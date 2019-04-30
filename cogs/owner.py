@@ -379,6 +379,25 @@ class Owner(commands.Cog):
                 except discord.HTTPException:
                     pass
 
+    @commands.command()
+    @commands.is_owner()
+    async def upgradedb(self, ctx):
+        """modify the db"""
+        nb_nul = 123456789
+
+        for g in self.bot.guilds:
+            changed = False
+            settings = await SettingsDB.get_instance().get_guild_settings(g.id)
+            if settings.channel == nb_nul:
+                settings.channel = False
+                changed = True
+            if settings.timer == nb_nul:
+                settings.timer = False
+                changed = True
+
+            if changed:
+                await SettingsDB.get_instance().set_guild_settings(settings)
+
     @commands.is_owner()
     @commands.command(aliases=['cp'])
     async def cleanupplayers(self, ctx, confirm: str = None):
@@ -415,7 +434,6 @@ class Owner(commands.Cog):
 
         if to_send:
             await ctx.send(to_send)
-
 
     @commands.command(aliases=['changeavatar'])
     @commands.is_owner()

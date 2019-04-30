@@ -14,9 +14,9 @@ from utils.chat_formatting import pagify, box
 from utils.watora import globprefix, log, owner_id, get_server_prefixes, get_str, no_lang_loaded
 
 cmds = {}
-cmds['music']      = ["join", "np", "play", "queue", "search", "skip", "forceskip", "replay", "previous", "relatedsong", "replaynow", "previousnow", "stop", "pl", "radio", "repeat", "pause", "volume", "playnow", "playnext", "clear", "promote", "shuffle", "remove", "moveto", "lyrics", "bassboost", "equalizer"]
+cmds['music']      = ["join", "np", "play", "queue", "search", "skip", "forceskip", "replay", "previous", "relatedsong", "replaynow", "previousnow", "stop", "pl", "radio", "repeat", "pause", "volume", "playnow", "playnext", "clear", "promote", "shuffle", "remove", "moveto", "lyrics", "bassboost", "equalizer", "blindtest", "blindtestscore"]
 cmds['fun']        = ["8ball", "minesweeper", "ily", "roll", "flip", "me", "customcommand", "choice", "ascii", "meme", "picture", "osu", "marry", "divorce", "anime", "manga", "char", "nextep"]
-cmds['useful']     = ["info", "poll", "stats", "credits", "changelog", "don", "permsinfo", "version", "infoshard", "avatar", "userinfo", "serverinfo", "roleinfo", "getrole", "ping", "invitation", "suggestion", "bug", "feedback", "clan", "joinclan", "claim", "unclaim", "claimlist"]
+cmds['useful']     = ["info", "poll", "stats", "credits", "changelog", "don", "permsinfo", "version", "infoshard", "avatar", "userinfo", "serverinfo", "roleinfo", "getrole", "ping", "invitation", "suggestion", "bug", "feedback", "clan", "joinclan"]
 cmds['moderation'] = ["kick", "ban", "hackban", "voicekick", "clean", "purge", "stfu"]
 cmds['config']     = ["prefix", "language", "owo", 'blacklist', 'settings', "defvolume", "defvote", "autoleave", "npmsg", "welcome", "goodbye", "autorole", "ignore", "disabledcommand", "setdj", "bind", "lazy", "autoplay", "autoconnect"]
 
@@ -1273,6 +1273,10 @@ class Gestion(commands.Cog):
 
         if not role:
             return await ctx.send(get_str(ctx, "cmd-joinclan-role-not-found").format(name))
+        if role.position >= ctx.author.top_role.position and not ctx.author.id == owner_id:
+            return await ctx.send(get_str(ctx, "role-not-enough-high"))
+        if role.position >= ctx.me.top_role.position:
+            return await ctx.send(get_str(ctx, "not-enough-permissions"))
 
         settings = await SettingsDB.get_instance().get_guild_settings(ctx.guild.id)
         if role.id not in settings.autoroles:
@@ -1313,7 +1317,7 @@ class Gestion(commands.Cog):
         msg = "`{}`".format("`, `".join(roles))
         await ctx.send(get_str(ctx, "cmd-autorole-updated-{}".format("roles" if len(settings.autoroles) > 1 else "one-role")).format(msg))
 
-    @commands.command()
+    @commands.command(aliases=["removeclan", "leaveclan", "jclan", "lclan"])
     @commands.guild_only()
     async def joinclan(self, ctx, *, name):
         """
@@ -1331,6 +1335,9 @@ class Gestion(commands.Cog):
             return await ctx.send(get_str(ctx, "cmd-joinclan-no-clans-available").format("`{}clan create`.".format(get_server_prefixes(ctx.bot, ctx.guild))))
         if role.id not in settings.clans:
             return await ctx.send(get_str(ctx, "cmd-joinclan-cant-be-given").format("`{}clan create`.".format(get_server_prefixes(ctx.bot, ctx.guild))))
+        if role in ctx.author.roles:
+            await ctx.author.remove_roles(role)
+            return await ctx.send(get_str(ctx, "cmd-giverole-remove").format(f"`{role}`", f"**{ctx.author}**"))
         if [r for r in ctx.author.roles if r.id in settings.clans]:
             return await ctx.send(get_str(ctx, "cmd-joinclan-already-have-clan"))
         else:

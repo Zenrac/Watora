@@ -52,7 +52,7 @@ class Mal(commands.Cog):
         try:
             selection = await self.bot.jikan.anime(found)
             selection = Jikan(selection)
-        except JikanException:
+        except (JikanException, aiohttp.ClientError):
             return await ctx.send(get_str(ctx, "no-result"))
 
         em = discord.Embed(colour=0x0066CC)
@@ -60,7 +60,7 @@ class Mal(commands.Cog):
         synopsis = self.remove_html(synopsis)
         if len(synopsis) > 300:
             em.description = " ".join(synopsis.split(" ")[0:40]) + "[ Read more»](%s)" % selection.url
-        em.set_author(name=selection.title, url=selection.url, icon_url='https://myanimelist.cdn-dena.com/img/sp/icon/apple-touch-icon-256.png')
+        em.set_author(name=selection.title, url=selection.url, icon_url='https://i.imgur.com/vEy5Zaq.png')
         if selection.title_english:
             if selection.title_english.lower() not in selection.title.lower():
                 em.add_field(name=get_str(ctx, "cmd-anime-english-title"), value=selection.title_english, inline=False)
@@ -110,7 +110,7 @@ class Mal(commands.Cog):
             day = days[datetime.now().day-1]
         try:
             result = await self.bot.jikan.schedule(day=day)
-        except JikanException:
+        except (JikanException, aiohttp.ClientError):
             return await ctx.send(get_str(ctx, "no-result"))
         animes = []
         for a in result[day.lower()]:
@@ -134,7 +134,7 @@ class Mal(commands.Cog):
         await ctx.trigger_typing()
         try:
             result = await self.bot.jikan.user(username=username)
-        except JikanException:
+        except (JikanException, aiohttp.ClientError):
             return await ctx.send(get_str(ctx, "no-result"))
         result = Jikan(result)
         embed = discord.Embed()
@@ -150,7 +150,7 @@ class Mal(commands.Cog):
         embed.add_field(name='Episodes Watched', value=stats.episodes_watched)
         embed.add_field(name='Days Watched', value=stats.days_watched)
 
-        embed.set_author(name=result.username, url=result.url, icon_url='https://myanimelist.cdn-dena.com/img/sp/icon/apple-touch-icon-256.png')
+        embed.set_author(name=result.username, url=result.url, icon_url='https://i.imgur.com/vEy5Zaq.png')
         embed.set_thumbnail(url=result.image_url)
         await ctx.send(embed=embed)
 
@@ -170,7 +170,7 @@ class Mal(commands.Cog):
         try:
             selection = await self.bot.jikan.manga(found)
             selection = Jikan(selection)
-        except JikanException:
+        except (JikanException, aiohttp.ClientError):
             return await ctx.send(get_str(ctx, "no-result"))
 
         em = discord.Embed(colour=0x0066CC)
@@ -178,7 +178,7 @@ class Mal(commands.Cog):
         synopsis = self.remove_html(synopsis)
         if len(synopsis) > 300:
             em.description = " ".join(synopsis.split(" ")[0:40]) + "[ Read more»](%s)" % selection.url
-        em.set_author(name=selection.title, url=selection.url, icon_url='https://myanimelist.cdn-dena.com/img/sp/icon/apple-touch-icon-256.png')
+        em.set_author(name=selection.title, url=selection.url, icon_url='https://i.imgur.com/vEy5Zaq.png')
         if selection.title_english:
             if selection.title_english.lower() not in selection.title.lower():
                 em.add_field(name=get_str(ctx, "cmd-anime-english-title"), value=selection.title_english, inline=False)
@@ -232,7 +232,7 @@ class Mal(commands.Cog):
         try:
             selection = await self.bot.jikan.character(found)
             selection = Jikan(selection)
-        except JikanException:
+        except (JikanException, aiohttp.ClientError):
             return await ctx.send(get_str(ctx, "no-result"))
 
         em = discord.Embed(colour=0x0066CC)
@@ -261,7 +261,7 @@ class Mal(commands.Cog):
             pass
         em.set_image(url=selection.image_url)
         em.set_author(name=selection.name, url=selection.url,
-                      icon_url='https://myanimelist.cdn-dena.com/img/sp/icon/apple-touch-icon-256.png')
+                      icon_url='https://i.imgur.com/vEy5Zaq.png')
         try:
             await fetch.delete()
         except discord.HTTPException:
@@ -287,7 +287,7 @@ class Mal(commands.Cog):
         try:
             selection = await self.bot.jikan.anime(found)
             anime = Jikan(selection)
-        except JikanException:
+        except (JikanException, aiohttp.ClientError):
             return await ctx.send(get_str(ctx, "no-result"))
 
         if anime.status == "Finished Airing":
@@ -305,7 +305,7 @@ class Mal(commands.Cog):
             except ValueError:
                 remaining = '?'
         embed = discord.Embed(title=get_str(ctx, "cmd-nextep"), description=remaining, color=0x0066CC)
-        embed.set_author(name='{}'.format(anime.title), url=anime.url, icon_url='https://myanimelist.cdn-dena.com/img/sp/icon/apple-touch-icon-256.png')
+        embed.set_author(name='{}'.format(anime.title), url=anime.url, icon_url='https://i.imgur.com/vEy5Zaq.png')
         embed.set_thumbnail(url=anime.image_url)
         embed.set_footer(text=get_str(ctx, "cmd-anime-aired") + " : " + anime.broadcast)
         try:

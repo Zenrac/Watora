@@ -1,4 +1,5 @@
 import os
+import sys
 import aiohttp
 import asyncio
 import inspect
@@ -6,6 +7,7 @@ import discord
 import traceback
 import psutil
 import platform
+import logging
 import time
 
 from io import BytesIO
@@ -22,6 +24,7 @@ class Owner(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         self.temp = None
+        self.log_handlers = {}
 
     async def unload_all_cogs(self):
         cogs = _list_cogs()
@@ -99,9 +102,13 @@ class Owner(commands.Cog):
 
         Reloads an extension.
         """
+        loaded = [c.__module__.split(".")[1] for c in self.bot.cogs.values()]
+        unloaded = [c for c in _list_cogs()
+                    if c not in loaded]
         if extension_name.lower() not in _list_cogs():
-            return await ctx.send("This cog is not loaded.")
-        self.bot.unload_extension("cogs." + extension_name)
+            return await ctx.send("This cog does not exist.")
+        if extension_name.lower() not in unloaded:
+            self.bot.unload_extension("cogs." + extension_name)
         try:
             self.bot.load_extension("cogs." + extension_name)
         except Exception as e:
@@ -117,9 +124,13 @@ class Owner(commands.Cog):
         Reloads every extensions.
         """
         msg = ""
+        loaded = [c.__module__.split(".")[1] for c in self.bot.cogs.values()]
+        unloaded = [c for c in _list_cogs()
+                    if c not in loaded]
         cogs = _list_cogs()
         for c in cogs:
-            self.bot.unload_extension("cogs." + c)
+            if c not in unloaded:
+                self.bot.unload_extension("cogs." + c)
             try:
                 self.bot.load_extension("cogs." + c)
             except Exception as e:
@@ -236,6 +247,7 @@ class Owner(commands.Cog):
         embed.add_field(name="Platform", value=str(platform.platform()), inline=False)
         embed.add_field(name="CPU", value=str(f"{psutil.cpu_percent()}%"), inline=False)
         embed.add_field(name="Memory", value=f"{bytes2human(psutil.virtual_memory().used)}/{bytes2human(psutil.virtual_memory().total)} ({psutil.virtual_memory().percent}%)", inline=False)
+        embed.add_field(name="Swap", value=f"{bytes2human(psutil.swap_memory().used)}/{bytes2human(psutil.swap_memory().total)} ({psutil.swap_memory().percent}%)", inline=False)
         embed.add_field(name="Disk", value=f"{bytes2human(psutil.disk_usage('/').used)}/{bytes2human(psutil.disk_usage('/').total)} ({psutil.disk_usage('/').percent}%)", inline=False)
         try:
             await ctx.send(embed=embed)
@@ -253,25 +265,22 @@ class Owner(commands.Cog):
         embed = discord.Embed(description="")
         for n in self.bot.lavalink.node_manager.nodes:
             if n.available:
-                nanipl = naniload = False
                 region = n.region
                 if n.stats:
                     cpu = round(n.stats.system_load*100, 2)
                     cpull = round(n.stats.lavalink_load*100, 2)
                     node_uptime = str(timedelta(milliseconds=n.stats.uptime)).split(".")[0]
                     core = n.stats.cpu_cores
-                    llp = n.stats.playing_players
+                    llp = n.stats.players
+                    llpp = n.stats.playing_players
                 else:
                     cpu = cpull = node_uptime = 'No data'
-                    core = lpp = 0
-                player = len(n.players)
-                playing = len([x for x in n.players if x.is_playing])
-                if (player - llp) < 0:
-                    if 'asia' == region:
-                        nanipl = '\nNaniPlayers : ' + f'{(llp - player)}'
+                    core = llp = llpp = 0
+                player = llp or len(n.players)
+                playing = llpp or len([x for x in n.players if x.is_playing])
                 description = (f"```fix\nNode {n.name}```\n*Region: {region}*\n*Uptime: {node_uptime}*\n\n**Cpu :**\nCore{'s' if core > 1 else ''} : {core}\n"
                                f"System Load : {cpu}% (lavalink {cpull}%)\n\n"
-                               f"**Players :**\nConnected : {player}\nPlaying : {playing}{nanipl if nanipl else ''}\n\n")
+                               f"**Shard Players :**\nCreated: {player}\nPlaying : {playing}\n\n")
             else:
                 description = (f"```fix\nNode {n.name}```\n*{n.region}*\n\n**NOT AVAILABLE!**")
             embed.description += description
@@ -379,25 +388,6 @@ class Owner(commands.Cog):
                 except discord.HTTPException:
                     pass
 
-    @commands.command()
-    @commands.is_owner()
-    async def upgradedb(self, ctx):
-        """modify the db"""
-        nb_nul = 123456789
-
-        for g in self.bot.guilds:
-            changed = False
-            settings = await SettingsDB.get_instance().get_guild_settings(g.id)
-            if settings.channel == nb_nul:
-                settings.channel = False
-                changed = True
-            if settings.timer == nb_nul:
-                settings.timer = False
-                changed = True
-
-            if changed:
-                await SettingsDB.get_instance().set_guild_settings(settings)
-
     @commands.is_owner()
     @commands.command(aliases=['cp'])
     async def cleanupplayers(self, ctx, confirm: str = None):
@@ -440,6 +430,28 @@ class Owner(commands.Cog):
     async def changepic(self, ctx, *, url: str):
         async with aiohttp.request("get", url) as res:
             await self.bot.user.edit(avatar=BytesIO(await res.read()))
+
+    @commands.command(aliases=['log'])
+    @commands.is_owner()
+    async def logger(self, ctx, *, name_logger = None):
+
+        if not name_logger:
+            for name in ['launcher', 'discord', 'lavalink', 'listenmoe']:
+                logger = logging.getLogger(name)
+                logger.disabled = not logger.disabled
+
+            await ctx.send("Loggers are now " + ['enabled', 'disabled'][logger.disabled])
+        else:
+            if name_logger.lower() in ['true', 'false']:
+                for name in ['launcher', 'discord', 'lavalink', 'listenmoe']:
+                    logger = logging.getLogger(name)
+                    logger.disabled = (name_logger.lower() == 'true')
+                await ctx.send("Loggers are now " + ['enabled', 'disabled'][logger.disabled])
+            else:
+                logger = logging.getLogger(name_logger)
+                logger.disabled = not logger.disabled
+                await ctx.send("{} logger is now ".format(name_logger[0].upper() + name_logger[1:]) + ['enabled', 'disabled'][logger.disabled])
+
 
 def setup(bot):
     bot.add_cog(Owner(bot))

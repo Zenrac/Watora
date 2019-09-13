@@ -2,13 +2,12 @@ import aiohttp
 import asyncio
 import listenmoe
 
-from monstercatFM import monstercat
+# from monstercatFM import monstercat
 from utils.watora import log
 from discord.ext import commands
 
 class Radio(commands.Cog):
     def __init__(self, bot):
-        self.ready = False
         self.bot = bot
         self.tasks = []
         self.session = aiohttp.ClientSession(loop=self.bot.loop)
@@ -65,20 +64,21 @@ class Radio(commands.Cog):
     async def start(self):
         await self.bot.wait_until_ready()
 
-        kp = listenmoe.client.Client(loop=self.bot.loop, aiosession=self.session, kpop=True)
+        kp = listenmoe.client.Client(loop=self.bot.loop, kpop=True)
         kp.register_handler(self.handkpop)
         task = asyncio.ensure_future(kp.start())
         self.tasks.append(task)
 
-        cl = listenmoe.client.Client(loop=self.bot.loop, aiosession=self.session)
+        cl = listenmoe.client.Client(loop=self.bot.loop)
         cl.register_handler(self.hand)
         task = asyncio.ensure_future(cl.start())
         self.tasks.append(task)
 
-        mc = monstercat.Client(loop=self.bot.loop, aiosession=self.session)
-        mc.register_handler(self.mchand)
-        task = asyncio.ensure_future(mc.start())
-        self.tasks.append(task)
+        # Monstercat disabled since a while..
+        # mc = monstercat.Client(loop=self.bot.loop, aiosession=self.session)
+        # mc.register_handler(self.mchand)
+        # task = asyncio.ensure_future(mc.start())
+        # self.tasks.append(task)
 
 def setup(bot):
     bot.add_cog(Radio(bot))

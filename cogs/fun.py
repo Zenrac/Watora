@@ -103,7 +103,7 @@ class Fun(commands.Cog):
         await ctx.send(board)
 
     @commands.command(name="8ball", aliases=["8balls", "eightball"])
-    async def _8ball(self, ctx, more: str):
+    async def _8ball(self, ctx, *, more: str):
         """
             {command_prefix}8ball [question]
 
@@ -111,18 +111,21 @@ class Fun(commands.Cog):
         """
         await ctx.send(random.choice(get_str(ctx, "cmd-8ball-options").split("|")))
 
-    @commands.command()
+    @commands.command(aliases=['wp', 'watopingd', 'wpd'])
     async def watoping(self, ctx):
         """
             {command_prefix}watoping
 
         Best emoji ever.
         """
-        try:
-            await ctx.message.delete()
-        except discord.HTTPException:
-            pass
-        await ctx.send(self.bot.get_emoji(id=458349269875949569))
+        if 'd' in ctx.invoked_with.lower():
+            ctx.command.reset_cooldown(ctx)
+            try:
+                await ctx.message.delete()
+            except discord.HTTPException:
+                pass
+
+        await ctx.send("<:watoping:458349269875949569>")
 
     @commands.command(name="ily", aliases=["jtm"])
     async def _ily(self, ctx, more=None):
@@ -131,30 +134,54 @@ class Fun(commands.Cog):
 
         {help}
         """
-        if more and not is_lover(self.bot, ctx.author):
+        if more and not await is_lover(self.bot, ctx.author):
             await ctx.send(get_str(ctx, "cmd-ily-nope"))
         elif more:
-            await ctx.send(self.bot.get_emoji(id=458349266495078413))
-        elif is_lover(self.bot, ctx.author):
+            await ctx.send("<:WatoraCry:458349266495078413>")
+        elif await is_lover(self.bot, ctx.author):
             await ctx.send(random.choice(get_str(ctx, "cmd-ily-yes").split("|")))
         else:
             await ctx.send(random.choice(get_str(ctx, "cmd-ily-no").split("|")))
 
     @commands.command()
-    async def roll(self, ctx, max: int = 100, min: int = 0):
+    async def roll(self, ctx, maxi: str = 100, mini: int = 0):
         """
+            {command_prefix}roll [number_of_dice]d[number_of_face]
             {command_prefix}roll [min] [max]
             {command_prefix}roll [max]
             {command_prefix}roll
 
         {help}
         """
-        if max <= min:
-            roll = random.randint(max, min)
-        else:
-            roll = random.randint(min, max)
+        if not str(maxi).isdigit():
+            numbers = maxi.split('d')
+            if not len(numbers) == 2:
+                return await self.bot.send_cmd_help(ctx)
 
-        await ctx.send(":game_die: " + get_str(ctx, "cmd-roll").format(ctx.author.mention, roll))
+            number, face = numbers
+
+            try:
+                number = min(int(number), 10)
+                face = min(int(face), 10000)
+            except ValueError:
+                return await self.bot.send_cmd_help(ctx)
+
+            results = []
+
+            for m in range(number):
+                results.append(random.randint(1, face))
+
+            if number != 1:
+                roll = '{} ({})'.format(sum(results), ' + '.join([str(m) for m in results]))
+            else:
+                roll = sum(results)
+
+        elif int(maxi) <= mini:
+            roll = random.randint(int(maxi), mini)
+        else:
+            roll = random.randint(mini, int(maxi))
+
+        await ctx.send(":game_die: " + get_str(ctx, "cmd-roll").format(ctx.author.name, roll))
 
     @commands.command()
     async def flip(self, ctx, *, user: discord.Member = None):
@@ -166,7 +193,7 @@ class Fun(commands.Cog):
         """
         if user:
             msg = ""
-            if user.id == self.bot.user.id or is_basicpatron(self.bot, user):
+            if user.id == self.bot.user.id or await is_basicpatron(self.bot, user):
                 user = ctx.author
                 msg = get_str(ctx, "cmd-flip-nice-try") + "\n\n"
             char = "abcdefghijklmnopqrstuvwxyz"
@@ -384,7 +411,7 @@ class Fun(commands.Cog):
         {help}
         """
         user = None
-        msg = unidecode.unidecode(msg)
+        #  msg = unidecode.unidecode(msg)
         if len(ctx.message.mentions) > (2 if self.bot.user.mention in ctx.prefix else 1):
             return await ctx.send(get_str(ctx, "cmd-meme-one-user"))
         if ctx.message.mentions:
@@ -404,7 +431,7 @@ class Fun(commands.Cog):
                 user = check_str[0]
 
         if user:
-            pic = user.avatar_url
+            pic = str(user.avatar_url)
 
         pic = pic.strip('<>')
 
@@ -538,6 +565,26 @@ class Fun(commands.Cog):
                 return await ctx.send(get_str(ctx, "need-embed-permission"))
 
         await ctx.send(opt)
+
+    @commands.cooldown(rate=3, per=1.5, type=commands.BucketType.user)
+    @commands.command(aliases=['f', 'press', 'respect', 'respects'])
+    async def pressf(self, ctx, *, target:str = None):
+        """
+            {command_prefix}f (something)
+
+        Press F to pay respect.
+        """
+        settings = await SettingsDB.get_instance().get_guild_settings(ctx.guild.id)
+        settings.respect += 1
+        await SettingsDB.get_instance().set_guild_settings(settings)
+
+        desc = f'**{ctx.author.name}** has paid their respects'
+        desc += f' to {target}.' if target else '.'
+
+        e = discord.Embed(description=desc)
+        e.set_footer(text=f"Total of {settings.respect} respect{'s' if settings.respect != 1 else ''} on this server.")
+
+        await ctx.send(embed=e)
 
     @commands.is_owner()
     @commands.command()

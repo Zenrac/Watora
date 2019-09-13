@@ -26,14 +26,27 @@ cmd_list = {
     'Anime':                    ['megumin', 'jojo', 'initial_d'],
     'Anime actions':            ['smug', 'pout', 'sleepy', 'love', 'lewd', 'neko', 'nom', 'cry', 'dance', 'blush', 'shrug', 'insult', 'awoo', 'clagwimoth', 'smile', 'teehee', 'thumbsup', 'tail', 'waifu_insult', 'animedab', 'highfive', 'banghead', 'poi', 'greet', 'baka'],
     'Memes':                    ['wastedpic', 'discord_memes', 'delet_this', 'owopic', 'triggeredpic', 'nani', 'thinking'],
-    'Filters':                  ['triggered', 'triggeredinvert', 'illuminati', 'invert', 'convmatrix', 'convinvert', 'convolute', 'pixelate', 'tobecontinued', 'wasted', 'beautiful', 'bob', 'distortion', 'glitch', 'mosaic', 'blurple', 'halloween', 'orangly', 'blood', 'bloodhelp', 'blur', 'discordlogo', 'displace', 'ghost', 'grayscale', 'implode', 'posterize', 'sepia', 'snow', 'time', 'animeprotest', 'angry', 'codebabes', 'hitler', 'link', 'respect', 'whoisthis', 'shocked', 'alexflipnote'],
-    'Generators':               ['presidentialalert', 'thisexample', 'thisfilm', 'hibiki', 'shy', 'searching', 'bluneko', 'wanted', 'bravery', 'brilliance', 'balance', 'loveship'],
-    'NSFW (in NSFW channel)':   ['neko', 'hentai']
 }
 
+# Arcadia API
+#cmd_list.update({
+ #   'Filters':                  ['triggered', 'triggeredinvert', 'illuminati', 'invert', 'convmatrix', 'convinvert', 'convolute', 'pixelate', 'tobecontinued', 'wasted', 'beautiful', 'bob', 'distortion', 'glitch', 'mosaic', 'blurple', 'halloween', 'orangly', 'blood', 'bloodhelp', 'blur', 'discordlogo', 'displace', 'ghost', 'grayscale', 'implode', 'posterize', 'sepia', 'snow', 'time', 'animeprotest', 'angry', 'codebabes', 'hitler', 'link', 'respect', 'whoisthis', 'shocked', 'alexflipnote'],
+  #  'Generators':               ['presidentialalert', 'thisexample', 'thisfilm', 'hibiki', 'shy', 'searching', 'bluneko', 'wanted', 'bravery', 'brilliance', 'balance', 'loveship']
+#})
+# Eclyssia API
+cmd_list.update({
+    'Filters':                  ['blur', 'beautiful', 'greyscale', 'invert', 'pixelate', 'posterize', 'sepia'],
+})
+
+cmd_list.update({
+    'Generators':               ['hibiki', 'shy', 'searching', 'bluneko'],
+    'NSFW (in NSFW channel)':   ['neko', 'hentai']
+})
+
+# Dank Memer API
 cmd_meme = {
     '1 avatar': ['radialblur', 'warp', 'aborted', 'affect', 'bongocat', 'cancer', 'dab', 'dank', 'deepfry', 'delete', 'disability', 'door', 'egg', 'failure', 'fakenews', 'fedora', 'gay', 'jail', 'laid', 'magik', 'rip', 'roblox', 'salty', 'satan', 'sickban', 'trash', 'ugly', 'warp', 'whodidthis'],
-    '1 text': ['crab', 'abandon', 'armor', 'balloon', 'boo', 'brain', 'changemymind', 'crysip', 'excuseme', 'facts', 'humansgood', 'knowyourlocation', 'master', 'note', 'ohno', 'plan', 'savehumanity', 'shit', 'slapsroof', 'surprised', 'vr', 'walking'],
+    '1 text': ['abandon', 'armor', 'balloon', 'boo', 'brain', 'changemymind', 'crysip', 'excuseme', 'facts', 'humansgood', 'knowyourlocation', 'master', 'note', 'ohno', 'plan', 'savehumanity', 'shit', 'slapsroof', 'surprised', 'vr', 'walking'],
     '2 avatars': ['bed', 'madethis', 'screams', 'robinslap', 'spank'],
     '1 avatar 1 text 1 username': ['quote', 'tweet', 'youtube'],
     '1 avatar 1 text': ['floor', 'unpopular']
@@ -134,7 +147,7 @@ class Gestion(commands.Cog):
 
         {help}
         """
-        search = min(int(search), 1000)
+        search = min(int(search), 200)
         try:
             await ctx.message.delete()
         except discord.HTTPException:
@@ -203,7 +216,7 @@ class Gestion(commands.Cog):
 
         {help}
         """
-        search_range = min(int(search_range), 1000)
+        search_range = min(int(search_range), 200)
         if self.bot.user.bot:
             if ctx.channel.permissions_for(ctx.me).manage_messages:
                 try:
@@ -225,7 +238,7 @@ class Gestion(commands.Cog):
 
         {help}
         """
-        search_range = min(int(search_range), 1000)
+        search_range = min(int(search_range), 200)
         if user.id == owner_id != ctx.author.id:
             return await ctx.send("Nope.")
         if self.bot.user.bot:
@@ -863,7 +876,7 @@ class Gestion(commands.Cog):
         if not ctx.me.guild_permissions.move_members or not ctx.channel.permissions_for(ctx.me).manage_channels:
             return await ctx.send(get_str(ctx, "not-enough-permissions"))
 
-        if user.top_role.position > ctx.author.top_role.position and not ctx.author.id == owner_id:
+        if user.top_role.position > ctx.author.top_role.position and ctx.author.id != owner_id and not ctx.author is ctx.guild.owner:
             return await ctx.send(get_str(ctx, "role-not-enough-high"))
 
         dest = await ctx.guild.create_voice_channel(name='voicekick', reason=f'[ {ctx.author} ] Voicekick')
@@ -894,7 +907,7 @@ class Gestion(commands.Cog):
         if user.id == ctx.me.id:
             return await ctx.send(get_str(ctx, "cmd-kick-cant-kick-myself"))
 
-        if user.top_role.position >= ctx.author.top_role.position and not ctx.author.id == owner_id:
+        if user.top_role.position >= ctx.author.top_role.position and ctx.author.id != owner_id and not ctx.author is ctx.guild.owner:
             return await ctx.send(get_str(ctx, "role-not-enough-high"))
         if user.top_role.position >= ctx.me.top_role.position:
             return await ctx.send(get_str(ctx, "not-enough-permissions"))
@@ -951,7 +964,7 @@ class Gestion(commands.Cog):
         if user.id == ctx.me.id:
             return await ctx.send(get_str(ctx, "cmd-kick-cant-kick-myself"))
 
-        if user.top_role.position >= ctx.author.top_role.position and not ctx.author.id == owner_id:
+        if user.top_role.position >= ctx.author.top_role.position and ctx.author.id != owner_id and not ctx.author is ctx.guild.owner:
             return await ctx.send(get_str(ctx, "role-not-enough-high"))
         if user.top_role.position >= ctx.me.top_role.position:
             return await ctx.send(get_str(ctx, "not-enough-permissions"))
@@ -986,7 +999,7 @@ class Gestion(commands.Cog):
         if user.id == ctx.me.id:
             return await ctx.send(get_str(ctx, "cmd-kick-cant-kick-myself"))
 
-        if user.top_role.position >= ctx.author.top_role.position and not ctx.author.id == owner_id:
+        if user.top_role.position >= ctx.author.top_role.position and ctx.author.id != owner_id and not ctx.author is ctx.guild.owner:
             return await ctx.send(get_str(ctx, "role-not-enough-high"))
         if user.top_role.position >= ctx.me.top_role.position:
             return await ctx.send(get_str(ctx, "not-enough-permissions"))
@@ -1021,7 +1034,7 @@ class Gestion(commands.Cog):
         if user.id == ctx.me.id:
             return await ctx.send(get_str(ctx, "cmd-kick-cant-kick-myself"))
 
-        if user.top_role.position >= ctx.author.top_role.position and not ctx.author.id == owner_id:
+        if user.top_role.position >= ctx.author.top_role.position and ctx.author.id != owner_id and not ctx.author is ctx.guild.owner:
             return await ctx.send(get_str(ctx, "role-not-enough-high"))
         if user.top_role.position >= ctx.me.top_role.position:
             return await ctx.send(get_str(ctx, "not-enough-permissions"))
@@ -1273,7 +1286,7 @@ class Gestion(commands.Cog):
 
         if not role:
             return await ctx.send(get_str(ctx, "cmd-joinclan-role-not-found").format(name))
-        if role.position >= ctx.author.top_role.position and not ctx.author.id == owner_id:
+        if role.position >= ctx.author.top_role.position and ctx.author.id != owner_id and not ctx.author is ctx.guild.owner:
             return await ctx.send(get_str(ctx, "role-not-enough-high"))
         if role.position >= ctx.me.top_role.position:
             return await ctx.send(get_str(ctx, "not-enough-permissions"))
@@ -1495,7 +1508,7 @@ class Gestion(commands.Cog):
             My [**Support Server**](https://discord.gg/ArJgTpM)\n\
             My [**Website**](https://watora.xyz)\n\
             My [**GitHub**](https://github.com/Zenrac/watora-translations)"
-        e.set_footer(text=f"You're my {len(self.bot.guilds)}th guild!")
+        e.set_footer(text=f"You're my {self.bot.guild_count}th guild!")
         e.description = msg
         channels = [c for c in guild.channels if isinstance(c, discord.TextChannel)
                     and c.permissions_for(guild.me).send_messages
@@ -1503,11 +1516,9 @@ class Gestion(commands.Cog):
 
         better_channels = [bc for bc in channels if 'bot' in bc.name.lower()]
         for channel in better_channels:
-            if channel.permissions_for(guild.me).embed_links:
-                return await channel.send(embed=e)
+            return await channel.send(embed=e)
         for channel in channels:
-            if channel.permissions_for(guild.me).embed_links:
-                return await channel.send(embed=e)
+            return await channel.send(embed=e)
 
 
 def setup(bot):

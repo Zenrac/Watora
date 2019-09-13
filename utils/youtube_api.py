@@ -78,11 +78,23 @@ class YoutubeAPI:
                     found[m['id']] = m['snippet']['title']
         return found
 
-    async def get_youtube_thumbnail(self, id):
-        """Gets song thumbnail from an ID"""
+
+    async def get_youtube_infos(self, id):
         rep = await self.make_request(f'videos?part=snippet&id={id}')
         if not rep:
-            return None
+            return None, None
+        thumbnail = await self.get_youtube_thumbnail(rep)
+        description = rep['items'][0]['snippet']['description']
+
+        return thumbnail, description
+
+
+    async def get_youtube_thumbnail(self, rep):
+        """Gets song thumbnail from an ID or a youtube api response"""
+        if not isinstance(rep, dict):
+            rep = await self.make_request(f'videos?part=snippet&id={rep}')
+            if not rep:
+                return None
         thumb = rep['items'][0]['snippet']['thumbnails']
         best_res = list(thumb.values())[0]
         for res in list(thumb.values())[1:]:

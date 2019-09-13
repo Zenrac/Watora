@@ -188,35 +188,39 @@ def sweet_bar(current, max):
     return prog_bar_str
 
 
-def is_basicpatron(self, author):
+async def is_basicpatron(self, author):
     """Checks if the user is basicpatron on my server."""
-    return check_if_role(self, author, 341716510122835969)
+    return await check_if_role(self, author, 341716510122835969, 341723457693810689, 341726906661470210)
 
 
-def is_patron(self, author):
+async def is_patron(self, author):
     """Checks if the user is patron on my server."""
-    return check_if_role(self, author, 341723457693810689)
+    return await check_if_role(self, author, 341723457693810689, 341726906661470210)
 
 
-def is_lover(self, author):
+async def is_lover(self, author):
     """Checks if the user is Lover on my server."""
-    return check_if_role(self, author, 341726906661470210)
+    return await check_if_role(self, author, 341726906661470210)
 
 
-def is_voter(self, author):
+async def is_voter(self, author):
     """Checks if the user is Voter on my server."""
-    return check_if_role(self, author, 498278262607314974)
+    return await check_if_role(self, author, 498278262607314974, 341716510122835969, 341723457693810689, 341726906661470210)
 
 
-def check_if_role(self, author, role_id):
+async def check_if_role(self, author, *role_id):
     if isinstance(author, discord.Member):
         author = author.id
-    server = self.get_guild(268492317164437506)
-    member = server.get_member(author)
-    role = server.get_role(role_id)
-    if not all([server, member, role]):
+    if author == owner_id:
+        return True
+    try:
+        resp = await self.http.get_member(268492317164437506, author)
+    except discord.HTTPException:
         return False
-    return (role in member.roles or member.id == owner_id)
+
+    roles_id = resp.get('roles', [])
+
+    return any(r for r in role_id if r in roles_id or str(r) in roles_id)
 
 
 def is_admin(author, channel):

@@ -47,8 +47,6 @@ class Spotify:
 
         self.token = None
 
-        self.loop.run_until_complete(self.get_token())  # validate token
-
     def _make_token_auth(self, client_id, client_secret):
         auth_header = base64.b64encode((client_id + ':' + client_secret).encode('ascii'))
         return {'Authorization': 'Basic %s' % auth_header.decode('ascii')}

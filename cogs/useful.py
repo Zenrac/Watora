@@ -69,7 +69,7 @@ class Useful(commands.Cog):
 
         if not user:
             if str(ctx.author.id) in settings.marry:
-                embed.title = "❤ {} ({})".format(get_str(ctx, "cmd-marry-married-to").format(self.bot.get_user(int(settings.marry[str(ctx.author.id)]["id"])) or settings.marry[str(ctx.author.id)]['name']), settings.marry[str(ctx.author.id)]['date'])
+                embed.title = "❤ {} ({})".format(get_str(ctx, "cmd-marry-married-to").format(self.bot.get_user(int(settings.marry[str(ctx.author.id)]["id"])) or await self.bot.fetch_user(int(settings.marry[str(ctx.author.id)]["id"])) or settings.marry[str(ctx.author.id)]['name']), settings.marry[str(ctx.author.id)]['date'])
                 try:
                     return await ctx.send(embed=embed)
                 except discord.Forbidden:
@@ -80,7 +80,7 @@ class Useful(commands.Cog):
         embed.title = "💍 " + get_str(ctx, "cmd-marry-proposed").format(ctx.author.name, user.name)
 
         if str(user.id) in settings.marry:
-            married_with = self.bot.get_user(int(settings.marry[str(user.id)]['id'])) or settings.marry[str(user.id)]['name']
+            married_with = self.bot.get_user(int(settings.marry[str(user.id)]['id'])) or await self.bot.fetch_user(int(settings.marry[str(user.id)]['id'])) or settings.marry[str(user.id)]['name']
             married_since = settings.marry[str(user.id)]['date']
             embed.description = "{} ({})".format(get_str(ctx, "cmd-marry-user-a-married").format(user.name, married_with), married_since)
             if married_with == ctx.author:
@@ -125,7 +125,7 @@ class Useful(commands.Cog):
 
         if response_message.content.lower().startswith('y'):
             if str(user.id) in settings.marry:  # 2nd check if it changed since the command call
-                married_with = self.bot.get_user(int(settings.marry[str(user.id)]['id'])) or settings.marry[str(user.id)]['name']
+                married_with = self.bot.get_user(int(settings.marry[str(user.id)]['id'])) or await self.bot.fetch_user(int(settings.marry[str(user.id)]['id'])) or settings.marry[str(user.id)]['name']
                 embed.description = get_str(ctx, "cmd-marry-user-a-married").format(user.name, married_with)
                 if married_with == ctx.author:
                     embed.description = get_str(ctx, "cmd-marry-a-together")
@@ -178,7 +178,7 @@ class Useful(commands.Cog):
             return await ctx.send(get_str(ctx, "cmd-divorce-a-single") + " <:WatoraDisappointed:458349267715883060>")
         married = settings.marry[str(ctx.author.id)]
         married_since = married['date']
-        married_with = self.bot.get_user(int(married["id"])) or married['name']
+        married_with = self.bot.get_user(int(married["id"])) or await self.bot.fetch_user(int(married["id"])) or married['name']
         datetime_date = datetime.strptime(married_since, '%d %b %Y')
         since_married = (ctx.message.created_at - datetime_date).days
         since_married_full = "{} ({})".format(f"**{married_since}**", get_str(ctx, "cmd-userinfo-days-ago").format(since_married) if since_married > 1 else get_str(ctx, "cmd-userinfo-day-ago").format(since_married))
@@ -297,7 +297,7 @@ class Useful(commands.Cog):
         servers = self.bot.guild_count
         # channels = len([c for c in self.bot.get_all_channels()]) # BLOCKING CODE FFS
         embed = discord.Embed()
-        owner = (ctx.guild.get_member(owner_id) if ctx.guild else self.bot.get_user(owner_id)) or str(owner_id)
+        owner = (ctx.guild.get_member(owner_id) if ctx.guild else self.bot.get_user(owner_id)) or await self.bot.fetch_user(owner_id) or str(owner_id)
         embed.set_author(name=f"{self.bot.user.name} v{ver}", icon_url=self.bot.user.avatar_url)
         if isinstance(ctx.channel, discord.abc.GuildChannel):
             embed.color = ctx.guild.me.color
@@ -383,10 +383,7 @@ class Useful(commands.Cog):
                 if i > 5:
                     break
                 top5.append(id)
-                if isinstance(ctx.channel, discord.abc.GuildChannel):
-                    member = self.bot.get_user(int(id))
-                else:
-                    member = self.bot.get_user(int(id))
+                member = self.bot.get_user(int(id)) or await self.bot.fetch_user(int(id))
                 if not member:
                     guild = await self.bot.fetch_guild(268492317164437506)
                     member = await guild.fetch_member(int(id))
@@ -553,7 +550,7 @@ class Useful(commands.Cog):
         data.add_field(name=get_str(ctx, "cmd-userinfo-voice"), value=voice)
         settings = await SettingsDB.get_instance().get_glob_settings()
         if str(user.id) in settings.marry:
-            married_with = self.bot.get_user(int(settings.marry[str(user.id)]['id'])) or settings.marry[str(user.id)]['name']
+            married_with = self.bot.get_user(int(settings.marry[str(user.id)]['id'])) or await self.bot.fetch_user(int(settings.marry[str(user.id)]['id'])) or settings.marry[str(user.id)]['name']
             married_since = settings.marry[str(user.id)]['date']
             data.add_field(name=get_str(ctx, "cmd-userinfo-married-with"), value=f"💕 {married_with} ({married_since})", inline=False)
         data.add_field(name="{}".format(get_str(ctx, "cmd-userinfo-roles") if nbroles > 1 else get_str(ctx, "cmd-userinfo-role")) + " [%s]" % nbroles, value=roles, inline=False)
@@ -779,7 +776,7 @@ class Useful(commands.Cog):
         #             return await ctx.send("Error :\n" + topdona)
         #         user = top.split(' ')[0]
         #         money = '**' + top.split(' ')[1] + '€**'
-        #         user = self.bot.get_user(int(user))
+        #         user = self.bot.get_user(int(user)) fetch ici
         #         topfinal.append(f'`{i}.` {user} - {money}')
 
         #     topdona = '\n'.join(topfinal)
@@ -1404,7 +1401,7 @@ class Useful(commands.Cog):
 
         if claimed and guild.get_member(int(claimed[0])):
             k = claimed[0]
-            return await ctx.send("This server is already claimed by {}.".format('yourself' if int(k) == ctx.author.id else guild.get_member(int(k)) or self.bot.get_user(int(k))))
+            return await ctx.send("This server is already claimed by {}.".format('yourself' if int(k) == ctx.author.id else guild.get_member(int(k)) or self.bot.get_user(int(k)) or await self.bot.fetch_user(int(k))))
 
         for k, m in settings.claim.items():
             if str(guild.id) in m:
@@ -1646,7 +1643,7 @@ class Useful(commands.Cog):
         else:
             message_bl = []
             for l in settings.blacklisted:
-                m = ctx.guild.get_member(int(l)) or discord.utils.find(lambda m: m.id == int(l), ctx.guild.roles) or self.bot.get_user(int(l))
+                m = ctx.guild.get_member(int(l)) or discord.utils.find(lambda m: m.id == int(l), ctx.guild.roles) or self.bot.get_user(int(l)) or await self.bot.fetch_user(int(l))
                 if m:
                     message_bl.append(f"`{m}`")
                 if message_bl:

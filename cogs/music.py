@@ -169,7 +169,7 @@ class BlindTest:
 
     async def stop(self, bypass=False, send_final=True):
         if self.is_running or bypass:
-            embed = self.get_classement()
+            embed = await self.get_classement()
             if embed.fields:
                 embed.title = get_str(self.guild, "cmd-blindtest-final-rank", bot=self.bot)
                 await self.bt_channel.send(embed=embed)
@@ -216,7 +216,7 @@ class BlindTest:
     def remaining_song(self):
         return len(self.songs)
 
-    def get_classement(self, embed=None):
+    async def get_classement(self, embed=None):
         if not embed:
             embed = discord.Embed()
         counter = Counter(self.points)
@@ -224,7 +224,7 @@ class BlindTest:
         for i, user in enumerate(classement, start=1):
             if len(embed.fields) > 10:
                 break
-            u = self.guild.get_member(int(user)) or self.bot.get_user(int(user))
+            u = self.guild.get_member(int(user)) or self.bot.get_user(int(user)) or await self.bot.fetch_user(int(user))
             if u:
                 embed.add_field(name=f'{i}. {u}', value=self.points[user])
         return embed
@@ -592,7 +592,7 @@ class Music(commands.Cog):
             if thumb:
                 embed.set_image(url=thumb)
 
-            requester = channel.guild.get_member(event.track.requester) or self.bot.get_user(event.track.requester)
+            requester = channel.guild.get_member(event.track.requester) or self.bot.get_user(event.track.requester) or await self.bot.fetch_user(event.track.requester)
             duration = lavalink.utils.format_time(event.track.duration).lstrip('0').lstrip(':')
 
             if not event.track.stream:
@@ -1030,7 +1030,7 @@ class Music(commands.Cog):
 
         await self.blindtest_embed(p=player, channel=channel, msg=response_message, bonus=point)
 
-        scd_embed = player.blindtest.get_classement(embed=scd_embed)
+        scd_embed = await player.blindtest.get_classement(embed=scd_embed)
 
         if player.blindtest.songs:
             await channel.send(embed=scd_embed)
@@ -1131,7 +1131,7 @@ class Music(commands.Cog):
             embed = discord.Embed(colour=color, title=f"**{p.current.title}**", url=p.current.uri)
             if thumb:
                 embed.set_image(url=thumb)
-            requester = c.guild.get_member(p.current.requester) or self.bot.get_user(p.current.requester)
+            requester = c.guild.get_member(p.current.requester) or self.bot.get_user(p.current.requester) or await self.bot.fetch_user(p.current.requester)
             if requester:
                 embed.set_author(name=requester.name, icon_url=requester.avatar_url or requester.default_avatar_url, url=p.current.uri)
 
@@ -1224,7 +1224,7 @@ class Music(commands.Cog):
         pos = lavalink.utils.format_time(player.position).lstrip('0').lstrip(':')
         dur = lavalink.utils.format_time(current.duration).lstrip('0').lstrip(':')
         thumb = await self.get_thumbnail(current, player)
-        requester = channel.guild.get_member(current.requester) or self.bot.get_user(current.requester)
+        requester = channel.guild.get_member(current.requester) or self.bot.get_user(current.requester) or await self.bot.fetch_user(current.requester)
         prog_bar_str = sweet_bar(player.position, current.duration)
         embed = discord.Embed(colour=color, title=f"**{current.title}**", description=f"{'⏸' if player.paused else '🔁' if player.repeat else ''}`[{pos}/{dur}]` {prog_bar_str}")
         embed.url = current.uri
@@ -1448,13 +1448,16 @@ class Music(commands.Cog):
                     return True
         return False
 
-    def is_perso(self, guild, name):
+    async def is_perso(self, guild, name):
         """Checks if an autoplaylist is personal or not"""
         if name.isdigit():
             member = guild.get_member(int(name))
             if member:
                 return member
             member = self.bot.get_user(int(name))
+            if member:
+                return member
+            member = await self.bot.fetch_user(int(name))
             if member:
                 return member
         return False
@@ -1529,7 +1532,7 @@ class Music(commands.Cog):
             settings = await SettingsDB.get_instance().get_glob_settings()
 
             if str(file_name.lower()) not in settings.autoplaylists:
-                perso = self.is_perso(ctx.guild, name=file_name)
+                perso = await self.is_perso(ctx.guild, name=file_name)
                 if perso:
                     return await ctx.send(get_str(ctx, "music-plstart-dont-have"))
                 file_name = format_mentions(file_name)
@@ -1611,7 +1614,7 @@ class Music(commands.Cog):
         for i, user in enumerate(classement, start=1):
             if len(embed.fields) > 10:
                 break
-            u = ctx.guild.get_member(int(user)) or self.bot.get_user(int(user))
+            u = ctx.guild.get_member(int(user)) or self.bot.get_user(int(user)) or await self.bot.fetch_user(int(user))
             if u:
                 if u == ctx.author:
                     author_in = True
@@ -2259,7 +2262,7 @@ class Music(commands.Cog):
         else:
             dur = lavalink.utils.format_time(current.duration).lstrip('0').lstrip(':')
         thumb = await self.get_thumbnail(current, player)
-        requester = ctx.guild.get_member(current.requester) or self.bot.get_user(current.requester)
+        requester = ctx.guild.get_member(current.requester) or self.bot.get_user(current.requester) or await self.bot.fetch_user(current.requester)
         prog_bar_str = sweet_bar(player.position, current.duration)
         embed = discord.Embed(colour=color, title=f"**{current.title}**", description=f"{'⏸' if player.paused else '🔁' if player.repeat else ''}`[{pos}/{dur}]` {prog_bar_str}")
         embed.url = current.uri
@@ -2291,7 +2294,7 @@ class Music(commands.Cog):
 
         pos = lavalink.utils.format_time(player.position).lstrip('0').lstrip(':')
 
-        requester = ctx.guild.get_member(player.current.requester) or self.bot.get_user(player.current.requester)
+        requester = ctx.guild.get_member(player.current.requester) or self.bot.get_user(player.current.requester) or await self.bot.fetch_user(player.current.requester)
 
         if not player.current.stream:
             # prog_bar_str = sweet_bar(player.position, player.current.duration)
@@ -2314,7 +2317,7 @@ class Music(commands.Cog):
         end = start + items_per_page
 
         for i, track in enumerate(player.queue[start:end], start=start):
-            requester = ctx.guild.get_member(track.requester) or self.bot.get_user(track.requester) or ctx.author  # better than having an error
+            requester = ctx.guild.get_member(track.requester) or self.bot.get_user(track.requester) or await self.bot.fetch_user(track.requester) or ctx.author  # better than having an error
             line = "`{}.` **[{}]({})** {} ".format(i + 1, track.title.replace('[', '').replace(']', '').replace('*', '')[:40], track.uri,
                                                    get_str(ctx, "music-queue-added-by"))
             msg += line
@@ -2881,7 +2884,7 @@ class Music(commands.Cog):
 
         if player.autoplaylist['is_personal']:
             id = int(player.autoplaylist['name'].lower())
-            user = ctx.guild.get_member(id) or self.bot.get_user(id)
+            user = ctx.guild.get_member(id) or self.bot.get_user(id) or await self.bot.fetch_user(id)
             if user:
                 user = user.name
             else:
@@ -2998,7 +3001,7 @@ class Music(commands.Cog):
             file_name_original = file_name
             file_name = str(file_name.lower())
 
-            perso = self.is_perso(ctx.guild, name=file_name)
+            perso = await self.is_perso(ctx.guild, name=file_name)
 
             if str(file_name) not in settings.autoplaylists:
                 if perso:
@@ -3048,7 +3051,7 @@ class Music(commands.Cog):
         if illegal_char(file_name):
             return await ctx.send(get_str(ctx, "music-plnew-special-char"))
 
-        is_perso = self.is_perso(ctx.guild, name=file_name)
+        is_perso = await self.is_perso(ctx.guild, name=file_name)
 
         if is_perso:
             if int(file_name) != ctx.author.id and ctx.author.id != owner_id:
@@ -3126,7 +3129,7 @@ class Music(commands.Cog):
         if illegal_char(file_name):
             return await ctx.send(get_str(ctx, "music-plnew-special-char"))
 
-        perso = self.is_perso(ctx.guild, name=file_name)
+        perso = await self.is_perso(ctx.guild, name=file_name)
 
         if perso:
             if int(file_name) != ctx.author.id and ctx.author.id != owner_id:
@@ -3207,7 +3210,7 @@ class Music(commands.Cog):
             if user:
                 file_name = str(user.id)
 
-        perso = self.is_perso(ctx.guild, name=file_name)
+        perso = await self.is_perso(ctx.guild, name=file_name)
 
         file_name = str(file_name.lower())
 
@@ -3263,7 +3266,7 @@ class Music(commands.Cog):
             if fileName in settings.autoplaylists:
                 return await ctx.send(get_str(ctx, "music-plnew-already-exists").format(f"**{response_message.content}**"))
 
-            if self.is_perso(ctx.guild, name=fileName):
+            if await self.is_perso(ctx.guild, name=fileName):
                 if int(fileName) != ctx.author.id and ctx.author.id != owner_id:
                     return await ctx.send(get_str(ctx, "music-plrepair-someone"))
 
@@ -3351,7 +3354,7 @@ class Music(commands.Cog):
             self._cd.get_bucket(ctx.message).reset()
             return await ctx.send(get_str(ctx, "music-plinfo-not-found"))
 
-        is_perso = self.is_perso(ctx.guild, name=name)
+        is_perso = await self.is_perso(ctx.guild, name=name)
 
         if is_perso:
             user_name = is_perso.name
@@ -3522,11 +3525,11 @@ class Music(commands.Cog):
                 whitelisted = get_str(ctx, "music-plsettings-nobody")
             else:
                 for m in autopl['whitelist']:
-                    user = ctx.guild.get_member(int(m)) or self.bot.get_user(int(m)) or m
+                    user = ctx.guild.get_member(int(m)) or self.bot.get_user(int(m)) or await self.bot.fetch_user(int(m)) or m
                     whitelisted.append(f"`{user}`")
                 whitelisted = "**,** ".join(whitelisted)
 
-            perso = self.is_perso(ctx.guild, name=name)
+            perso = await self.is_perso(ctx.guild, name=name)
 
             if perso:
                 username = perso.name
@@ -3550,7 +3553,7 @@ class Music(commands.Cog):
                 embed.description = desc
 
             embed.add_field(name=get_str(ctx, "music-plsettings-songs"), value=len(autopl['songs']))
-            embed.add_field(name=get_str(ctx, "music-plsettings-created-by"), value=self.bot.get_user(int(autopl['created_by'])) or autopl['created_by_name'])
+            embed.add_field(name=get_str(ctx, "music-plsettings-created-by"), value=self.bot.get_user(int(autopl['created_by'])) or await self.bot.fetch_user(int(autopl['created_by'])) or autopl['created_by_name'])
             embed.add_field(name=get_str(ctx, "music-plsettings-creation-date"), value=autopl['created_date'])
             embed.add_field(name="Shuffle", value=get_str(ctx, "music-plsettings-{}".format(['no', 'yes'][autopl['shuffle']])))
             embed.add_field(name=get_str(ctx, "music-plsettings-private"), value=get_str(ctx, "music-plsettings-{}".format(['no', 'yes'][autopl['private']])))
@@ -3591,7 +3594,7 @@ class Music(commands.Cog):
             if int(autopl['created_by']) != ctx.author.id and ctx.author.id != owner_id:
                 return await ctx.send(get_str(ctx, "music-autoplaylist-only-owner"))
 
-            perso = self.is_perso(ctx.guild, name=name_lower)
+            perso = await self.is_perso(ctx.guild, name=name_lower)
             if perso:
                 username = perso.name
                 title = get_str(ctx, "music-plsettings-autopl").format(f"**{username}**") + "\n"
@@ -3638,7 +3641,7 @@ class Music(commands.Cog):
                             user_id = ''.join([str(s) for s in user_id if s.isdigit()])
                             if not user_id.isdigit():
                                 continue
-                            user = ctx.guild.get_member(int(user_id)) or self.bot.get_user(int(user_id))
+                            user = ctx.guild.get_member(int(user_id)) or self.bot.get_user(int(user_id)) or await self.bot.fetch_user(int(user_id))
                             if user and str(user.id) in autopl['whitelist']:
                                 autopl['whitelist'].remove(str(user.id))
                     else:  # admit +
@@ -3647,7 +3650,7 @@ class Music(commands.Cog):
                             if not user_id.isdigit():
                                 continue
 
-                            user = ctx.guild.get_member(int(user_id)) or self.bot.get_user(int(user_id))
+                            user = ctx.guild.get_member(int(user_id)) or self.bot.get_user(int(user_id)) or await self.bot.fetch_user(int(user_id))
                             if user and str(user.id) not in autopl['whitelist']:
                                 autopl['whitelist'].append(str(user.id))
 
@@ -3658,7 +3661,7 @@ class Music(commands.Cog):
                         whitelisted = get_str(ctx, "music-plsettings-nobody")
                     else:
                         for m in autopl['whitelist']:
-                            user = ctx.guild.get_member(int(m)) or self.bot.get_user(int(m)) or m
+                            user = ctx.guild.get_member(int(m)) or self.bot.get_user(int(m)) or await self.bot.fetch_user(int(m)) or m
                             whitelisted.append(f"`{user}`")
                         whitelisted = ", ".join(whitelisted)
 
@@ -3891,12 +3894,12 @@ class Music(commands.Cog):
         for i, m in enumerate(newlist[page-10:page], start=max(1 + page - 10, 1)):
             id = int(m['created_by'])
             if m['is_personal']:
-                perso = self.is_perso(ctx.guild, name=m['name'])
+                perso = await self.is_perso(ctx.guild, name=m['name'])
                 if perso:
                     name = perso
                     autoplname = get_str(ctx, "music-plsettings-autopl").format(f'**{name}**')
                 else:
-                    user = ctx.guild.get_member(id) or self.bot.get_user(id)
+                    user = ctx.guild.get_member(id) or self.bot.get_user(id) or await self.bot.fetch_user(id) or id
                     if user:
                         name = user
                     else:
@@ -3904,7 +3907,7 @@ class Music(commands.Cog):
                     autoplname = m['name']
             else:
                 perso = False
-                user = ctx.guild.get_member(id) or self.bot.get_user(id)
+                user = ctx.guild.get_member(id) or self.bot.get_user(id) or await self.bot.fetch_user(id) or id
                 if user:
                     name = user
                 else:
@@ -3956,7 +3959,7 @@ class Music(commands.Cog):
             except KeyError:
                 return await ctx.send(get_str(ctx, "music-plinfo-not-found"))
 
-        perso = self.is_perso(ctx.guild, name=name)
+        perso = await self.is_perso(ctx.guild, name=name)
 
         if perso:
             username = perso.name

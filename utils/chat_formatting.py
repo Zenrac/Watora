@@ -21,6 +21,7 @@ PAUSE = '⏸'
 SHUFFLE = '🔀'
 VOL_UP = '🔊'
 VOL_DOWN = '🔉'
+TRASH_BIN = '🚮'
 
 COLOR = int("2AA198", 16)
 
@@ -96,7 +97,7 @@ def shlex_ignore_single_quote(value):
 
 
 class Paginator:
-    REACTIONS = (ARROW_LEFT, STOP, ARROW_RIGHT)
+    REACTIONS = (ARROW_LEFT, STOP, ARROW_RIGHT, TRASH_BIN)
 
     def __init__(self, **kwargs):
         self.ctx = kwargs.pop('ctx')
@@ -126,7 +127,7 @@ class Paginator:
 
     @property
     def reactions(self):
-        return (ARROW_LEFT, STOP, ARROW_RIGHT)
+        return (ARROW_LEFT, STOP, ARROW_RIGHT, TRASH_BIN)
 
     @property
     def pages_needed(self):
@@ -167,6 +168,9 @@ class Paginator:
                         await self.msg.clear_reactions()
                     except discord.HTTPException:
                         pass
+                    break
+                elif reaction.emoji == TRASH_BIN:
+                    await self.msg.delete()
                     break
 
                 await self.msg.remove_reaction(reaction.emoji, user)

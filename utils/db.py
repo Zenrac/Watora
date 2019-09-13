@@ -27,6 +27,7 @@ class GuildSettings(Settings):
         self.channel = kwargs.get("channel", None)
         self.bound = kwargs.get("bound", None)
         self.customcommands = kwargs.get("customcommands", {})
+        self.points = kwargs.get("points", {})
         self.welcomes = kwargs.get("welcomes", {})
         self.goodbyes = kwargs.get("goodbyes", {})
         self.autosongs = kwargs.get("autosongs", {})
@@ -47,6 +48,7 @@ class GlobSettings(Settings):
         self.marry = kwargs.get("marry", {})
         self.donation = kwargs.get("donation", {})
         self.claim = kwargs.get("claim", {})
+        self.animes = kwargs.get("animes", {})
 
 
 class SettingsDB:

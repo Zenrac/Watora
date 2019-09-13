@@ -26,6 +26,7 @@ THE SOFTWARE.
 import asyncio
 import aiohttp
 
+from random import randrange
 from urllib.parse import quote_plus
 
 
@@ -77,7 +78,7 @@ class YoutubeAPI:
                     found[m['id']] = m['snippet']['title']
         return found
 
-    async def get_youtube_thumbnail(self, id, timeout=60):
+    async def get_youtube_thumbnail(self, id):
         """Gets song thumbnail from an ID"""
         rep = await self.make_request(f'videos?part=snippet&id={id}')
         if not rep:
@@ -105,4 +106,8 @@ class YoutubeAPI:
                         player.already_played.add(result['id']['videoId'])
                         player.already_played.add(id)
                     return result['id']['videoId']
-        return results[0]['id']['videoId']
+        return results[randrange(len(results))]['id']['videoId']
+        # If all recommendation have been already played..
+        # Return a random result and hope it'll not create an
+        # infinite recommendation loop, (this random should
+        # prevent from this)

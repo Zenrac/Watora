@@ -249,11 +249,10 @@ class Useful(commands.Cog):
             else:
                 result = self.bot.get_command(command)
                 cname = str(result).replace(" ", "-").lower()
+                cname = str(cname.replace('pl-', 'pl'))
                 if result.help:
-                    if not isinstance(ctx.channel, discord.abc.PrivateChannel):
-                        await ctx.send("```%s```" % dedent(result.help.format(command_prefix=get_server_prefixes(ctx.bot, ctx.guild), help=get_str(ctx, f"cmd-{cname}-help"))))
-                    else:
-                        await ctx.send("```%s```" % dedent(result.help.format(command_prefix=globprefix, help=get_str(ctx, f"cmd-{cname}-help"))))
+                    help_msg = get_str(ctx, f"cmd-{cname}-help")
+                    await ctx.send("```%s```" % dedent(result.help.format(command_prefix=get_server_prefixes(ctx.bot, ctx.guild), help=help_msg)))
                 else:
                     await ctx.send(get_str(ctx, "cmd-help-help-not-found"))
 
@@ -264,7 +263,7 @@ class Useful(commands.Cog):
                 embed.color = 0x71368a
             else:
                 embed.color = ctx.me.color
-            embed.description = get_str(ctx, "cmd-help-description") + "\n" + get_str(ctx, "cmd-help-support").format('[World of Watora](https://discord.gg/ArJgTpM).\n**__**')
+            embed.description = get_str(ctx, "cmd-help-description") + "\n" + get_str(ctx, "cmd-help-support").format('[**World of Watora**](https://discord.gg/ArJgTpM).\n**__**')
             if ctx.guild:
                 settings = await SettingsDB.get_instance().get_guild_settings(ctx.guild.id)
                 is_admin = ctx.channel.permissions_for(ctx.author).manage_guild
@@ -279,7 +278,7 @@ class Useful(commands.Cog):
                         embed.add_field(name=f'{title} ({len(cmds[key])})', value=descrip)
                 except KeyError:
                     pass
-            embed.add_field(name="__", value=get_str(ctx, "cmd-help-more-info-cmd") + " **{}help [command]**".format(get_server_prefixes(ctx.bot, ctx.guild)) + "\n" + get_str(ctx, "cmd-help-more-info-cat") + " **{}help [category]**".format(get_server_prefixes(ctx.bot, ctx.guild)))
+            embed.add_field(name="__", value=get_str(ctx, "cmd-help-more-info-cmd") + " **`{}help [command]`**".format(get_server_prefixes(ctx.bot, ctx.guild)) + "\n" + get_str(ctx, "cmd-help-more-info-cat") + " **`{}help [category]`**".format(get_server_prefixes(ctx.bot, ctx.guild)))
             try:
                 await ctx.send(embed=embed)
             except discord.Forbidden:
@@ -935,7 +934,7 @@ class Useful(commands.Cog):
         e.add_field(name='Channel', value='{0} (ID: {0.id})'.format(msg.channel), inline=False)
         e.set_footer(text='Author ID: ' + str(msg.author.id))
 
-        confirm_message = await ctx.send("Your suggestion **about Watora** is going to be sent to Watora's developper. Are you sure about that ?\nWrite `yes` or `no`.\n```diff\n- Warning: Any kind of abuse will make your account blacklisted from the bot (it means that you'll not be able to use Watora anymore).```")
+        confirm_message = await ctx.send("Your suggestion **about Watora** is going to be sent to Watora's developper. Are you sure about that ?\nWrite `yes` or `no`.\n```diff\n- Warning: Any kind of abuse will make your account blacklisted from the bot (it means that you'll not be able to use Watora anymore).\n+ Please only write it in ENGLISH (or french...)```")
         def check(m):
             if m.author.bot or m.author != ctx.author:
                 return False
@@ -992,7 +991,7 @@ class Useful(commands.Cog):
         e.add_field(name='Channel', value='{0} (ID: {0.id})'.format(msg.channel), inline=False)
         e.set_footer(text='Author ID: ' + str(msg.author.id))
 
-        confirm_message = await ctx.send("Your bug report **about Watora** is going to be sent to Watora's developper. Are you sure about that ?\nWrite `yes` or `no`.\n```diff\n- Warning: Any kind of abuse will make your account blacklisted from the bot (it means that you'll not be able to use Watora anymore).```")
+        confirm_message = await ctx.send("Your bug report **about Watora** is going to be sent to Watora's developper. Are you sure about that ?\nWrite `yes` or `no`.\n```diff\n- Warning: Any kind of abuse will make your account blacklisted from the bot (it means that you'll not be able to use Watora anymore).\n+ Please only write it in ENGLISH (or french...)```")
 
         def check(m):
             if m.author.bot or m.author != ctx.author:
@@ -1048,7 +1047,7 @@ class Useful(commands.Cog):
         e.add_field(name='Channel', value='{0} (ID: {0.id})'.format(msg.channel), inline=False)
         e.set_footer(text='Author ID: ' + str(msg.author.id))
 
-        confirm_message = await ctx.send("Your feedback **about Watora** is going to be sent to Watora's developper. Are you sure about that ?\nWrite `yes` or `no`.\n```diff\n- Warning: Any kind of abuse will make your account blacklisted from the bot (it means that you'll not be able to use Watora anymore).```")
+        confirm_message = await ctx.send("Your feedback **about Watora** is going to be sent to Watora's developper. Are you sure about that ?\nWrite `yes` or `no`.\n```diff\n- Warning: Any kind of abuse will make your account blacklisted from the bot (it means that you'll not be able to use Watora anymore).\n+ Please only write it in ENGLISH (or french...)```")
 
         def check(m):
             if m.author.bot or m.author != ctx.author:
@@ -1608,23 +1607,18 @@ class Useful(commands.Cog):
 
         vote = f"{settings.vote}%"
 
-        if settings.timer:
-            value = settings.timer
-            timer = f"{value} {get_str(ctx, 'cmd-nextep-seconds')}"
-            if value == 123456789:
-                timer = get_str(ctx, 'music-autoleave-never')
+        if not settings.timer:
+            timer = get_str(ctx, 'music-autoleave-never')
         else:
-            timer = f"3 {get_str(ctx, 'cmd-nextep-minutes')}"
+            timer = f"{settings.timer} {get_str(ctx, 'cmd-nextep-seconds')}"
 
         if settings.channel:
-            value = settings.channel
-            if value == 123456789:
-                np = "❌"
-            else:
-                channel = [c for c in guild.channels if c.id == value][0]
-                np = f"#{channel}"
-        else:
+            channel = [c for c in guild.channels if c.id == settings.channel][0]
+            np = f"#{channel}"
+        elif settings.channel is None:
             np = "☑ Auto"
+        else:
+            np = "❌"
 
         embed = discord.Embed()
 

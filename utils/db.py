@@ -38,6 +38,7 @@ class GuildSettings(Settings):
         self.disabledcommands = kwargs.get("disabledcommands", [])
         self.blacklisted = kwargs.get("blacklisted", [])
         self.clans = kwargs.get("clans", [])
+        self.respect = kwargs.get("respect", 0)
 
 
 class GlobSettings(Settings):
@@ -49,6 +50,8 @@ class GlobSettings(Settings):
         self.donation = kwargs.get("donation", {})
         self.claim = kwargs.get("claim", {})
         self.animes = kwargs.get("animes", {})
+        self.cachedanimes = kwargs.get("cachedanimes", {})
+        self.server_count = kwargs.get("server_count", {})
 
 
 class SettingsDB:

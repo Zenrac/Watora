@@ -353,7 +353,7 @@ class Lazyer:
             del tasks[self.channel.guild.id]
         task = asyncio.ensure_future(self.task_to_channel())
         tasks[self.channel.guild.id] = task
-        await task
+        # await task
 
     async def task_to_channel(self):
         self.player.npmsg = await self.channel.send(embed=self.embed)

@@ -57,9 +57,10 @@ class Mal(commands.Cog):
 
         em = discord.Embed(colour=0x0066CC)
         synopsis = selection.synopsis
-        synopsis = self.remove_html(synopsis)
-        if len(synopsis) > 300:
-            em.description = " ".join(synopsis.split(" ")[0:40]) + "[ Read more»](%s)" % selection.url
+        if synopsis:
+            synopsis = self.remove_html(synopsis)
+            if len(synopsis) > 300:
+                em.description = " ".join(synopsis.split(" ")[0:40]) + "[ Read more»](%s)" % selection.url
         em.set_author(name=selection.title, url=selection.url, icon_url='https://i.imgur.com/vEy5Zaq.png')
         if selection.title_english:
             if selection.title_english.lower() not in selection.title.lower():
@@ -84,7 +85,7 @@ class Mal(commands.Cog):
             b = getattr(aired, 'to').split('T')[0]
         else:
             b = '?'
-        aired = get_str(ctx, "cmd-anime-aired-from") + " " + a + " " + get_str(ctx, "cmd-anime-to") + " " + b
+        aired = get_str(ctx, "cmd-anime-aired-from", can_owo=False) + " " + a + " " + get_str(ctx, "cmd-anime-to", can_owo=False) + " " + b
         em.set_footer(text=aired)
         try:
             await fetch.delete()
@@ -175,9 +176,10 @@ class Mal(commands.Cog):
 
         em = discord.Embed(colour=0x0066CC)
         synopsis = selection.synopsis
-        synopsis = self.remove_html(synopsis)
-        if len(synopsis) > 300:
-            em.description = " ".join(synopsis.split(" ")[0:40]) + "[ Read more»](%s)" % selection.url
+        if synopsis:
+            synopsis = self.remove_html(synopsis)
+            if len(synopsis) > 300:
+                em.description = " ".join(synopsis.split(" ")[0:40]) + "[ Read more»](%s)" % selection.url
         em.set_author(name=selection.title, url=selection.url, icon_url='https://i.imgur.com/vEy5Zaq.png')
         if selection.title_english:
             if selection.title_english.lower() not in selection.title.lower():
@@ -200,13 +202,14 @@ class Mal(commands.Cog):
         status = selection.status
         em.add_field(name=get_str(ctx, "cmd-anime-status"), value=status)
         published = selection.published
-        a = getattr(published, 'from').split('T')[0]
-        if published.to:
-            b = getattr(published, 'to').split('T')[0]
-        else:
-            b = '?'
-        published = get_str(ctx, "cmd-manga-published-from") + " " + a + " " + get_str(ctx, "cmd-anime-to") + " " + b
-        em.set_footer(text=published)
+        if getattr(published, 'from'):
+            a = getattr(published, 'from').split('T')[0]
+            if published.to:
+                b = getattr(published, 'to').split('T')[0]
+            else:
+                b = '?'
+            published = get_str(ctx, "cmd-manga-published-from", can_owo=False) + " " + a + " " + get_str(ctx, "cmd-anime-to", can_owo=False) + " " + b
+            em.set_footer(text=published)
         try:
             await fetch.delete()
         except discord.HTTPException:
@@ -307,7 +310,8 @@ class Mal(commands.Cog):
         embed = discord.Embed(title=get_str(ctx, "cmd-nextep"), description=remaining, color=0x0066CC)
         embed.set_author(name='{}'.format(anime.title), url=anime.url, icon_url='https://i.imgur.com/vEy5Zaq.png')
         embed.set_thumbnail(url=anime.image_url)
-        embed.set_footer(text=get_str(ctx, "cmd-anime-aired") + " : " + anime.broadcast)
+
+        embed.set_footer(text=get_str(ctx, "cmd-anime-aired", can_owo=False) + " : " + (anime.broadcast or '?'))
         try:
             await search.delete()
         except discord.HTTPException:
@@ -340,7 +344,7 @@ class Mal(commands.Cog):
         try:
             mal_id = await self.bot.jikan.search(search_type=type, query=query)
             mal_id = mal_id['results'][0]['mal_id']
-        except (JikanException, KeyError):
+        except (JikanException, KeyError, IndexError):
             if 'manga' in type:
                 google_key = self.bot.tokens['MANGA']  # This is a custom search including only myanimelist/manga website
             elif 'character' in type:

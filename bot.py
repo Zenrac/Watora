@@ -6,6 +6,7 @@ import aiohttp
 import unidecode
 import asyncio
 import traceback
+import logging
 
 from datetime import date
 from textwrap import dedent
@@ -14,16 +15,8 @@ from discord.ext import commands
 
 from utils.chat_formatting import shlex_ignore_single_quote
 from utils.dataIO import dataIO
-from utils.spotify import Spotify
 from utils.watora import token, globprefix, owner_id, log, get_str, is_patron, is_lover, _list_cogs, get_server_prefixes, is_admin, get_image_from_url, format_mentions, NoVoiceChannel
 from utils.db import SettingsDB
-
-try:
-    import uvloop
-except ImportError:
-    pass
-else:
-    asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
 
 
 def _prefix_callable(bot, msg):
@@ -35,13 +28,23 @@ def _prefix_callable(bot, msg):
 
     return commands.when_mentioned_or(*prefixes)(bot, msg)
 
+def start_bot(shard_count=None, shard_ids=None, send=None):
+    Watora(shard_count=shard_count, shard_ids=shard_ids, send=send).run()
 
 class Watora(commands.AutoShardedBot):
 
-    def __init__(self):
-        super().__init__(command_prefix=_prefix_callable, case_insensitive=True,
-                         description='')
+    def __init__(self, shard_count=None, shard_ids=None, send=None):
+        super().__init__(
+            command_prefix=_prefix_callable,
+            case_insensitive=True,
+            description='',
+            shard_ids=shard_ids,
+            shard_count=shard_count,
+            status=discord.Status.idle,
+            fetch_offline_members=False
+        )
 
+        self.pipe = send
         self.session = aiohttp.ClientSession(loop=self.loop)
         self.debug_mode = ""
         self.remove_command('help')
@@ -59,37 +62,23 @@ class Watora(commands.AutoShardedBot):
 
         # Spotify Integration
         self.spotify = None
-        if self.tokens['SPOTIFY_SECRET'] and self.tokens['SPOTIFY_ID']:
-            try:
-                self.spotify = Spotify(self.tokens['SPOTIFY_ID'], self.tokens['SPOTIFY_SECRET'], aiosession=self.session, loop=self.loop)
-            except aiohttp.ClientError:
-                log.warning('Your Spotify credentials could not be validated. Please make sure your client ID and client secret '
-                            'in the config file are correct. Disabling Spotify integration for this session.')
-                self.spotify = None
-            else:
-                if not self.spotify.token:
-                    log.warning('Your Spotify credentials could not be validated. Please make sure your client ID and client secret '
-                                'in the config file are correct. Disabling Spotify integration for this session.')
-                    self.spotify = None
-                else:
-                    log.info('Authenticated with Spotify successfully using client ID and secret.')
 
-        # Load cogs
-        for extension in _list_cogs():
-            try:
-                self.load_extension("cogs." + extension)
-            except Exception as e:
-                exc = '{}: {}'.format(type(e).__name__, e)
-                log.info('Failed to load extension {}\n{}'.format(extension, exc))
+    @property
+    def server_count(self):
+        return self.guild_count
+
+    @property
+    def guild_count(self):
+        return sum(self.config.server_count.values())
 
     async def server_is_claimed(self, guild_id):
         """Checks if a server is claimed or not"""
         settings = await SettingsDB.get_instance().get_glob_settings()
         for k, m in settings.claim.items():
             if str(guild_id) in m.keys():
-                if is_patron(self, int(k)):
+                if await is_patron(self, int(k)):
                     max_claim = 2
-                    if is_lover(self, int(k)):
+                    if await is_lover(self, int(k)):
                         max_claim = 5
                     if int(k) == owner_id:
                         max_claim = 9e40
@@ -290,13 +279,13 @@ class Watora(commands.AutoShardedBot):
     async def send_cmd_help(self, ctx):
 
         cname = str(ctx.command).replace(" ", "-").lower()
+        cname = str(cname).replace('pl-', 'pl')
         if ctx.command.help:
-            if isinstance(ctx.channel, discord.abc.PrivateChannel):
-                return await ctx.send("```%s```" % dedent(ctx.command.help.format(command_prefix=globprefix, help=get_str(ctx, f"cmd-{cname}-help"))))
-            else:
-                return await ctx.send("```%s```" % dedent(ctx.command.help.format(command_prefix=get_server_prefixes(ctx.bot, ctx.guild), help=get_str(ctx, f"cmd-{cname}-help"))))
+            help_msg = get_str(ctx, f"cmd-{cname}-help")
+            return await ctx.send("```%s```" % dedent(ctx.command.help.format(command_prefix=get_server_prefixes(ctx.bot, ctx.guild), help=help_msg)))
         else:
-            log.info(f"MissingHelpError : {cname}")
+            return await ctx.send(get_str(ctx, "cmd-help-help-not-found"))
+            log.warning(f"MissingHelpError : {cname}")
 
     async def on_command_error(self, ctx, error):
 
@@ -310,10 +299,10 @@ class Watora(commands.AutoShardedBot):
 
         if isinstance(error, commands.MissingRequiredArgument) or isinstance(error, commands.BadArgument):
             try:
-                log.info(f"{error}.. Sending help...")
+                log.debug(f"{error}.. Sending help...")
                 return await self.send_cmd_help(ctx)
             except discord.HTTPException:
-                log.info("Can't send help - Missing Permissions")
+                log.debug("Can't send help - Missing Permissions")
                 return
 
         elif isinstance(error, commands.errors.CommandOnCooldown):
@@ -321,7 +310,7 @@ class Watora(commands.AutoShardedBot):
                 scds = str(error).replace('You are on cooldown. Try again in', '')
                 return await ctx.channel.send("```c\n{}{}```".format(get_str(ctx, "bot-cooldown"), scds), delete_after=10)
             except discord.HTTPException:
-                log.info("Can't send cooldown message - Missing Permissions")
+                log.debug("Can't send cooldown message - Missing Permissions")
                 return
 
         elif isinstance(error, commands.errors.NoPrivateMessage):
@@ -334,7 +323,7 @@ class Watora(commands.AutoShardedBot):
             try:
                 return await ctx.channel.send("```c\n{} ({}permsinfo)```".format(get_str(ctx, 'bot-not-enough-permissions'), get_server_prefixes(ctx.bot, ctx.guild)), delete_after=10)
             except discord.HTTPException:
-                log.info("Can't send permissions failure message - Missing Permissions")
+                log.debug("Can't send permissions failure message - Missing Permissions")
                 return
 
         elif isinstance(error, commands.CommandNotFound):
@@ -346,16 +335,16 @@ class Watora(commands.AutoShardedBot):
         else:
             if isinstance(error, commands.CommandInvokeError):
                 if isinstance(error.original, discord.errors.Forbidden):
-                    log.info("discord.errors.Forbidden: FORBIDDEN (status code: 403): Missing Permissions")
+                    log.debug("discord.errors.Forbidden: FORBIDDEN (status code: 403): Missing Permissions")
                     return
                 if isinstance(error.original, discord.errors.NotFound):
                     # log.info("discord.errors.NotFound: NotFound (status code: 404): Message not found")
                     return
                 if isinstance(error.original, aiohttp.ClientError):
-                    log.info("Command raised an exception: ClientError")
+                    log.debug("Command raised an exception: ClientError")
                     return
                 if isinstance(error.original, asyncio.futures.TimeoutError):
-                    log.info("Command raised an exception: TimeoutError")
+                    log.debug("Command raised an exception: TimeoutError")
                     return
 
             print('Ignoring exception in command {}:'.format(ctx.command), file=sys.stderr)
@@ -364,7 +353,7 @@ class Watora(commands.AutoShardedBot):
 
     async def on_message(self, message):
 
-        if not self.init_ok and message.author.id != owner_id:
+        if not self.init_ok:
             return
 
         if message.author.bot:
@@ -399,11 +388,12 @@ class Watora(commands.AutoShardedBot):
 
         if self.get_command(message.content.strip()[len(cmd_prefix):].strip().split(' ')[0]):
             if message.author.id != owner_id and message.author.id in self.config.blacklisted:
-                log.info(f"[User Blacklisted] {message.author.id}/{message_author} ({message_content.replace(cmd_prefix, globprefix, 1)[:50]})")
+                log.debug(f"[User Blacklisted] {message.author.id}/{message_author} ({message_content.replace(cmd_prefix, globprefix, 1)[:50]})")
 
             else:
-                log.info(f"[Command] {message.author.id}/{message_author} ({message_content.replace(cmd_prefix, globprefix, 1)[:50]})")
+                log.info(f"[Command] {message.author.id}/{message_author} ({message_content.replace(cmd_prefix, globprefix, 1)[:100]})")
                 await self.process_commands(message)
+                log.debug(f"[Processed Command] {message.author.id}/{message_author} ({message_content.replace(cmd_prefix, globprefix, 1)[:100]})")
 
         elif not isinstance(message.channel, discord.abc.PrivateChannel):  # check if custom command exists
             if settings.customcommands:
@@ -418,7 +408,7 @@ class Watora(commands.AutoShardedBot):
             if cmd in settings.customcommands:
                 cmd = await self.format_cc(settings.customcommands[cmd], message)
                 if message.author.id != owner_id and message.author.id in self.config.blacklisted:
-                    log.info(f"[User Blacklisted CustomCommand] {message.author.id}/{message_author} ({message_content})")
+                    log.debug(f"[User Blacklisted CustomCommand] {message.author.id}/{message_author} ({message_content})")
                     return
                 if ">>>" in cmd:
                     while ">>> " in cmd:
@@ -441,7 +431,7 @@ class Watora(commands.AutoShardedBot):
                             message.content = f"{cmd_prefix}{m}"
                             if len(m.split(' ')) < 2 and rest:
                                 message.content += f" {rest}"
-                            log.info(f"[CustomCommandCallMultiple] {message.author.id}/{message_author} ({message.content[:50]})")
+                            log.debug(f"[CustomCommandCallMultiple] {message.author.id}/{message_author} ({message.content[:50]})")
                             await self.process_commands(message)
                         return
 
@@ -452,7 +442,7 @@ class Watora(commands.AutoShardedBot):
                         message.content = f"{cmd_prefix}{message.content}"
                         if len(message.content.split(' ')) < 2 and rest:
                             message.content += f" {rest}"
-                        log.info(f"[CustomCommandCall] {message.author.id}/{message_author} ({message.content[:50]})")
+                        log.debug(f"[CustomCommandCall] {message.author.id}/{message_author} ({message.content[:50]})")
                         return await self.process_commands(message)
 
                 pic = get_image_from_url(cmd)
@@ -474,14 +464,14 @@ class Watora(commands.AutoShardedBot):
                     except discord.Forbidden:
                         pass
 
-                log.info("[CustomCommand] {}/{} ({})".format(message.author.id, message_author, message_content))
+                log.debug("[CustomCommand] {}/{} ({})".format(message.author.id, message_author, message_content))
 
     async def on_message_check(self, message, settings, cmd_prefix):
         if str(message.channel.id) in settings.disabledchannels:
             if not settings.disabledchannels[str(message.channel.id)]:
                 return False
             cmd = self.get_command(message.content[len(cmd_prefix):].split(' ')[0])
-            if cmd.name.lower() in settings.disabledchannels[str(message.channel.id)]:
+            if cmd and cmd.name.lower() in settings.disabledchannels[str(message.channel.id)]:
                 return False
 
         if settings.blacklisted:
@@ -565,28 +555,47 @@ class Watora(commands.AutoShardedBot):
         async for server in autosongs_servers:
             self.autosongs_map[server["_id"]] = server["autosongs"]
 
+        # Multiprocessing guild count
         self.owner_id = owner_id
         self.config = await SettingsDB.get_instance().get_glob_settings()
+        if 0 in self.shards and self.shard_count != len(self.config.server_count):
+            self.config.server_count = {}
+            await SettingsDB.get_instance().set_glob_settings(self.config)
+
+        # Load cogs
+        for extension in _list_cogs():
+            try:
+                self.load_extension("cogs." + extension)
+            except Exception as e:
+                exc = '{}: {}'.format(type(e).__name__, e)
+                log.warning('Failed to load extension {}\n{}'.format(extension, exc))
+
         total_cogs = len(_list_cogs())
-        users = len(set(self.get_all_members()))
         servers = len(self.guilds)
         owner = self.get_user(owner_id) or str(owner_id)
-        channels = len([c for c in self.get_all_channels()])
+
         log.info("-----------------")
         log.info("{} ({})".format(str(self.user), str(self.user.id)))
         log.info("{} server{}".format(servers, "s" if servers > 1 else ""))
         log.info("{} shard{}".format(self.shard_count, "s" if self.shard_count > 1 else ""))
-        log.info("{} channels".format(channels))
-        log.info("{} users".format(users))
         log.info("Prefix: {}".format(globprefix))
         log.info("Owner: {}".format(owner))
         log.info("{}/{} active cogs with {} commands".format(
             len(self.cogs), total_cogs, len(self.commands)))
         log.info("-----------------")
+
+        if self.pipe and not self.pipe.closed:
+            self.pipe.send(1)
+            self.pipe.close()
+
+        for name in ['launcher', 'lavalink', 'listenmoe']:
+            logger = logging.getLogger(name)
+            logger.disabled = not logger.disabled
+
         self.init_ok = True
 
     async def on_shard_ready(self, shard_id):
         log.info(f"Shard {shard_id} is ready")
 
     def run(self):
-        super().run(token, reconnect=True)
+        super().run(token, reconnect=True, bot=True)

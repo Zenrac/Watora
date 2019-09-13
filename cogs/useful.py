@@ -62,10 +62,10 @@ class Useful(commands.Cog):
                     await SettingsDB.get_instance().set_glob_settings(settings)
                     return
 
-            if not is_lover(self.bot, ctx.author):
+            if not await is_lover(self.bot, ctx.author):
                 return await ctx.send(get_str(ctx, "cmd-weeb-dont-touch-me"))
             else:
-                return await ctx.send(get_str(ctx, "cmd-marry-too-young") + " {}".format(self.bot.get_emoji(458349268944814080)))
+                return await ctx.send(get_str(ctx, "cmd-marry-too-young") + " {}".format("<:WatoraHyperBlush:458349268944814080>"))
 
         if not user:
             if str(ctx.author.id) in settings.marry:
@@ -158,7 +158,7 @@ class Useful(commands.Cog):
 
             await SettingsDB.get_instance().set_glob_settings(settings)
         elif response_message.content.lower().startswith('n'):
-            await ctx.send(get_str(ctx, "cmd-marry-declined").format(ctx.author.mention) + " {}".format(self.bot.get_emoji(458349267715883060)), delete_after=30)
+            await ctx.send(get_str(ctx, "cmd-marry-declined").format(ctx.author.mention) + " <:WatoraDisappointed:458349267715883060>", delete_after=30)
         else:
             try:
                 await confirm_message.delete()
@@ -175,7 +175,7 @@ class Useful(commands.Cog):
         """
         settings = await SettingsDB.get_instance().get_glob_settings()
         if str(ctx.author.id) not in settings.marry:
-            return await ctx.send(get_str(ctx, "cmd-divorce-a-single") + " {}".format(self.bot.get_emoji(458349267715883060)))
+            return await ctx.send(get_str(ctx, "cmd-divorce-a-single") + " <:WatoraDisappointed:458349267715883060>")
         married = settings.marry[str(ctx.author.id)]
         married_since = married['date']
         married_with = self.bot.get_user(int(married["id"])) or married['name']
@@ -293,21 +293,21 @@ class Useful(commands.Cog):
         {help}
         """
         settings = await SettingsDB.get_instance().get_glob_settings()
-        users = len(set(self.bot.get_all_members()))  # set removes duplicate
-        servers = len(self.bot.guilds)
-        channels = len([c for c in self.bot.get_all_channels()])
+        # users = len(set(self.bot.get_all_members()))  # set removes duplicate # BLOCKING CODE FFS
+        servers = self.bot.guild_count
+        # channels = len([c for c in self.bot.get_all_channels()]) # BLOCKING CODE FFS
         embed = discord.Embed()
         owner = (ctx.guild.get_member(owner_id) if ctx.guild else self.bot.get_user(owner_id)) or str(owner_id)
-        embed.set_author(name=self.bot.user.name, icon_url=self.bot.user.avatar_url)
+        embed.set_author(name=f"{self.bot.user.name} v{ver}", icon_url=self.bot.user.avatar_url)
         if isinstance(ctx.channel, discord.abc.GuildChannel):
             embed.color = ctx.guild.me.color
-        embed.add_field(name="Version", value=ver, inline=False)
-        embed.add_field(name="Library", value="Discord.py")
+        # embed.add_field(name="Version", value=ver, inline=False)
+        embed.add_field(name="Library", value="Discord.py v{}".format(str(discord.__version__)), inline=False)
         embed.add_field(name="Uptime", value=str(get_uptime()))
         embed.add_field(name="Guild{}".format("s" if servers > 1 else ""), value=servers)
-        embed.add_field(name="Channels", value=channels)
+        # embed.add_field(name="Channels", value=channels)
         embed.add_field(name="Shard{}".format("s" if self.bot.shard_count > 1 else ""), value=self.bot.shard_count)
-        embed.add_field(name="Users", value=users)
+        # embed.add_field(name="Users", value=users)
         embed.add_field(name="Owner", value=owner)
         embed.add_field(name="Commands", value=len(self.bot.commands))
         embed.add_field(name="Autoplaylists", value=len(settings.autoplaylists))
@@ -348,7 +348,7 @@ class Useful(commands.Cog):
 
         Wut ? Did you just find an easter eggs ?
         """
-        await ctx.send(self.bot.get_emoji(id=458349268621721601))
+        await ctx.send("<:WatoraLost:458349268621721601>")
 
     @commands.command()
     @commands.cooldown(rate=1, per=1.0, type=commands.BucketType.user)
@@ -384,9 +384,14 @@ class Useful(commands.Cog):
                     break
                 top5.append(id)
                 if isinstance(ctx.channel, discord.abc.GuildChannel):
-                    member = ctx.guild.get_member(int(id)) or self.bot.get_guild(268492317164437506).get_member(int(id)) or self.bot.get_user(int(id)) or id
+                    member = self.bot.get_user(int(id))
                 else:
-                    member = self.bot.get_guild(268492317164437506).get_member(int(id)) or self.bot.get_user(int(id)) or id
+                    member = self.bot.get_user(int(id))
+                if not member:
+                    guild = await self.bot.fetch_guild(268492317164437506)
+                    member = await guild.fetch_member(int(id))
+                if not member:
+                    member = id
                 msg += f"`{i}` **{member}** : **{counter[id]}** vote{'s' if counter[id] > 1 else ''}\n"
             month = datetime.now().strftime("%B")
             if str(user.id) not in top5:
@@ -408,22 +413,23 @@ class Useful(commands.Cog):
         except discord.Forbidden:
             return await ctx.send(get_str(ctx, "need-embed-permission"))
 
-    @checks.has_permissions(manage_guild=True)
     @commands.cooldown(rate=1, per=3.0, type=commands.BucketType.user)
-    @commands.command(aliases=["say", "watora", "talk", "write"])
+    @commands.command(aliases=["sayd", "say", "watora", "talk", "write", "med"])
     async def me(self, ctx, *, content=None):
         """
             {command_prefix}say [content]
 
         {help}
         """
-        ctx.command.reset_cooldown(ctx)
-        try:
-            await ctx.message.delete()
-        except discord.HTTPException:
-            pass
-        if not content:
+        if not content or 'd' in ctx.invoked_with.lower():
+            ctx.command.reset_cooldown(ctx)
+            try:
+                await ctx.message.delete()
+            except discord.HTTPException:
+                pass
             return  # just delete the message and go away
+
+        ctx.command.reset_cooldown(ctx)
         content = await self.bot.format_cc(content, ctx.message)
         content = format_mentions(content)
         pic = get_image_from_url(content)
@@ -491,7 +497,7 @@ class Useful(commands.Cog):
         if not user:
             user = ctx.author
 
-        shared = sum([1 for m in self.bot.get_all_members() if m.id == user.id])
+        # shared = sum([1 for m in self.bot.get_all_members() if m.id == user.id])
 
         if user.voice:
             other_people = len(user.voice.channel .members) - 1
@@ -507,8 +513,10 @@ class Useful(commands.Cog):
         since_joined = (ctx.message.created_at - joined_at).days
         user_joined = joined_at.strftime("%d %b %Y %H:%M")
         user_created = user.created_at.strftime("%d %b %Y %H:%M")
-        member_number = sorted(ctx.guild.members,
-                               key=lambda m: m.joined_at).index(user) + 1
+        try:
+            member_number = sorted(ctx.guild.members, key=lambda m: m.joined_at).index(user) + 1
+        except TypeError:
+            member_number = 0
 
         created_on = "{}\n(".format(user_created) + "{}".format(get_str(ctx, "cmd-userinfo-days-ago") if since_created > 1 else get_str(ctx, "cmd-userinfo-day-ago")).format(since_created) + ")"
         joined_on = "{}\n(".format(user_joined) + "{}".format(get_str(ctx, "cmd-userinfo-days-ago") if since_joined > 1 else get_str(ctx, "cmd-userinfo-day-ago")).format(since_joined) + ")"
@@ -518,13 +526,11 @@ class Useful(commands.Cog):
         if user.activity:
             if isinstance(user.activity, discord.Spotify):
                 game = get_str(ctx, "cmd-userinfo-listening-music").format(user.activity.title, user.activity.artist)
-            elif user.activity.type == 0:
+            elif user.activity.type == discord.ActivityType.playing:
                 game = get_str(ctx, "cmd-userinfo-playing") + " {}".format(user.activity.name)
-            elif user.activity.type == 3:  # watching
+            elif user.activity.type == discord.ActivityType.watching:  # watching
                 game = get_str(ctx, "cmd-userinfo-watching") + " {}".format(user.activity.name)
-            elif isinstance(user.activity, discord.activity.Activity):
-                pass
-            else:
+            elif user.activity.type == discord.ActivityType.streaming:
                 game = get_str(ctx, "cmd-userinfo-streaming") + " [{}]({})".format(user.activity, user.activity.url)
 
         if roles:
@@ -543,7 +549,7 @@ class Useful(commands.Cog):
             data.colour = user.colour
         data.add_field(name=get_str(ctx, "cmd-userinfo-joined-discord"), value=created_on)
         data.add_field(name=get_str(ctx, "cmd-userinfo-joined-guild"), value=joined_on)
-        data.add_field(name="{}".format(get_str(ctx, "cmd-userinfo-servers-shared") if shared > 2 else get_str(ctx, "cmd-userinfo-server-shared")), value=shared)
+        # data.add_field(name="{}".format(get_str(ctx, "cmd-userinfo-servers-shared") if shared > 2 else get_str(ctx, "cmd-userinfo-server-shared")), value=shared)
         data.add_field(name=get_str(ctx, "cmd-userinfo-voice"), value=voice)
         settings = await SettingsDB.get_instance().get_glob_settings()
         if str(user.id) in settings.marry:
@@ -551,7 +557,7 @@ class Useful(commands.Cog):
             married_since = settings.marry[str(user.id)]['date']
             data.add_field(name=get_str(ctx, "cmd-userinfo-married-with"), value=f"💕 {married_with} ({married_since})", inline=False)
         data.add_field(name="{}".format(get_str(ctx, "cmd-userinfo-roles") if nbroles > 1 else get_str(ctx, "cmd-userinfo-role")) + " [%s]" % nbroles, value=roles, inline=False)
-        data.set_footer(text=get_str(ctx, "cmd-userinfo-member") + " #{} | ".format(member_number) + get_str(ctx, "cmd-userinfo-user-id") + ":{}".format(user.id))
+        data.set_footer(text=get_str(ctx, "cmd-userinfo-member", can_owo=False) + " #{} | ".format(member_number) + get_str(ctx, "cmd-userinfo-user-id", can_owo=False) + ":{}".format(user.id))
 
         name = str(user)
         name = " ~ ".join((name, user.nick)) if user.nick else name
@@ -578,10 +584,12 @@ class Useful(commands.Cog):
         """
         if guild:  # owner can see other's guild informations
             if ctx.author.id == owner_id:
-                guild_list = [g for g in self.bot.guilds if g.name.lower() == guild.lower() or guild.isdigit() and int(g.id) == int(guild)]
-                if not guild_list:
+                try:
+                    guild = await self.bot.fetch_guild(int(guild))
+                except ValueError:
                     return await ctx.send("Guild not found...")
-                guild = guild_list[0]
+                if not guild:
+                    return await ctx.send("Guild not found...")
             else:
                 guild = ctx.guild
         else:
@@ -598,7 +606,7 @@ class Useful(commands.Cog):
         voice_channels = len([x for x in guild.channels
                              if type(x) == discord.VoiceChannel])
         passed = (ctx.message.created_at - guild.created_at).days
-        created_at = get_str(ctx, "cmd-serverinfo-since").format(guild.created_at.strftime("%d %b %Y %H:%M"), passed)
+        created_at = get_str(ctx, "cmd-serverinfo-since", can_owo=False).format(guild.created_at.strftime("%d %b %Y %H:%M"), passed)
 
         colour = ''.join([random.choice('0123456789ABCDEF') for x in range(6)])
         colour = int(colour, 16)
@@ -617,7 +625,7 @@ class Useful(commands.Cog):
         if claimed:
             user_id = int(claimed[0])
             claimed = list(claimed[1].items())[0]
-            user = (guild.get_member(user_id) if guild.get_member(user_id) else claimed[0])
+            user = (guild.get_member(user_id) if guild.get_member(user_id) else await guild.fetch_member(user_id) or user_id)
             data.add_field(name="Patreon Server", value="Claimed by {}. Since {}".format(user, claimed[1]))
 
         if guild.icon_url:
@@ -751,7 +759,7 @@ class Useful(commands.Cog):
 
         {help}
         """
-        e = discord.Embed().set_footer(text=get_str(ctx, "cmd-don-thx-in-advance"))
+        e = discord.Embed().set_footer(text=get_str(ctx, "cmd-don-thx-in-advance", can_owo=False))
 
         try:
             e.colour = ctx.author.colour
@@ -764,20 +772,24 @@ class Useful(commands.Cog):
         if 'bar' in settings.donation:
             pbar = settings.donation['bar']
 
-        if topdona:
-            topfinal = []
-            for i, top in enumerate(topdona.split(' / '), start=1):
-                if len(top.split(' ')) != 2:
-                    return await ctx.send("Error :\n" + topdona)
-                user = top.split(' ')[0]
-                money = '**' + top.split(' ')[1] + '€**'
-                user = self.bot.get_user(int(user))
-                topfinal.append(f'`{i}.` {user} - {money}')
+        # if topdona:
+        #     topfinal = []
+        #     for i, top in enumerate(topdona.split(' / '), start=1):
+        #         if len(top.split(' ')) != 2:
+        #             return await ctx.send("Error :\n" + topdona)
+        #         user = top.split(' ')[0]
+        #         money = '**' + top.split(' ')[1] + '€**'
+        #         user = self.bot.get_user(int(user))
+        #         topfinal.append(f'`{i}.` {user} - {money}')
 
-            topdona = '\n'.join(topfinal)
-            e.description = f"**{datetime.now().strftime('%B %Y')}**"
-            e.add_field(name=get_str(ctx, "cmd-don-make-a-donation"), value="[**Paypal**]({})".format("https://www.paypal.me/watora") + "\n[**Patreon**]({})".format("https://www.patreon.com/watora"))
-            e.add_field(name=get_str(ctx, "cmd-don-top-donators") + ':', value=topdona, inline=False)
+        #     topdona = '\n'.join(topfinal)
+        #     e.description = f"**{datetime.now().strftime('%B %Y')}**"
+        #     e.add_field(name=get_str(ctx, "cmd-don-make-a-donation"), value="[**Paypal**]({})".format("https://www.paypal.me/watora") + "\n[**Patreon**]({})".format("https://www.patreon.com/watora"))
+        #     e.add_field(name=get_str(ctx, "cmd-don-top-donators") + ':', value=topdona, inline=False)
+
+        e.description = f"**{datetime.now().strftime('%B %Y')}**"
+        e.add_field(name=get_str(ctx, "cmd-don-make-a-donation"), value="[**Paypal**]({})".format("https://www.paypal.me/watora") + "\n[**Patreon**]({})".format("https://www.patreon.com/watora"), inline=False)
+
         if pbar:
             if "," in pbar:
                 pbar = pbar.replace(",", ".")
@@ -848,7 +860,7 @@ class Useful(commands.Cog):
         Makes me leave a specified server.
         """
         try:
-            target = self.bot.get_guild(int(args))
+            target = await self.bot.fetch_guild(int(args))
         except ValueError:
             target = None
         if not target:
@@ -913,16 +925,14 @@ class Useful(commands.Cog):
 
         {help}
         """
-        if len(content.split(" ")) < 6 and not is_basicpatron(self.bot, ctx.author):
+        if len(content.split(" ")) < 6 and not await is_basicpatron(self.bot, ctx.author):
             ctx.command.reset_cooldown(ctx)
             return await ctx.send(get_str(ctx, "cmd-suggestion-useless"))
 
         e = discord.Embed(title='Suggestion', colour=0x738bd7)
         msg = ctx.message
 
-        channel = self.bot.get_channel(268495043235545088)
-        if not channel:
-            return
+        channel = 268495043235545088
 
         e.set_author(name=str(msg.author), icon_url=msg.author.avatar_url or msg.author.default_avatar_url)
         e.description = content
@@ -954,9 +964,10 @@ class Useful(commands.Cog):
             ctx.command.reset_cooldown(ctx)
             return await ctx.send("Suggestion cancelled.", delete_after=30)
         if response_message.content.lower().startswith('y'):
-            smsg = await channel.send(embed=e)
-            await smsg.add_reaction("☑")
-            await smsg.add_reaction("❌")
+            smsg = await self.bot.http.send_message(channel, content='', embed=e.to_dict())
+            msg_id = smsg['id']
+            await self.bot.http.add_reaction(channel, msg_id, "☑")
+            await self.bot.http.add_reaction(channel, msg_id, "❌")
             await ctx.send(get_str(ctx, "cmd-suggestion-sent") + " :mailbox_with_mail:")
         else:
             ctx.command.reset_cooldown(ctx)
@@ -970,16 +981,14 @@ class Useful(commands.Cog):
 
         {help}
         """
-        if len(content.split(" ")) < 6 and not is_basicpatron(self.bot, ctx.author):
+        if len(content.split(" ")) < 6 and not await is_basicpatron(self.bot, ctx.author):
             ctx.command.reset_cooldown(ctx)
             return await ctx.send(get_str(ctx, "cmd-bug-useless"))
 
         e = discord.Embed(title='Bug', colour=0x723be7)
         msg = ctx.message
 
-        channel = self.bot.get_channel(268495081202384896)
-        if not channel:
-            return
+        channel = 268495081202384896
 
         e.set_author(name=str(msg.author), icon_url=msg.author.avatar_url or msg.author.default_avatar_url)
         e.description = content
@@ -1012,7 +1021,7 @@ class Useful(commands.Cog):
             ctx.command.reset_cooldown(ctx)
             return await ctx.send("Report cancelled.", delete_after=30)
         if response_message.content.lower().startswith('y'):
-            await channel.send(embed=e)
+            smsg = await self.bot.http.send_message(channel, content='', embed=e.to_dict())
             await ctx.send(get_str(ctx, "cmd-bug-sent") + " :mailbox_with_mail:")
         else:
             ctx.command.reset_cooldown(ctx)
@@ -1026,16 +1035,14 @@ class Useful(commands.Cog):
 
         {help}
         """
-        if len(content.split(" ")) < 6 and not is_basicpatron(self.bot, ctx.author):
+        if len(content.split(" ")) < 6 and not await is_basicpatron(self.bot, ctx.author):
             ctx.command.reset_cooldown(ctx)
             return await ctx.send(get_str(ctx, "cmd-feedback-useless"))
 
         e = discord.Embed(title='Feedback', colour=0x2ecc71)
         msg = ctx.message
 
-        channel = self.bot.get_channel(346251537217093632)
-        if not channel:
-            return
+        channel = 346251537217093632
 
         e.set_author(name=str(msg.author), icon_url=msg.author.avatar_url or msg.author.default_avatar_url)
         e.description = content
@@ -1068,7 +1075,7 @@ class Useful(commands.Cog):
             ctx.command.reset_cooldown(ctx)
             return await ctx.send("Feedback cancelled.", delete_after=30)
         if response_message.content.lower().startswith('y'):
-            await channel.send(embed=e)
+            smsg = await self.bot.http.send_message(channel, content='', embed=e.to_dict())
             await ctx.send(get_str(ctx, "cmd-feedback-sent") + " :mailbox_with_mail:")
         else:
             ctx.command.reset_cooldown(ctx)
@@ -1092,13 +1099,13 @@ class Useful(commands.Cog):
         {help}
         """
         nshards = len(self.bot.shards)
-        msg = "```xl\nCurrently on {} shard{} with {} guilds.\n\n".format(nshards, "s" if nshards > 1 else "", len(self.bot.guilds))
-        for n in range(0, nshards):
+        msg = "```xl\nCurrently on {} shard{} with {} guilds (all: {}).\n\n".format(nshards, "s" if nshards > 1 else "", len(self.bot.guilds), self.bot.guild_count)
+        for i, n in enumerate(list(self.bot.shards.keys())):
             gshard = 0
             for s in self.bot.guilds:
                 if s.shard_id == n:
                     gshard += 1
-            msg += f"[{n}] : {gshard} guilds. (latency : {(round([shard[1] for shard in self.bot.latencies][n], 2))*1000} ms)\n"
+            msg += f"[{n}] : {gshard} guilds. (latency : {(round([shard[1] for shard in self.bot.latencies][i], 2))*1000} ms)\n"
 
         msg += "```"
         await ctx.send(msg)
@@ -1112,7 +1119,7 @@ class Useful(commands.Cog):
         Where there are the most ppl using Watora ?
         """
         c = Counter(x.region for x in self.bot.guilds)
-        msg = "```xl\nCurrently on {} guild{}.\n\n".format(len(self.bot.guilds), "s" if len(self.bot.guilds) > 1 else "")
+        msg = "```xl\nCurrently on {} guild{} (all: {}).\n\n".format(len(self.bot.guilds), "s" if len(self.bot.guilds) > 1 else "", self.bot.guild_count)
         for (x, y) in c.most_common():
             msg += f"[{x}] : {y}\n"
         msg += "```"
@@ -1150,7 +1157,7 @@ class Useful(commands.Cog):
         Gets the availables invitations of a guild.
         """
         try:
-            target = self.bot.get_guild(int(id))
+            target = await self.bot.fetch_guild(int(args))
         except ValueError:
             target = None
         msg = ""
@@ -1200,7 +1207,7 @@ class Useful(commands.Cog):
         if not ctx.channel.permissions_for(ctx.me).manage_roles:
             return await ctx.send(get_str(ctx, "need-manage-roles-permission"))
         if role not in user.roles:
-            if role.position >= ctx.author.top_role.position and not ctx.author.id == owner_id:
+            if role.position >= ctx.author.top_role.position and ctx.author.id != owner_id and not ctx.author is ctx.guild.owner:
                 return await ctx.send(get_str(ctx, "role-not-enough-high"))
             if role.position >= ctx.me.top_role.position:
                 return await ctx.send(get_str(ctx, "not-enough-permissions"))
@@ -1213,7 +1220,7 @@ class Useful(commands.Cog):
                 await ctx.send(get_str(ctx, "cmd-giverole-add").format(f"**{user}**", f"`{role}`"))
 
         else:
-            if role.position >= ctx.author.top_role.position and not ctx.author.id == owner_id:
+            if role.position >= ctx.author.top_role.position and ctx.author.id != owner_id and not ctx.author is ctx.guild.owner:
                 return await ctx.send(get_str(ctx, "role-not-enough-high"))
             if role.position >= ctx.me.top_role.position:
                 return await ctx.send(get_str(ctx, "not-enough-permissions"))
@@ -1385,12 +1392,12 @@ class Useful(commands.Cog):
         Allows to claim a guild.
         """
         if guild_id:
-            guild = self.bot.get_guild(guild_id)
+            guild = await self.bot.fetch_guild(guild_id)
             if not guild:
                 return await ctx.send("I didn't find this guild. Ensure your ID or use the command on the guild without specifying an ID.")
         else:
             guild = ctx.guild
-        if not is_patron(self.bot, ctx.author):
+        if not await is_patron(self.bot, ctx.author):
             return await ctx.send("You need to be at least Super Patron on my server to claim a server!")
         settings = await SettingsDB.get_instance().get_glob_settings()
         claimed = await self.bot.server_is_claimed(guild.id)
@@ -1401,7 +1408,7 @@ class Useful(commands.Cog):
 
         for k, m in settings.claim.items():
             if str(guild.id) in m:
-                if not is_patron(self.bot, int(k)):
+                if not await is_patron(self.bot, int(k)):
                     settings.claim[k].pop(str(guild.id))
 
         confirm_message = await ctx.send("Are you sure you want to claim **{}** (id: {}), you'll not be able to unclaim it before 7 days! Type `yes` or `no`.".format(guild.name, guild.id))
@@ -1431,7 +1438,7 @@ class Useful(commands.Cog):
             settings.claim[str(ctx.author.id)] = {str(guild.id): datetime.today().strftime("%d %b %Y")}
         else:
             max_claim = 2
-            if is_lover(self.bot, ctx.author):
+            if await is_lover(self.bot, ctx.author):
                 max_claim = 5
             if ctx.author.id == owner_id:
                 max_claim = 9e40
@@ -1456,7 +1463,7 @@ class Useful(commands.Cog):
             guild_id = str(ctx.guild.id)
         else:
             guild_id = str(guild_id)  # param is type int just to ensure that it can be converted to int easily thanks to discord.py
-        if not is_patron(self.bot, ctx.author):
+        if not await is_patron(self.bot, ctx.author):
             return await ctx.send("You need to be at least Super Patron on my server to claim/unclaim a server!")
         settings = await SettingsDB.get_instance().get_glob_settings()
         if str(ctx.author.id) in settings.claim:
@@ -1481,18 +1488,19 @@ class Useful(commands.Cog):
         """
         if not member:
             member = ctx.author
-        if not is_patron(self.bot, member):
+        if not await is_patron(self.bot, member):
             return await ctx.send("You need to be at least Super Patron on my server to claim/unclaim a server!")
         settings = await SettingsDB.get_instance().get_glob_settings()
         if (str(member.id) not in settings.claim) or not settings.claim[str(member.id)]:
             return await ctx.send("You don't have any claimed server. Start to add some by using `{}claim`".format(get_server_prefixes(ctx.bot, ctx.guild)))
         desc = ''
         for i, m in enumerate(settings.claim[str(member.id)].items(), start=1):
-            desc += f'`{i}. `' + (('**' + self.bot.get_guild(int(m[0])).name + '** ') if self.bot.get_guild(int(m[0])) else '') + f'(`{m[0]}`) ' + f'({m[1]})\n'
+            guild = await self.bot.fetch_guild(int(m[0]))
+            desc += f'`{i}. `' + (('**' + guild.name + '** ') if guild else '') + f'(`{m[0]}`) ' + f'({m[1]})\n'
         embed = discord.Embed(description=desc)
         embed.set_author(name=member.name, icon_url=member.avatar_url)
         max_claim = 2
-        if is_lover(self.bot, member):
+        if await is_lover(self.bot, member):
             max_claim = 5
         if member.id == owner_id:
             max_claim = 9e40
@@ -1510,10 +1518,12 @@ class Useful(commands.Cog):
         """
         if guild:  # owner can see other's guild settings
             if ctx.author.id == owner_id:
-                guild_list = [g for g in self.bot.guilds if g.name.lower() == guild.lower() or guild.isdigit() and int(g.id) == int(guild)]
-                if not guild_list:
+                try:
+                    guild = await self.bot.fetch_guild(int(guild))
+                except ValueError:
                     return await ctx.send("Guild not found...")
-                guild = guild_list[0]
+                if not guild:
+                    return await ctx.send("Guild not found...")
             else:
                 guild = ctx.guild
         else:
@@ -1613,8 +1623,11 @@ class Useful(commands.Cog):
             timer = f"{settings.timer} {get_str(ctx, 'cmd-nextep-seconds')}"
 
         if settings.channel:
-            channel = [c for c in guild.channels if c.id == settings.channel][0]
-            np = f"#{channel}"
+            channel = guild.get_channel(settings.channel)
+            if channel:
+                np = f"#{channel}"
+            else:
+                np = "❌"
         elif settings.channel is None:
             np = "☑ Auto"
         else:

@@ -80,7 +80,7 @@ class Welcomer(commands.Cog):
                 if role:
                     try:
                         await member.add_roles(role)
-                    except discord.Forbidden:
+                    except discord.HTTPException:
                         pass
                 await asyncio.sleep(0.5)
 

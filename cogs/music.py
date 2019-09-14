@@ -601,9 +601,7 @@ class Music(commands.Cog):
             if requester:
                 embed.set_author(name=requester.name, icon_url=requester.avatar_url or requester.default_avatar_url, url=event.track.uri)
 
-            log.debug('[Auto NP-msg] Sending np msg to {0.id}/{0.name}'.format(channel.guild))
             asyncio.ensure_future(self.send_new_np_msg(event.player, channel, new_embed=embed))
-            log.debug('[Auto NP-msg] Sent np msg to {0.id}/{0.name}'.format(channel.guild))
 
         elif isinstance(event, lavalink.events.QueueEndEvent):
             # TODO: Rewrite this
@@ -2905,7 +2903,7 @@ class Music(commands.Cog):
         """
         await ctx.invoke(self.plstart, file_name=file_name)
 
-    @commands.command(aliases=['boost', 'bb'])
+    @commands.command(aliases=['boost', 'bass', 'bb'])
     async def bassboost(self, ctx, level: str = None):
         """
             {command_prefix}bassboost [level]

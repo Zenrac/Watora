@@ -566,8 +566,7 @@ class Music(commands.Cog):
                 self.inact_tasks[gid].cancel()
                 self.inact_tasks.pop(gid)
 
-            if not event.player.blindtest.is_running or event.player.blindtest.listening_mode:
-                thumb = await self.get_thumbnail(event.track, event.player, new=True)
+            thumb = await self.get_thumbnail(event.track, event.player, new=True)  # Load thumbnail everytime
 
             if not channel:
                 return
@@ -1449,7 +1448,7 @@ class Music(commands.Cog):
 
     async def is_perso(self, guild, name):
         """Checks if an autoplaylist is personal or not"""
-        if name.isdigit() and 20 > len(name) > 16: # To change after 2090 cus ID will be longer or equal than 20.
+        if name.isdigit():
             member = await self.bot.safe_fetch('member', int(name), guild=guild)
             if member:
                 return member
@@ -3047,7 +3046,7 @@ class Music(commands.Cog):
 
         is_perso = await self.is_perso(ctx.guild, name=file_name)
 
-        if str(file_name).isdigit() and 20 > len(file_name) > 16::
+        if is_perso:
             if int(file_name) != ctx.author.id and ctx.author.id != owner_id:
                 return await ctx.send(get_str(ctx, "music-plnew-try-to-hack"))
 
@@ -3519,7 +3518,7 @@ class Music(commands.Cog):
                 whitelisted = get_str(ctx, "music-plsettings-nobody")
             else:
                 for m in autopl['whitelist']:
-                    user = await self.bot.safe_fetch('user', int(m)) or m
+                    user = await self.bot.safe_fetch('member', int(m), guild=ctx.guild) or m
                     whitelisted.append(f"`{user}`")
                 whitelisted = "**,** ".join(whitelisted)
 
@@ -3834,7 +3833,7 @@ class Music(commands.Cog):
     @commands.cooldown(rate=1, per=5.0, type=commands.BucketType.user)
     async def plfind(self, ctx, query:str = None, page:int = 1):
         """
-            {command_prefix}plfind (query) (page)
+            {command_prefix}plfind (query)
 
         {help}
         """
@@ -3893,7 +3892,7 @@ class Music(commands.Cog):
                     name = perso
                     autoplname = get_str(ctx, "music-plsettings-autopl").format(f'**{name}**')
                 else:
-                    user = await self.bot.safe_fetch('user', id) or id
+                    user = await self.bot.safe_fetch('member', id, guild=ctx.guild) or id
                     if user:
                         name = user
                     else:
@@ -3901,7 +3900,7 @@ class Music(commands.Cog):
                     autoplname = m['name']
             else:
                 perso = False
-                user = await self.bot.safe_fetch('user', id) or id
+                user = await self.bot.safe_fetch('member', id, guild=ctx.guild) or id
                 if user:
                     name = user
                 else:

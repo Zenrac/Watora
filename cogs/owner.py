@@ -298,7 +298,7 @@ class Owner(commands.Cog):
 
         Displays who is my owner.
         """
-        owner = await self.bot.safe_fetch('user', owner_id, guild=ctx.guild) or str(owner_id)
+        owner = await self.bot.safe_fetch('user', owner_id) or str(owner_id)
         await ctx.send(f"My owner is `{owner}`.")
 
     @commands.command(name="cogs")

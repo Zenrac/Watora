@@ -45,8 +45,10 @@ class Useful(commands.Cog):
                     embed.title = "❤ " + get_str(ctx, "cmd-marry-happily")
                     embed.description = get_str(ctx, "cmd-marry-success").format(f"**{ctx.author.name}**", f"**{user.name}**")
                     await ctx.send(embed=embed)
-                    before = settings.marry[str(user.id)]['id']
-                    del settings.marry[before]  # Watora divorces before
+                    if str(user.id) in settings.marry:
+                        before = settings.marry[str(user.id)]['id']
+                        del settings.marry[before]  # Watora divorces before
+
                     date = datetime.today().strftime("%d %b %Y")
 
                     settings.marry[str(ctx.author.id)] = {}
@@ -302,7 +304,7 @@ class Useful(commands.Cog):
         servers = self.bot.guild_count
         # channels = len([c for c in self.bot.get_all_channels()]) # BLOCKING CODE FFS
         embed = discord.Embed()
-        owner = await self.bot.safe_fetch('member', owner_id, guild=ctx.guild) or str(owner_id)
+        owner = await self.bot.safe_fetch('user', owner_id) or str(owner_id)
         embed.set_author(name=f"{self.bot.user.name} v{ver}", icon_url=self.bot.user.avatar_url)
         if isinstance(ctx.channel, discord.abc.GuildChannel):
             embed.color = ctx.guild.me.color
@@ -388,7 +390,7 @@ class Useful(commands.Cog):
                 if i > 5:
                     break
                 top5.append(id)
-                member = await self.bot.safe_fetch('member', int(id), guild=268492317164437506) or id
+                member = await self.bot.safe_fetch('user', int(id)) or id
                 msg += f"`{i}` **{member}** : **{counter[id]}** vote{'s' if counter[id] > 1 else ''}\n"
             month = datetime.now().strftime("%B")
             if str(user.id) not in top5:

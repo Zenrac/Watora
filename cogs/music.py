@@ -3047,7 +3047,7 @@ class Music(commands.Cog):
 
         is_perso = await self.is_perso(ctx.guild, name=file_name)
 
-        if str(file_name).isdigit() and len(file_name) > 16:
+        if str(file_name).isdigit() and 20 > len(file_name) > 16::
             if int(file_name) != ctx.author.id and ctx.author.id != owner_id:
                 return await ctx.send(get_str(ctx, "music-plnew-try-to-hack"))
 

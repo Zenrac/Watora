@@ -735,7 +735,7 @@ class Gestion(commands.Cog):
         Adds a user id to my blacklist.
         """
         settings = await SettingsDB.get_instance().get_glob_settings()
-        user = ctx.guild.get_member(id) if ctx.guild else self.bot.get_user(id)
+        user = await self.bot.safe_fetch('member', id, guild=ctx.guild)
         if not user:
             await ctx.send("User not found, if you really want to superblacklist it, use `{}sbl hackaddid`".format(get_server_prefixes(ctx.bot, ctx.guild)))
         elif user.id not in settings.blacklisted:

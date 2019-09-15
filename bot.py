@@ -100,6 +100,41 @@ class Watora(commands.AutoShardedBot):
 
         return role
 
+    async def safe_fetch(self, target, id, guild=None):
+        if target not in ['member', 'user', 'guild', 'channel']:
+            raise Exception(f'{target} is not a supported target. Please use either channel, member, user or guild.')
+
+        result = None
+
+        if guild:
+            if target in ['member', 'channel', 'user']:
+                if target == 'user':
+                    target = 'member'
+                if isinstance(guild, discord.Guild) or str(guild).isdigit():
+                    if str(guild).isdigit():
+                        guild = await self.safe_fetch('guild', guild)
+                    if guild:
+                        result = getattr(guild, f'get_{target}')(id)
+                        if not result:
+                            try:
+                                coro = getattr(guild, f'fetch_{target}')
+                                result = await coro(id)
+                            except discord.HTTPException:
+                                pass
+                if target == 'member':
+                    target = 'user'
+
+        if not result:
+            result = getattr(self, f'get_{target}')(id)
+            if not result:
+                try:
+                    coro = getattr(self, f'fetch_{target}')
+                    result = await coro(id)
+                except discord.HTTPException:
+                    pass
+
+        return result
+
     async def format_cc(self, command, message):
         results = re.findall("\{([^}]+)\}", command)  # noqa: W605
         for result in results:
@@ -572,7 +607,7 @@ class Watora(commands.AutoShardedBot):
 
         total_cogs = len(_list_cogs())
         servers = len(self.guilds)
-        owner = self.get_user(owner_id) or str(owner_id)
+        owner = await self.safe_fetch('user', owner_id) or str(owner_id)
 
         log.info("-----------------")
         log.info("{} ({})".format(str(self.user), str(self.user.id)))

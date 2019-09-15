@@ -115,12 +115,6 @@ class Watora(commands.AutoShardedBot):
                         guild = await self.safe_fetch('guild', guild)
                     if guild:
                         result = getattr(guild, f'get_{target}')(id)
-                        if not result:
-                            try:
-                                coro = getattr(guild, f'fetch_{target}')
-                                result = await coro(id)
-                            except discord.HTTPException:
-                                pass
                 if target == 'member':
                     target = 'user'
 

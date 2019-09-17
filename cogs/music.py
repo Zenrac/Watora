@@ -2287,7 +2287,7 @@ class Music(commands.Cog):
 
         pos = lavalink.utils.format_time(player.position).lstrip('0').lstrip(':')
 
-        requester = await self.bot.safe_fetch('member', player.current.requester, guid=ctx.guild)
+        requester = await self.bot.safe_fetch('member', player.current.requester, guild=ctx.guild)
 
         if not player.current.stream:
             # prog_bar_str = sweet_bar(player.position, player.current.duration)
@@ -2388,14 +2388,16 @@ class Music(commands.Cog):
 
         if claimed_server:
             max_volume = 1000
-        elif await is_voter(self.bot, ctx.author):
-            max_volume = 150
-            if await is_basicpatron(self.bot, ctx.author):
-                max_volume = 200
-                if await is_patron(self.bot, ctx.author):
-                    max_volume = 1000
         else:
-            max_volume = 100
+            fetched_member = await is_voter(self.bot, ctx.author, fetch=True)  # Keep the result: Smart way to only do 1 api call.
+            if fetched_member:
+                max_volume = 150
+                if await is_basicpatron(self.bot, ctx.author, resp=fetched_member):
+                    max_volume = 200
+                    if await is_patron(self.bot, ctx.author, resp=fetched_member):
+                        max_volume = 1000
+            else:
+                max_volume = 100
 
         if not new_volume:
             prog_bar_str = sweet_bar(player.volume, max_volume)
@@ -3009,7 +3011,7 @@ class Music(commands.Cog):
 
             if perso:
                 if perso != ctx.author:
-                    await ctx.send(get_str(ctx, "music-plstart-loaded-user").format(f"**{player.autoplaylist['name']}**"))
+                    await ctx.send(get_str(ctx, "music-plstart-loaded-user").format(f"**{perso.name}**"))
                 else:
                     await ctx.send(get_str(ctx, "music-plstart-your-loaded"))
             else:

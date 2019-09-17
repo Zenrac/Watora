@@ -127,6 +127,7 @@ class Fun(commands.Cog):
 
         await ctx.send("<:watoping:458349269875949569>")
 
+    @commands.cooldown(rate=1, per=2, type=commands.BucketType.user)
     @commands.command(name="ily", aliases=["jtm"])
     async def _ily(self, ctx, more=None):
         """
@@ -134,11 +135,12 @@ class Fun(commands.Cog):
 
         {help}
         """
-        if more and not await is_lover(self.bot, ctx.author):
+        fetched_member = await is_lover(self.bot, ctx.author, fetch=True)
+        if more and not fetched_member:
             await ctx.send(get_str(ctx, "cmd-ily-nope"))
         elif more:
             await ctx.send("<:WatoraCry:458349266495078413>")
-        elif await is_lover(self.bot, ctx.author):
+        elif fetched_member:
             await ctx.send(random.choice(get_str(ctx, "cmd-ily-yes").split("|")))
         else:
             await ctx.send(random.choice(get_str(ctx, "cmd-ily-no").split("|")))

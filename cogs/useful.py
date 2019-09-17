@@ -750,14 +750,37 @@ class Useful(commands.Cog):
                 break
         await ctx.send(msg.content)
 
-    @commands.command(aliases=["dons", "donation", "donate", "donating"])
+    @commands.command(aliases=["dons", "donation", "donate", "donating", "donators", "donator"])
     @commands.cooldown(rate=1, per=1.0, type=commands.BucketType.user)
-    async def don(self, ctx):
+    async def don(self, ctx, *, text=None):
         """
             {command_prefix}don
+            {command_prefix}don [text]
+            {command_prefix}don off
 
         {help}
         """
+        settings = None
+        if text:
+            if not await is_basicpatron(self.bot, ctx.author):
+                return await ctx.send(embed=discord.Embed(description="Sorry, you have to be Patron to set a custom message!\n\n**[Patreon](https://www.patreon.com/bePatron?u=7139372)**"))
+
+            settings = await SettingsDB.get_instance().get_glob_settings()
+
+            if 'donators' not in settings.donation:
+                settings.donation['donators'] = {}
+
+            if text.lower() in ['stop', 'off', 'disable', 'empty', 'remove']:
+                if str(ctx.author.id) in settings.donation['donators']:
+                    settings.donation['donators'].pop(str(ctx.author.id))
+                    await SettingsDB.get_instance().set_glob_settings(settings)
+                    await ctx.send('Message removed!')
+
+            else:
+                settings.donation['donators'][str(ctx.author.id)] = text
+                await SettingsDB.get_instance().set_glob_settings(settings)
+                await ctx.send('Message set!')
+
         e = discord.Embed().set_footer(text=get_str(ctx, "cmd-don-thx-in-advance", can_owo=False))
 
         try:
@@ -765,29 +788,32 @@ class Useful(commands.Cog):
         except AttributeError:
             pass
         topdona = pbar = ''
-        settings = await SettingsDB.get_instance().get_glob_settings()
+        if not settings:  # Only 1 DB call
+            settings = await SettingsDB.get_instance().get_glob_settings()
         if 'top' in settings.donation:
             topdona = settings.donation['top']
         if 'bar' in settings.donation:
             pbar = settings.donation['bar']
 
-        # if topdona:
-        #     topfinal = []
-        #     for i, top in enumerate(topdona.split(' / '), start=1):
-        #         if len(top.split(' ')) != 2:
-        #             return await ctx.send("Error :\n" + topdona)
-        #         user = top.split(' ')[0]
-        #         money = '**' + top.split(' ')[1] + '€**'
-        #         user = await self.bot.safe_fetch('user', int(user))
-        #         topfinal.append(f'`{i}.` {user} - {money}')
-
-        #     topdona = '\n'.join(topfinal)
-        #     e.description = f"**{datetime.now().strftime('%B %Y')}**"
-        #     e.add_field(name=get_str(ctx, "cmd-don-make-a-donation"), value="[**Paypal**]({})".format("https://www.paypal.me/watora") + "\n[**Patreon**]({})".format("https://www.patreon.com/watora"))
-        #     e.add_field(name=get_str(ctx, "cmd-don-top-donators") + ':', value=topdona, inline=False)
-
         e.description = f"**{datetime.now().strftime('%B %Y')}**"
         e.add_field(name=get_str(ctx, "cmd-don-make-a-donation"), value="[**Paypal**]({})".format("https://www.paypal.me/watora") + "\n[**Patreon**]({})".format("https://www.patreon.com/watora"), inline=False)
+        donators = settings.donation.get('donators', {})
+        if donators:
+            desc = ""
+            for k, v in donators.items():
+                fetched_member = await is_basicpatron(self.bot, int(k), fetch=True)
+                if fetched_member:
+                    tier = 2
+                    if await is_patron(self.bot, int(k), resp=fetched_member):
+                        tier = 5
+                        if await is_lover(self.bot, int(k), resp=fetched_member):
+                            tier = 10
+
+                    username = fetched_member['user']['username'] + '#' + fetched_member['user']['discriminator']
+                    text = format_mentions(v)[:100]
+                    desc += f'`{username}` **${tier}/m** : {text}\n'
+            if desc:
+                e.add_field(name="Current patrons", value=desc)
 
         if pbar:
             if "," in pbar:
@@ -879,19 +905,6 @@ class Useful(commands.Cog):
         """
         settings = await SettingsDB.get_instance().get_glob_settings()
         settings.donation['bar'] = bar
-        await SettingsDB.get_instance().set_glob_settings(settings)
-        await ctx.send(":ok_hand:")
-
-    @commands.command()
-    @commands.is_owner()
-    async def top(self, ctx, *, top):
-        """
-            {command_prefix}top
-
-        Sets the top donators in the donation message.
-        """
-        settings = await SettingsDB.get_instance().get_glob_settings()
-        settings.donation['top'] = top
         await SettingsDB.get_instance().set_glob_settings(settings)
         await ctx.send(":ok_hand:")
 
@@ -1090,7 +1103,7 @@ class Useful(commands.Cog):
         await ctx.send(get_str(ctx, "cmd-ver-current") + f" **{ver}**.")
 
     @commands.cooldown(rate=1, per=3.0, type=commands.BucketType.user)
-    @commands.command(aliases=["infoshards", "shardinfo", "shardsinfo"])
+    @commands.command(aliases=["infoshards", "shardinfo", "shardsinfo", "status", "shardstatus", "shardsstatus"])
     async def infoshard(self, ctx):
         """
             {command_prefix}infoshard

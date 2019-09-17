@@ -76,9 +76,10 @@ class Watora(commands.AutoShardedBot):
         settings = await SettingsDB.get_instance().get_glob_settings()
         for k, m in settings.claim.items():
             if str(guild_id) in m.keys():
-                if await is_patron(self, int(k)):
+                fetched_member = await is_patron(self, int(k), fetch=True)
+                if fetched_member:
                     max_claim = 2
-                    if await is_lover(self, int(k)):
+                    if await is_lover(self, int(k), resp=fetched_member):
                         max_claim = 5
                     if int(k) == owner_id:
                         max_claim = 9e40
@@ -496,11 +497,19 @@ class Watora(commands.AutoShardedBot):
                 log.debug("[CustomCommand] {}/{} ({})".format(message.author.id, message_author, message_content))
 
     async def on_message_check(self, message, settings, cmd_prefix):
+        words = message.content[len(cmd_prefix):].split(' ')
+        cmd = self.get_command(' '.join(words[:2]))
+        if not cmd:
+            cmd = self.get_command(words[0])
+        if cmd:
+            command = cmd.name.lower()
+            if cmd.parent:
+                command = f'{cmd.parent.name.lower()} {command}'
+
         if str(message.channel.id) in settings.disabledchannels:
             if not settings.disabledchannels[str(message.channel.id)]:
                 return False
-            cmd = self.get_command(message.content[len(cmd_prefix):].split(' ')[0])
-            if cmd and cmd.name.lower() in settings.disabledchannels[str(message.channel.id)]:
+            if cmd and command in settings.disabledchannels[str(message.channel.id)]:
                 return False
 
         if settings.blacklisted:
@@ -510,14 +519,12 @@ class Watora(commands.AutoShardedBot):
                 return False
 
         if settings.disabledcommands:
-            cmd = self.get_command(message.content[len(cmd_prefix):].split(' ')[0])
-            if cmd:
-                if cmd.name.lower() in settings.disabledcommands:
-                    try:
-                        await message.channel.send("```c\n{}```".format(get_str(message.guild, "bot-disabled-command", self)), delete_after=10)
-                    except discord.Forbidden:
-                        pass
-                    return False
+            if cmd and command in settings.disabledcommands:
+                try:
+                    await message.channel.send("```c\n{}```".format(get_str(message.guild, "bot-disabled-command", self)), delete_after=10)
+                except discord.Forbidden:
+                    pass
+                return False
 
         if settings.bound:
             if settings.bound in [c.id for c in message.guild.channels]:

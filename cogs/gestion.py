@@ -16,7 +16,7 @@ from utils.watora import globprefix, log, owner_id, get_server_prefixes, get_str
 cmds = {}
 cmds['music']      = ["join", "np", "play", "queue", "search", "skip", "forceskip", "replay", "previous", "relatedsong", "replaynow", "previousnow", "stop", "pl", "radio", "repeat", "pause", "volume", "playnow", "playnext", "clear", "promote", "shuffle", "remove", "moveto", "lyrics", "bassboost", "equalizer", "blindtest", "blindtestscore"]
 cmds['fun']        = ["8ball", "minesweeper", "ily", "roll", "flip", "me", "customcommand", "choice", "ascii", "meme", "picture", "osu", "marry", "divorce", "anime", "manga", "char", "nextep"]
-cmds['useful']     = ["info", "poll", "stats", "credits", "changelog", "don", "permsinfo", "version", "infoshard", "avatar", "userinfo", "serverinfo", "roleinfo", "getrole", "ping", "invitation", "suggestion", "bug", "feedback", "clan", "joinclan"]
+cmds['useful']     = ["don", "info", "poll", "stats", "credits", "changelog", "permsinfo", "version", "infoshard", "avatar", "userinfo", "serverinfo", "roleinfo", "getrole", "ping", "invitation", "suggestion", "bug", "feedback", "clan", "joinclan"]
 cmds['moderation'] = ["kick", "ban", "hackban", "voicekick", "clean", "purge", "stfu"]
 cmds['config']     = ["prefix", "language", "owo", 'blacklist', 'settings', "defvolume", "defvote", "autoleave", "npmsg", "welcome", "goodbye", "autorole", "ignore", "disabledcommand", "setdj", "bind", "lazy", "autoplay", "autoconnect"]
 
@@ -337,6 +337,9 @@ class Gestion(commands.Cog):
             elif command:
                 strcommand = command = command.lower()
                 cmd = self.bot.get_command(strcommand)
+                total_command = cmd.name
+                if cmd.parent:
+                    total_command = f'{cmd.parent} {total_command}'
                 if strcommand in cmds:
                     if strcommand == "all":
                         return await ctx.invoke(self.ignore, channel=channel)
@@ -352,8 +355,8 @@ class Gestion(commands.Cog):
                                 if c in settings.disabledchannels[cid]:
                                     settings.disabledchannels[cid].remove(c)
                                     disabled_cmds.append(c)
-                        elif cmd.name in settings.disabledchannels[cid]:
-                            settings.disabledchannels[cid].remove(cmd.name)
+                        elif total_command in settings.disabledchannels[cid]:
+                            settings.disabledchannels[cid].remove(total_command)
                     else:
                         return await ctx.send(get_str(ctx, "cmd-ignore-enabled").format("0", "`{}`".format(channel.name)))
                     if settings.disabledchannels[cid]:
@@ -368,7 +371,7 @@ class Gestion(commands.Cog):
                 else:
                     disabled_cmds = [1]
                     if cid not in settings.disabledchannels:
-                        settings.disabledchannels[cid] = cmd if isinstance(cmd, list) else [cmd.name]
+                        settings.disabledchannels[cid] = cmd if isinstance(cmd, list) else [total_command]
                     else:
                         if isinstance(cmd, list):
                             disabled_cmds = []
@@ -376,8 +379,8 @@ class Gestion(commands.Cog):
                                 if c not in settings.disabledchannels[cid]:
                                     settings.disabledchannels[cid].append(c)
                                     disabled_cmds.append(c)
-                        elif cmd.name not in settings.disabledchannels[cid]:
-                            settings.disabledchannels[cid].append(cmd.name)
+                        elif total_command not in settings.disabledchannels[cid]:
+                            settings.disabledchannels[cid].append(total_command)
                     info = '`{}`'.format('`, `'.join(settings.disabledchannels[cid]))
                     if len(info) > 1700:
                         await ctx.send(get_str(ctx, "cmd-ignore-disabled").format(len(disabled_cmds), "`{}`".format(channel.name)))
@@ -438,6 +441,9 @@ class Gestion(commands.Cog):
         if not cmd:
             return await ctx.send(get_str(ctx, "cmd-dc-cmd-not-found"))
         command = cmd.name
+        if cmd.parent:
+            command = f'{cmd.parent} {command}'
+
         settings = await SettingsDB.get_instance().get_guild_settings(ctx.guild.id)
         if command not in settings.disabledcommands:
             settings.disabledcommands.append(command)
@@ -457,6 +463,11 @@ class Gestion(commands.Cog):
         strcommand = command = command.lower()
         if strcommand in cmds:
             settings = await SettingsDB.get_instance().get_guild_settings(ctx.guild.id)
+            if strcommand == 'all':
+                count = len(settings.disabledcommands)
+                settings.disabledcommands.clear()
+                await SettingsDB.get_instance().set_guild_settings(settings)
+                return await ctx.send(get_str(ctx, "cmd-ignore-enabled").format(count, "`{}`".format(ctx.guild.name)))
             disabled_cmds = []
             for cmd in cmds[strcommand]:
                 if cmd in settings.disabledcommands:
@@ -472,6 +483,8 @@ class Gestion(commands.Cog):
         if not cmd:
             return await ctx.send(get_str(ctx, "cmd-dc-cmd-not-found"))
         command = cmd.name
+        if cmd.parent:
+            command = f'{cmd.parent} {command}'
         settings = await SettingsDB.get_instance().get_guild_settings(ctx.guild.id)
         if settings.disabledcommands:
             if command in settings.disabledcommands:

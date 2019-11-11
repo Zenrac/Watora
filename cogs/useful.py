@@ -227,6 +227,7 @@ class Useful(commands.Cog):
     async def help(self, ctx, *, command: str = None):
         """
             {command_prefix}help [command]
+            {command_prefix}help [category]
             {command_prefix}help
 
         {help}
@@ -255,13 +256,7 @@ class Useful(commands.Cog):
 
             else:
                 result = self.bot.get_command(command)
-                cname = str(result).replace(" ", "-").lower()
-                cname = str(cname.replace('pl-', 'pl'))
-                if result.help:
-                    help_msg = get_str(ctx, f"cmd-{cname}-help")
-                    await ctx.send("```%s```" % dedent(result.help.format(command_prefix=get_server_prefixes(ctx.bot, ctx.guild), help=help_msg)))
-                else:
-                    await ctx.send(get_str(ctx, "cmd-help-help-not-found"))
+                await self.bot.send_cmd_help(ctx, result)
 
         else:
             embed = discord.Embed()
@@ -282,7 +277,7 @@ class Useful(commands.Cog):
                     title = key[0].upper() + key[1:]
                     descrip = '**,** '.join([f"`{cm}`" for cm in cmds[key] if not ctx.guild or is_admin or ((cm.lower() not in settings.disabledcommands) and (cm.lower() not in disabled))])
                     if descrip:
-                        embed.add_field(name=f'{title} ({len(cmds[key])})', value=descrip)
+                        embed.add_field(name=f'{title} ({len(cmds[key])})', value=descrip, inline=False)
                 except KeyError:
                     pass
             embed.add_field(name="__", value=get_str(ctx, "cmd-help-more-info-cmd") + " **`{}help [command]`**".format(get_server_prefixes(ctx.bot, ctx.guild)) + "\n" + get_str(ctx, "cmd-help-more-info-cat") + " **`{}help [category]`**".format(get_server_prefixes(ctx.bot, ctx.guild)))
@@ -743,7 +738,14 @@ class Useful(commands.Cog):
         except KeyError:
             pass
         if not patchchannel:
-            return
+            e = discord.Embed(description='See all changelogs on my official server!')
+            if not ctx.guild:
+                e.color = 0x71368a
+            else:
+                e.color = ctx.me.color
+            e.set_thumbnail(url=self.bot.user.avatar_url)
+            e.add_field(name='{}:'.format(get_str(ctx, "cmd-invitation-my-server")), value='[World of Watora]({})'.format("https://discord.gg/ArJgTpM"))
+            return await ctx.send(embed=e)
         async for lmsg in patchchannel.history(limit=2):
             if lmsg.author.id == owner_id:
                 msg = lmsg

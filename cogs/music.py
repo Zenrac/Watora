@@ -142,6 +142,7 @@ class BlindTest:
         self.timeout = 120
         self.percentage = '100,0,0'
         self.wait = 5
+        self.source = 'ytsearch'
 
     @property
     def is_running(self):
@@ -248,7 +249,7 @@ class BlindTest:
 
         for m in titles:
             if (len(m) * (self.severity / 100)) <= len(query):
-                if query in m or naked_query in m:
+                if query in m:
                     return True
 
         for m in titles:
@@ -262,28 +263,15 @@ class CustomPlayer(lavalink.DefaultPlayer):
     def __init__(self, guild_id: int, node):
         super().__init__(guild_id, node)
 
-        self._user_data = {}
         self.channel_id = None
-
-        self.paused = False
-        self.last_update = 0
-        self.last_position = 0
-        self._prev_position = 0
-        self.position_timestamp = 0
-
-        self.shuffle = False
-        self.repeat = False
-        self.equalizer = [0.0 for x in range(15)]
-        self.volume = 100
-        self.queue = []
-        self.current = None
         self.previous = None
+        self.description = None
 
         self.stop_votes = set()
         self.skip_votes = set()
         self.clear_votes = set()
         self.already_played = set()
-        self.description = None
+
         self.auto_paused = False
         self.autoplaylist = None
         self.list = None
@@ -430,7 +418,8 @@ class Music(commands.Cog):
             'timeout' : lambda m: 2 < int(m) and int(m) <= 300,
             'severity' : lambda m: 0 < int(m) and int(m) <= 100,
             'percentage' : lambda m: sum((abs(int(c)) for c in m.split(','))) == 100,
-            'wait' : lambda m: 0 <= int(m) and int(m) <= 30
+            'wait' : lambda m: 0 <= int(m) and int(m) <= 30,
+            'source' : '\S+'
         }
 
         self.anime_status = (
@@ -724,7 +713,7 @@ class Music(commands.Cog):
             raise commands.errors.CommandNotFound  # because it avoid a checkfailure message
         return True
 
-    async def prepare_url(self, query, node=None):
+    async def prepare_url(self, query, node=None, source='ytsearch'):
         """Prepares the url if it's an url or not etc... Ensures dict."""
         log.debug('[Prepare] Preparing url for {}'.format(query))
         if not match_url(query):
@@ -735,7 +724,7 @@ class Music(commands.Cog):
             if query.lower() == 'monstercat':
                 return await self.prepare_url(query=self.list_radiolist['Monstercat'], node=node)
             query = self.remove_optional_parameter(query)
-            new = f'ytsearch:{query}'
+            new = f'{source}:{query}'
             results = await self.bot.lavalink.get_tracks(query=new, node=node)
             if not results or not isinstance(results, dict) or not results['tracks']:
                 songs = await self.youtube_api.youtube_search(query)
@@ -764,7 +753,7 @@ class Music(commands.Cog):
         log.debug('[Prepare] Prepared url for {} without any result.'.format(query))
         return {'playlistInfo': {}, 'loadType': 'NO_MATCHES', 'tracks': []}
 
-    async def prepare_spotify(self, ctx, query, node=None, infinite_loop=False):
+    async def prepare_spotify(self, ctx, query, node=None, infinite_loop=False, max_tracks:int = 100):
         """ Prepares a Spotify URI or URL to be played with lavalink"""
         # Convert URL to URI
         if match_url(query) and 'open.spotify' in query:
@@ -794,15 +783,15 @@ class Music(commands.Cog):
                     procmesg = await ctx.send(get_str(ctx, "music-spotify-processing-a").format(f"`{res['name']}`"))
                     base_content = procmesg.content
                     tracks_found = len(res['tracks']['items'])
-                    for num, i in enumerate(res['tracks']['items'][:50], start=1):
-                        query = i['name'] + ' ' + i['artists'][0]['name']
-                        log.debug('Processing {0}'.format(query))
+                    for num, i in enumerate(res['tracks']['items'][:max_tracks], start=1):
                         try:
+                            query = i['name'] + ' ' + i['artists'][0]['name']
+                            log.debug('Processing {0}'.format(query))
                             song = await self.prepare_url(query=query, node=node)
                             results['tracks'].append(song['tracks'][0])
                             results['loadType'] = "PLAYLIST_LOADED"
                             results['playlistInfo'] = {'selectedTrack': -1, 'name': res['name']}
-                        except (KeyError, IndexError):
+                        except (KeyError, IndexError, TypeError):
                             tracks_found -= 1
                         if len(res['tracks']['items']) != tracks_found:
                             results['failed'] = len(res['tracks']['items']) - tracks_found
@@ -817,6 +806,20 @@ class Music(commands.Cog):
                     if tracks_found == 0:
                         raise SpotifyError(get_str(ctx, "music-spotify-all-failed"))
 
+                elif query.startswith('artist:') and not infinite_loop:
+                    query = query.split(":", 1)[1]
+                    res = await self.bot.spotify.get_artist_albums(query)
+                    items = res['items']
+                    albums = [item for item in items if item['album_type'] == 'album']
+                    if albums:
+                        album = random.choice(albums)
+                    elif items:
+                        album = random.choice(items)
+                    else:
+                        raise SpotifyError(get_str(ctx, "music-spotify-not-supported"))
+                    return await self.prepare_spotify(ctx, album['uri'], infinite_loop=True)
+
+
                 elif query.startswith('user:') and 'playlist:' in query:
                     user = query.split(":",)[1]
                     query = query.split(":", 3)[3]
@@ -824,16 +827,16 @@ class Music(commands.Cog):
                     procmesg = await ctx.send(get_str(ctx, "music-spotify-processing-p").format(f"`{res['name']}`"))
                     base_content = procmesg.content
                     tracks_found = len(res['tracks']['items'])
-                    for num, i in enumerate(res['tracks']['items'][:50], start=1):
-                        query = i['track']['name'] + ' ' + i['track']['artists'][0]['name']
-                        log.debug('[Spotify] Processing {0}'.format(query))
+                    for num, i in enumerate(res['tracks']['items'][:max_tracks], start=1):
                         try:
+                            query = i['track']['name'] + ' ' + i['track']['artists'][0]['name']
+                            log.debug('[Spotify] Processing {0}'.format(query))
                             song = await self.prepare_url(query=query, node=node)
                             results['tracks'].append(song['tracks'][0])
                             results['loadType'] = "PLAYLIST_LOADED"
                             results['playlistInfo'] = {'selectedTrack': -1, 'name': res['name']}
                             log.debug('[Spotify] Processing finished for {0}'.format(query))
-                        except (KeyError, IndexError):
+                        except (KeyError, IndexError, TypeError):
                             tracks_found -= 1
                         if len(res['tracks']['items']) != tracks_found:
                             results['failed'] = len(res['tracks']['items']) - tracks_found
@@ -863,7 +866,7 @@ class Music(commands.Cog):
         else:
             raise SpotifyError(get_str(ctx, "music-spotify-not-supported"))
 
-    async def autoplaylist_loop(self, player):
+    async def autoplaylist_loop(self, player, error_count=0):
         """Autoplaylist auto-add song loop"""
         if player.connected_channel and player.is_connected and not player.is_playing and player.autoplaylist and not player.queue:
             # if not sum(1 for m in player.connected_channel.members if not (m.voice.deaf or m.bot or m.voice.self_deaf)):
@@ -896,7 +899,8 @@ class Music(commands.Cog):
                         player.autoplaylist['songs'].remove(song_url)
                     except ValueError:
                         pass
-                    return await self.autoplaylist_loop(player)
+                    if error_count < 5:  # if 5 fails in a row.. stop trying.
+                        return await self.autoplaylist_loop(player, error_count=error_count+1)
         return False
 
     def find_best_result(self, results):
@@ -919,7 +923,7 @@ class Music(commands.Cog):
 
         return best_results[0]
 
-    async def blindtest_loop(self, player, check=False):
+    async def blindtest_loop(self, player, check=False, error_count=0):
         """Blindtest auto-add song loop"""
         if not player.blindtest.channel:
             return False
@@ -951,7 +955,7 @@ class Music(commands.Cog):
                 song = player.blindtest.pop()
             player.blindtest.next_song = None
             song_url = player.blindtest.get_song_keywords()
-            results = await self.prepare_url(query=song_url, node=player.node)
+            results = await self.prepare_url(query=song_url, node=player.node, source=player.blindtest.source)
             if results and results['tracks']:
                 track = self.find_best_result(results)
                 track = self.prepare_track(track)  # not sure if it's usefull for blindtest lul
@@ -973,8 +977,8 @@ class Music(commands.Cog):
                     await channel.send(get_str(channel.guild, 'cmd-blindtest-next-song', bot=self.bot))
                     player.blindtest.current_task.append(asyncio.ensure_future(self.wait_blindtest_answer(player, channel)))
                 return True
-            else:
-                return await self.blindtest_loop(player)
+            elif error_count < 5:
+                return await self.blindtest_loop(player, error_count=error_count+1)
         return False
 
     async def wait_blindtest_answer(self, player, channel):
@@ -1508,7 +1512,7 @@ class Music(commands.Cog):
 
     async def prepare_blindtest(self, ctx, player, difficulty: int = None, mal: str = None, argument: str = 'all',
         autoplaylist: str = None, longestword: str = 'false', timeout: int = 120, severity: int = 100,
-        listening: str = 'false', percentage='100,0,0', wait=5, remove: str = 'ptw'):
+        listening: str = 'false', percentage='100,0,0', wait=5, remove: str = 'ptw', source: str = 'y'):
         """Prepares the blindtest before starting it."""
         songs = []
         if autoplaylist:
@@ -1574,6 +1578,9 @@ class Music(commands.Cog):
         else:
             player.blindtest.listening_mode = False
             player.channel = None
+
+        if source.lower().startswith('s'):
+            player.blindtest.source = 'scsearch'
 
         player.blindtest.severity = int(severity)
         player.blindtest.timeout = int(timeout)
@@ -2310,8 +2317,11 @@ class Music(commands.Cog):
         end = start + items_per_page
 
         for i, track in enumerate(player.queue[start:end], start=start):
+            max_val = len(str(len(player.queue[start:end]) + start))
+            str_index = str(i + 1)
+            str_index = "".join([' ' for x in range(max_val - len(str_index))]) + str_index
             requester = await self.bot.safe_fetch('member', track.requester, guild=ctx.guild) or ctx.author  # better than having an error
-            line = "`{}.` **[{}]({})** {} ".format(i + 1, track.title.replace('[', '').replace(']', '').replace('*', '')[:40], track.uri,
+            line = "`{}.` **[{}]({})** {} ".format(str_index, track.title.replace('[', '').replace(']', '').replace('*', '')[:40], track.uri,
                                                    get_str(ctx, "music-queue-added-by"))
             msg += line
             available_spaces = 67 - len(line) + len(track.uri) + 8  # cus of the **
@@ -4462,6 +4472,7 @@ class Music(commands.Cog):
         index = 1
 
         for e in tracks:
+            max_value = len(str(len(tracks)))
             str_index = str(index)
             dur = lavalink.utils.format_time(e['info']['length']).lstrip('0').lstrip(':')
             if len(e["info"]['title']) > 40:
@@ -4471,7 +4482,7 @@ class Music(commands.Cog):
                         upper += 1
                 if upper > 15:
                     e["info"]['title'] = str(e["info"]['title'])[0] + str(e["info"]['title'])[1:].lower()
-            str_index = "".join([' ' for x in range(3 - len(str_index))]) + str_index
+            str_index = "".join([' ' for x in range(max_value - len(str_index))]) + str_index
             new = "`{}.` **[{}]({}) [{}]**".format(str_index, e["info"]['title'].replace('[', '').replace(']', '').replace('*', '')[:lenght], e['info']['uri'], dur)
             if len('\n'.join(results)) + len(new) < 1975:
                 results.append(new)
@@ -5112,13 +5123,13 @@ class Music(commands.Cog):
         settings = await SettingsDB.get_instance().get_guild_settings(ctx.guild.id)
         if query:
             parts = query.split('|')
-            for part in parts:
+            for part in query.split('|'):
                 if not part.strip():
                     parts.remove(part)
-                if 'radio:' in part:
+                elif 'radio:' in part:
                     if part.replace('radio:', '').strip() not in self.list_radiolist:
                         return await ctx.send(get_str(ctx, "music-radio-invalid-syntax").format("`{}radio list`".format(get_server_prefixes(ctx.bot, ctx.guild))))
-                if 'autoplaylist:' in part:
+                elif 'autoplaylist:' in part:
                     glob_settings = await SettingsDB.get_instance().get_glob_settings()
                     file_name = part.replace('autoplaylist:', '').strip()
                     if str(file_name.lower()) not in glob_settings.autoplaylists:

@@ -530,8 +530,10 @@ class Fun(commands.Cog):
 
         {help}
         """
-        opt = random.choice(name.split("|"))
-        if opt == "":
+        choices = [o for o in name.split("|") if o.strip()]
+        if choices:
+            opt = random.choice(choices)
+        else:
             return await ctx.send(get_str(ctx, "cmd-choice-empty-option"))
 
         opt = opt.strip()

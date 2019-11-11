@@ -306,13 +306,31 @@ class Watora(commands.AutoShardedBot):
 
         return str(getattr(first, second, raw_result))
 
-    async def send_cmd_help(self, ctx):
+    async def send_cmd_help(self, ctx, command=None):
 
-        cname = str(ctx.command).replace(" ", "-").lower()
+        if not command:
+            command = ctx.command
+        cname = str(command).replace(" ", "-").lower()
         cname = str(cname).replace('pl-', 'pl')
-        if ctx.command.help:
+        if command.help:
+            prefix = get_server_prefixes(ctx.bot, ctx.guild)
             help_msg = get_str(ctx, f"cmd-{cname}-help")
-            return await ctx.send("```%s```" % dedent(ctx.command.help.format(command_prefix=get_server_prefixes(ctx.bot, ctx.guild), help=help_msg)))
+            if ctx.channel.permissions_for(ctx.me).embed_links:
+                embed = discord.Embed(title=f'{prefix}{str(command)}')
+                help_msg = '\n'.join(command.help.split('\n\n')[1:]).format(help=help_msg)
+                embed.description = help_msg
+                cmds = '\n'.join([f'`{cmd.strip()}`' for cmd in command.help.split('\n\n')[0].format(command_prefix=prefix).split('\n')])
+                embed.add_field(name='Usage', value=cmds, inline=False)
+                if not ctx.guild:
+                    embed.color = 0x71368a
+                else:
+                    embed.color = ctx.me.color
+                if command.aliases:
+                    aliases = '\n'.join([f'`{prefix}{(str(command.parent) + " ") if command.parent else ""}{a}`' for a in command.aliases])
+                    embed.add_field(name="Aliases", value=aliases, inline=False)
+                return await ctx.send(embed=embed)
+            else:
+                return await ctx.send("```%s```" % dedent(ctx.command.help.format(command_prefix=get_server_prefixes(ctx.bot, ctx.guild), help=help_msg)))
         else:
             return await ctx.send(get_str(ctx, "cmd-help-help-not-found"))
             log.warning(f"MissingHelpError : {cname}")

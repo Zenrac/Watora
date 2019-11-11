@@ -26,8 +26,10 @@ class Welcomer(commands.Cog):
             if str(channel.id) in dict:
                 text = dict[str(channel.id)]
                 if "|" in text:
-                    text = random.choice(text.split("|"))
-                    text = text.lstrip()
+                    choices = [o for o in text.split("|") if o.strip()]
+                    if choices:
+                        text = random.choice(choices)
+                        text = text.lstrip()
                 text = text.replace('@mention', '<@%s>' % member.id)
                 text = text.replace('@serv', member.guild.name)
                 if 'discord.gg' in member.name.lower():

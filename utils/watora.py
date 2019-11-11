@@ -171,11 +171,11 @@ def get_uptime():
     return str(datetime.timedelta(seconds=secs))
 
 
-def sweet_bar(current, max):
+def sweet_bar(current, max, length: int = 10):
     """Returns a sweet str bar with a max and min value."""
     prog_bar_str = ''
     percentage = 0.0
-    progress_bar_length = 30
+    progress_bar_length = length
 
     if max > 0:
         percentage = current / max
@@ -188,39 +188,45 @@ def sweet_bar(current, max):
     return prog_bar_str
 
 
-async def is_basicpatron(self, author):
+async def is_basicpatron(self, author, fetch=False, resp=None):
     """Checks if the user is basicpatron on my server."""
-    return await check_if_role(self, author, 341716510122835969, 341723457693810689, 341726906661470210)
+    return await check_if_role(self, author, fetch, resp, 341716510122835969, 341723457693810689, 341726906661470210)
 
 
-async def is_patron(self, author):
+async def is_patron(self, author, fetch=False, resp=None):
     """Checks if the user is patron on my server."""
-    return await check_if_role(self, author, 341723457693810689, 341726906661470210)
+    return await check_if_role(self, author, fetch, resp, 341723457693810689, 341726906661470210)
 
 
-async def is_lover(self, author):
+async def is_lover(self, author, fetch=False, resp=None):
     """Checks if the user is Lover on my server."""
-    return await check_if_role(self, author, 341726906661470210)
+    return await check_if_role(self, author, fetch, resp, 341726906661470210)
 
 
-async def is_voter(self, author):
+async def is_voter(self, author, fetch=False, resp=None):
     """Checks if the user is Voter on my server."""
-    return await check_if_role(self, author, 498278262607314974, 341716510122835969, 341723457693810689, 341726906661470210)
+    return await check_if_role(self, author, fetch, resp, 498278262607314974, 341716510122835969, 341723457693810689, 341726906661470210)
 
 
-async def check_if_role(self, author, *role_id):
+async def check_if_role(self, author, fetch, resp, *role_id):
     if isinstance(author, discord.Member):
         author = author.id
     if author == owner_id:
         return True
-    try:
-        resp = await self.http.get_member(268492317164437506, author)
-    except discord.HTTPException:
-        return False
+    if not resp:
+        try:
+            resp = await self.http.get_member(268492317164437506, author)
+        except discord.HTTPException:
+            return False
 
     roles_id = resp.get('roles', [])
 
-    return any(r for r in role_id if r in roles_id or str(r) in roles_id)
+    if any(r for r in role_id if r in roles_id or str(r) in roles_id):
+        if fetch:
+            return resp
+        return True
+
+    return False
 
 
 def is_admin(author, channel):

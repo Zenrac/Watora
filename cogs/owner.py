@@ -431,6 +431,15 @@ class Owner(commands.Cog):
         async with aiohttp.request("get", url) as res:
             await self.bot.user.edit(avatar=BytesIO(await res.read()))
 
+    @commands.command(aliases=['csi', 'csid'])
+    @commands.is_owner()
+    async def calcshardid(self, ctx, guild_id: int):
+        result = await self.bot.safe_fetch('guild', guild_id)
+        if result:
+            await ctx.send(f'`{result.name} ({result.id})` shard id: `{result.shard_id}`')
+        else:
+            await ctx.send('Guild not found')
+
     @commands.command(aliases=['log'])
     @commands.is_owner()
     async def logger(self, ctx, *, name_logger = None):

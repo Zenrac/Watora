@@ -336,14 +336,16 @@ class Gestion(commands.Cog):
                     await ctx.send(get_str(ctx, "cmd-ignore-now").format(f"`{channel.name}`", "\n\n{}".format(info)))
             elif command:
                 strcommand = command = command.lower()
-                cmd = self.bot.get_command(strcommand)
-                total_command = cmd.name
-                if cmd.parent:
-                    total_command = f'{cmd.parent} {total_command}'
                 if strcommand in cmds:
                     if strcommand == "all":
                         return await ctx.invoke(self.ignore, channel=channel)
                     cmd = cmds[strcommand]
+                else:
+                    cmd = self.bot.get_command(strcommand)
+                    if cmd:
+                        total_command = cmd.name
+                        if cmd.parent:
+                            total_command = f'{cmd.parent} {total_command}'
                 if not cmd:
                     return await ctx.send(get_str(ctx, "cmd-dc-cmd-not-found"))
                 if param.lower().startswith('r'):

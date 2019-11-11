@@ -108,7 +108,7 @@ class Mal(commands.Cog):
         days = ('monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday')
         embed = discord.Embed()
         if not day or day.lower() not in days:
-            day = days[datetime.now().day-1]
+            day = days[datetime.now().day % 7]
         try:
             result = await self.bot.jikan.schedule(day=day)
         except (JikanException, aiohttp.ClientError):

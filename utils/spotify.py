@@ -67,6 +67,10 @@ class Spotify:
         """Get a list of a playlist's tracks"""
         return await self.make_spotify_req(self.API_BASE + 'playlists/{0}/tracks'.format(uri))
 
+    async def get_artist_albums(self, uri):
+        """Get a list of album of an artist"""
+        return await self.make_spotify_req(self.API_BASE + 'artists/{0}/albums'.format(uri))
+
     async def make_spotify_req(self, url):
         """Proxy method for making a Spotify req using the correct Auth headers"""
         token = await self.get_token()

@@ -35,7 +35,18 @@ import traceback
 import subprocess
 
 from shutil import disk_usage, rmtree
+from multiprocessing import Process, Pipe, Queue
 
+import asyncio
+
+try:
+    import uvloop
+except ImportError:
+    pass
+else:
+    asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
+
+loop = asyncio.get_event_loop()
 
 class PIP(object):
     @classmethod
@@ -107,7 +118,7 @@ class PIP(object):
 tmpfile = tempfile.TemporaryFile('w+', encoding='utf8')
 log = logging.getLogger('launcher')
 log.setLevel(logging.DEBUG)
-
+# log.setLevel(logging.INFO)
 sh = logging.StreamHandler(stream=sys.stdout)
 sh.setFormatter(logging.Formatter(
     fmt="[%(asctime)s] - %(levelname)s: %(message)s"
@@ -121,6 +132,7 @@ tfh.setFormatter(logging.Formatter(
     fmt="[%(asctime)s] - %(levelname)s - %(name)s: %(message)s"
 ))
 tfh.setLevel(logging.DEBUG)
+# tfh.setLevel(logging.INFO)
 log.addHandler(tfh)
 
 
@@ -173,11 +185,22 @@ def finalize_logging():
 
     sh.setLevel(logging.INFO)
 
-    dlog = logging.getLogger('discord')
-    dlh = logging.StreamHandler(stream=sys.stdout)
-    dlh.terminator = ''
-    dlh.setFormatter(logging.Formatter('.'))
-    dlog.addHandler(dlh)
+    for logger in ['discord', 'lavalink', 'listenmoe']:
+        dlog = logging.getLogger(logger)
+        dlh = logging.StreamHandler(stream=sys.stdout)
+        dlh.setFormatter(logging.Formatter(
+            fmt="[%(asctime)s] - %(levelname)s: %(message)s"
+        ))
+        dlog.addHandler(dlh)
+
+        dfh = logging.FileHandler(log.handlers[1].baseFilename)
+        dfh.setFormatter(logging.Formatter(
+            fmt="[%(asctime)s] - %(levelname)s: %(message)s"
+        ))
+        dlog.addHandler(dfh)
+
+        dlh.setLevel(logging.INFO)
+        dfh.setLevel(logging.INFO)
 
 
 def bugger_off(msg="Press enter to continue . . .", code=1):
@@ -342,6 +365,7 @@ def main():
         sh.terminator = ''
         log.info("Connecting\n")
         sh.terminator = '\n'
+
         m.run()
 
     except SyntaxError:
@@ -375,8 +399,16 @@ def main():
         log.info("I'm guessing that your settings.json is invalid, ensure your ','")
         log.info(e)
     except Exception as e:
-        log.info("Error starting Watora")
-        log.info(e)
+        log.warning("Error starting Watora")
+        log.warning(e)
+        log.warning(type(e))
+        log.warning(sys.exc_info())
+        traceback.print_exc()
+        log.warning(traceback.format_exc())
+        exc_type, exc_obj, exc_tb = sys.exc_info()
+        fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+        print(exc_type, fname, exc_tb.tb_lineno)
+
 
     finally:
         if not m or not m.init_ok:
@@ -384,9 +416,10 @@ def main():
                 # How to log this without redundant messages...
                 traceback.print_exc()
 
+        loop.close()
+
     print()
     log.info("All done.")
-    os.system("PAUSE")
     os._exit(0)
 
 

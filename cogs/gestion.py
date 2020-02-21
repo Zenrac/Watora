@@ -35,7 +35,7 @@ cmd_list = {
 #})
 # Eclyssia API
 cmd_list.update({
-    'Filters':                  ['blur', 'beautiful', 'greyscale', 'invert', 'pixelate', 'posterize', 'sepia'],
+    'Filters':                  ['blur', 'triggered', 'whatspokemon', 'captcha', 'beautiful', 'greyscale', 'invert', 'pixelate', 'posterize', 'sepia'],
 })
 
 cmd_list.update({
@@ -45,11 +45,18 @@ cmd_list.update({
 
 # Dank Memer API
 cmd_meme = {
-    '1 avatar': ['radialblur', 'warp', 'aborted', 'affect', 'bongocat', 'cancer', 'dab', 'dank', 'deepfry', 'delete', 'disability', 'door', 'egg', 'failure', 'fakenews', 'fedora', 'gay', 'jail', 'laid', 'magik', 'rip', 'roblox', 'salty', 'satan', 'sickban', 'trash', 'ugly', 'warp', 'whodidthis'],
-    '1 text': ['abandon', 'armor', 'balloon', 'boo', 'brain', 'changemymind', 'crysip', 'excuseme', 'facts', 'humansgood', 'knowyourlocation', 'master', 'note', 'ohno', 'plan', 'savehumanity', 'shit', 'slapsroof', 'surprised', 'vr', 'walking'],
+    '1 avatar': ['wanted', 'hitler', 'goggles', 'radialblur', 'airpods',
+        'warp', 'aborted', 'affect', 'bongocat', 'cancer', 'dab', 'dank', 'deepfry',
+        'delete', 'disability', 'door', 'egg', 'failure', 'fakenews', 'fedora', 'gay', 'jail',
+        'laid', 'magik', 'rip', 'roblox', 'salty', 'satan', 'sickban', 'trash', 'ugly', 'warp', 'whodidthis'],
+    '1 text': ['inator', 'stroke', 'violence', 'violentsparks', 'thesearch', 'sneakyfox',
+        'piccolo', 'nothing', 'abandon', 'justpretending', 'fuck', 'expanddong', 'doglemon', 'corporate',
+        'confusedcat', 'citation', 'cheating', 'armor', 'balloon', 'boo', 'brain', 'changemymind', 'crysip', 'excuseme',
+        'facts', 'humansgood', 'knowyourlocation', 'master', 'note', 'ohno', 'plan', 'savehumanity', 'shit', 'slapsroof',
+        'surprised', 'vr', 'walking'],
     '2 avatars': ['bed', 'madethis', 'screams', 'robinslap', 'spank'],
-    '1 avatar 1 text 1 username': ['quote', 'tweet', 'youtube'],
-    '1 avatar 1 text': ['floor', 'unpopular']
+    '1 avatar 1 text 1 username': ['byemom', 'quote', 'tweet', 'youtube'],
+    '1 avatar 1 text': ['garfield', 'floor', 'unpopular', 'whothisis']
 }
 
 for img_cmd in cmd_meme.values():

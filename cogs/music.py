@@ -142,7 +142,6 @@ class BlindTest:
         self.timeout = 120
         self.percentage = '100,0,0'
         self.wait = 5
-        self.source = 'ytsearch'
 
     @property
     def is_running(self):
@@ -716,6 +715,12 @@ class Music(commands.Cog):
     async def prepare_url(self, query, node=None, source='ytsearch'):
         """Prepares the url if it's an url or not etc... Ensures dict."""
         log.debug('[Prepare] Preparing url for {}'.format(query))
+        settings = await SettingsDB.get_instance().get_glob_settings()
+        default_source = settings.source
+
+        if source == 'ytsearch' and source != default_source:
+            source = default_source
+
         if not match_url(query):
             if query.lower().startswith(('listen.moe', 'listen moe', 'listenmoe')):
                 if 'k' in query.lower():
@@ -1023,7 +1028,8 @@ class Music(commands.Cog):
 
             cid = str(response_message.author.id)
             mega_bonus = (response_message.content == player.blindtest.current_song.title)
-            bonus = (response_message.content.lower() == player.blindtest.current_song.title.lower())
+            naked_query = re.sub(r'\W+', ' ', player.blindtest.current_song.title).strip()
+            bonus = (response_message.content.lower() in [player.blindtest.current_song.title.lower(), naked_query])
             point = 3 if mega_bonus else (2 if bonus else 1)
             if cid in player.blindtest.points:
                 player.blindtest.points[cid] += point
@@ -1885,10 +1891,13 @@ class Music(commands.Cog):
 
         if not results or not results['tracks']:
             if results['loadType'] == "LOAD_FAILED":
+                if 'mix' in results.get('exception', {}).get('message'):
+                    return await ctx.invoke(self.play_song, query=query.split('&list')[0])  # Skip YouTube mixes
                 await ctx.send(get_str(ctx, "music-load-failed").format("`{}search`".format(get_server_prefixes(ctx.bot, ctx.guild))))
             elif results['loadType'] == "NO_MATCHES":
                 await ctx.send(get_str(ctx, "music-no-result").format("`{}search`".format(get_server_prefixes(ctx.bot, ctx.guild))))
             return
+
 
         embed = discord.Embed(colour=self.get_color(ctx.guild))
 
@@ -4335,8 +4344,13 @@ class Music(commands.Cog):
                 elif entry.attachments or entry.embeds:  # if there are embeds or attchments
                     break
 
-        if typing:
-            await ctx.trigger_typing()
+            if typing:
+                await ctx.trigger_typing()
+        else:
+            try:
+                await ctx.message.add_reaction("☑")
+            except discord.Forbidden:
+                await ctx.send(get_str(ctx, "music-join-success").format(f"**{channel}**"), delete_after=15)
 
         if self.is_spotify(query):
             matchs = ['/album/', '/playlist/', ':album:', ':playlist:']
@@ -4629,6 +4643,8 @@ class Music(commands.Cog):
         {help}
         """
         if not ctx.invoked_subcommand:
+            if not ctx.channel.permissions_for(ctx.author).manage_guild and not ctx.author.id == owner_id:
+                raise commands.errors.CheckFailure
             return await ctx.invoke(self.setdj_set, name=role)
 
     @setdj.command(name="now", aliases=["queue", "dj", "djs", "display", "list", "liste", "info"])
@@ -5106,6 +5122,8 @@ class Music(commands.Cog):
         {help}
         """
         if not ctx.invoked_subcommand:
+            if not ctx.channel.permissions_for(ctx.author).manage_guild and not ctx.author.id == owner_id:
+                raise commands.errors.CheckFailure
             return await ctx.invoke(self.autoconnect_set, channel=channel, query=query)
 
     @checks.has_permissions(manage_guild=True)
@@ -5193,6 +5211,20 @@ class Music(commands.Cog):
         self.bot.autosongs_map.pop(ctx.guild.id, None)
         await SettingsDB.get_instance().set_guild_settings(settings)
         await ctx.send(":ballot_box_with_check:")
+
+    @commands.is_owner()
+    @commands.command()
+    async def togglesource(self, ctx, *, source: str):
+        """
+            {command_prefix}togglesource
+
+        Toggle default video source.
+        """
+        settings = await SettingsDB.get_instance().get_glob_settings()
+        settings.source = source
+        await SettingsDB.get_instance().set_glob_settings(settings)
+
+        await ctx.send(f"Source toggled to `{source}`")
 
     @commands.is_owner()
     @commands.command()

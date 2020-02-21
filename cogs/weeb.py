@@ -13,7 +13,7 @@ from arcadia.errors import Forbidden
 from arcadia import Client as arcadiaclient
 from cogs.gestion import cmd_list, cmd_meme
 
-rickroll = "https://services.is-going-to-rickroll.me/api"
+memer = "https://dankmemer.services/api"
 ksoft_api = "https://api.ksoft.si/images/random-image"
 cmd = '{command_prefix}'
 doc = '"""'
@@ -27,7 +27,7 @@ class Weeb(commands.Cog):
         self.lazy_api = "https://i.ode.bz/auto"
         self.session = aiohttp.ClientSession(loop=self.bot.loop)
         self.ksoft_headers = {'authorization': f'Bearer {self.bot.tokens["KSOFT"]}'}
-        self.rickroll_headers = {'authorization': self.bot.tokens['RICKROLL']}
+        self.dankmemer_header = {'authorization': self.bot.tokens['MEMER']}
         weebclient.pluggable(bot=bot, api_key=self.bot.tokens['WEEB'])
         arcadiaclient.pluggable(bot=bot, token=self.bot.tokens['ARCADIA'], aiosession=self.session)
 
@@ -36,7 +36,7 @@ class Weeb(commands.Cog):
         del self.bot.arcadia
 
     async def get_image_ksoft(self, tag: str, nsfw: bool = True):
-        params = f'?tag={tag}&nsfw={bytes(nsfw)}'
+        params = f'?tag={tag}&nsfw={nsfw}'
         url = ksoft_api + params
         async with self.session.get(url, headers=self.ksoft_headers, timeout=20) as response:
             if response.status != 200:
@@ -79,11 +79,11 @@ class Weeb(commands.Cog):
         """
         if text:
             text = quote(text)
-        url = '{}/{}{}{}'.format(rickroll, image_type.lower(), '?avatar1={}'.format(url) if url else '',
+        url = '{}/{}{}{}'.format(memer, image_type.lower(), '?avatar1={}'.format(url) if url else '',
                                  '{}text={}'.format('&' if url else '?', text) if text else '')
         for p, v in args.items():
             url += '&{}={}'.format(p, v)
-        async with self.session.get(url, headers=self.rickroll_headers, timeout=timeout) as response:
+        async with self.session.get(url, headers=self.dankmemer_header, timeout=timeout) as response:
             if response.status != 200:
                 raise Forbidden('You are not allowed to access this resource.')
             ext = response.content_type.split('/')[-1]
@@ -91,7 +91,7 @@ class Weeb(commands.Cog):
             await response.release()
         return discord.File(img, filename="image.{}".format(ext))
 
-    @commands.command(aliases=["image", "generators", "generator", "images", "gen", "generate", "pic", "imagelist", "weeb", "picturelist", "pictures", "weeblist", "weebpic", "helpweeb", "weebhelp"])
+    @commands.command(aliases=["image", "img", "generators", "generator", "images", "gen", "generate", "pic", "imagelist", "weeb", "picturelist", "pictures", "weeblist", "weebpic", "helpweeb", "weebhelp"])
     async def picture(self, ctx):
         """
             {command_prefix}picture
@@ -123,15 +123,15 @@ class Weeb(commands.Cog):
                 weeb_cmd.append(v)
 
     aliases = {
-    'clagwimoth' : ", '?', '??', '???'",
-    'neko' : ", 'catgirl', 'catgirls'",
-    'delet_this' : ', "deletethis", "deletthis", "delete_that", "delete_this", "deletethat"',
-    'discord_memes' : '", discordmemes", "discord_meme", "discordmeme"',
-    'tail' : ', "wag"',
-    'waifu_insult' : ', "waifuinsult", "waifuinsults"',
-    'initial_d' : ', "initiald"',
-    'greet' : ', "aurevoir", "cya", "greetings", "greeting"',
-    'love' : ', "deredere"'
+        'clagwimoth' : ", '?', '??', '???'",
+        'neko' : ", 'catgirl', 'catgirls'",
+        'delet_this' : ', "deletethis", "deletthis", "delete_that", "delete_this", "deletethat"',
+        'discord_memes' : '", discordmemes", "discord_meme", "discordmeme"',
+        'tail' : ', "wag"',
+        'waifu_insult' : ', "waifuinsult", "waifuinsults"',
+        'initial_d' : ', "initiald"',
+        'greet' : ', "aurevoir", "cya", "greetings", "greeting"',
+        'love' : ', "deredere"'
     }
 
     for m in weeb_cmd:
@@ -248,6 +248,7 @@ async def _{m}(self, ctx, pic=None):
 
     img = await self.get_meme_image('{m}', url=pic, timeout=20)
     embed.set_image(url=f"attachment://%s" % img.filename)
+    embed.set_footer(text="Powered by DANK MEMER IMGEN")
 
     try:
         await ctx.send(file=img, embed=embed)
@@ -269,6 +270,7 @@ async def _{m}(self, ctx, *, text):
 
     img = await self.get_meme_image('{m.replace("sip", "")}', text=text, timeout=20)
     embed.set_image(url=f"attachment://%s" % img.filename)
+    embed.set_footer(text="Powered by DANK MEMER IMGEN")
 
     try:
         if '.mp4' not in img.filename:
@@ -347,6 +349,7 @@ async def _{m}(self, ctx, pic=None, pic2=None):
 
     img = await self.get_meme_image('{m.replace('robin', '')}', url=pic, avatar2=pic2, timeout=20)
     embed.set_image(url=f"attachment://%s" % img.filename)
+    embed.set_footer(text="Powered by DANK MEMER IMGEN")
 
     try:
         await ctx.send(file=img, embed=embed)
@@ -393,6 +396,7 @@ async def _{m}(self, ctx, pic=None, *, text=None):
 
     img = await self.get_meme_image('{m}', url=pic, text=text, timeout=20)
     embed.set_image(url=f"attachment://%s" % img.filename)
+    embed.set_footer(text="Powered by DANK MEMER IMGEN")
 
     try:
         await ctx.send(file=img, embed=embed)
@@ -440,6 +444,7 @@ async def _{m}(self, ctx, pic=None, *, text: str = None):
 
     img = await self.get_meme_image('{m}', url=pic, username1=user.name, text=text, timeout=20)
     embed.set_image(url=f"attachment://%s" % img.filename)
+    embed.set_footer(text="Powered by DANK MEMER IMGEN")
 
     try:
         await ctx.send(file=img, embed=embed)

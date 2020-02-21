@@ -37,6 +37,7 @@ class YoutubeAPI:
         self.session = aiosession or aiohttp.ClientSession(loop=self.bot.loop)
         self.loop = loop or asyncio.get_event_loop()
 
+
     async def make_request(self, url):
         """Used to call youtune API"""
         url = f'{self.url}{url}&key={self.youtube_token}'
@@ -62,6 +63,7 @@ class YoutubeAPI:
                 videos.append(track)
 
         return videos
+
 
     async def get_youtube_title(self, player=None, *, id: list):
         if not isinstance(id, list):
@@ -103,6 +105,7 @@ class YoutubeAPI:
             if best_pixel < pixel:
                 best_res = res
         return best_res['url']
+
 
     async def get_recommendation(self, id: str, player=None):
         """Gets music recommendations from YouTube API from a specified ID"""

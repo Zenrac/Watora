@@ -6,6 +6,7 @@ __pycache__/
 # Config Files
 config/settings.json
 config/tokens.json
+config/i18n/
 
 logs/
 utils/Lavalink

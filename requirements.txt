@@ -1,0 +1,23 @@
+pip
+aiohttp
+listenmoe
+websockets
+lxml
+pyfiglet
+python3-mal
+pytz
+psutil
+bs4
+git+https://github.com/Zenrac/Lavalink.py.git@manual
+git+git://github.com/AWConant/jikanpy.git
+monstercatFM
+weebapi
+TextToOwO
+unidecode
+pyarcadia
+pymongo
+motor
+google-api-python-client
+uvloop ;'linux' in sys_platform
+discord.py
+cffi --only-binary all; sys_platform == 'win32'

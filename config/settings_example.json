@@ -1,0 +1,9 @@
+{
+    "TOKEN" : "YOUR_TOKEN_HERE",
+	"OWNER_ID" : "YOUR_ID_HERE",
+	"PREFIX" : "YOUR_PREFIX_HERE",
+	"DEF_VOL" : "100",
+	"DEF_TIMEOUT" : "180",
+  	"DEF_VOTE" : "50",
+	"VER" : "11.3"
+}

@@ -4574,13 +4574,21 @@ class Music(commands.Cog):
         except ValueError:
             return await ctx.send(get_str(ctx, "music-search-ensure"))
 
-        service = 'youtube'
         services = {
             'youtube': 'ytsearch',
             'soundcloud': 'scsearch',
             'yt': 'ytsearch',
             'sc': 'scsearch',
         }
+
+        settings = await SettingsDB.get_instance().get_glob_settings()
+        default_source = settings.source
+        try:
+            service = list(services.keys())[list(services.values()).index(default_source)]
+        except (IndexError, KeyError):
+            service = 'youtube'
+
+        print(service)
 
         if leftover_args[0] in services and leftover_args[0] != original_leftover_args:
             service = leftover_args.pop(0)

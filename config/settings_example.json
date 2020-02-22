@@ -9,5 +9,7 @@
   "LOVER_ROLE": 0,
   "PATRON_ROLE": 0,
   "BASIC_PATRON_ROLE": 0,
-  "VOTER_ROLE": 0
+  "VOTER_ROLE": 0,
+  "DB_PORT": 27017,
+  "DB_HOST": "localhost"
 }

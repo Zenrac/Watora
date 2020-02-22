@@ -6,6 +6,7 @@ import listenmoe
 from utils.watora import log
 from discord.ext import commands
 
+
 class Radio(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
@@ -25,12 +26,14 @@ class Radio(commands.Cog):
                 try:
                     await music.update_all_listen_moe_players(kpop)
                 except Exception as e:
-                    log.warning(f"[LISTEN.moe] Updating {'K-POP' if kpop else 'J-POP'} players failed with error : {e}")
+                    log.warning(
+                        f"[LISTEN.moe] Updating {'K-POP' if kpop else 'J-POP'} players failed with error : {e}")
             else:
                 try:
                     await music.update_all_mc_players()
                 except Exception as e:
-                    log.warning(f"[MonsterCat] Updating players failed with error : {e}")
+                    log.warning(
+                        f"[MonsterCat] Updating players failed with error : {e}")
 
     async def hand(self, msg):
         before = self.bot.now
@@ -79,6 +82,7 @@ class Radio(commands.Cog):
         # mc.register_handler(self.mchand)
         # task = asyncio.ensure_future(mc.start())
         # self.tasks.append(task)
+
 
 def setup(bot):
     bot.add_cog(Radio(bot))

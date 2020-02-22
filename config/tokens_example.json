@@ -1,43 +1,43 @@
 {
-    "BOTS_KEY" : "",
-    "BOTSFRENCH_KEY" : "",
-    "BOTSORG_KEY" : "",
-    "CARBON_KEY" : "",
-    "BOTSFORDISCORD_KEY" : "",
-    "BOTSPACE_KEY" : "",
-    "DISCORDBOTSGROUP_KEY" : "",
-    "DIVINEDISCORDBOTS_KEY" : "",
-    "DISCORDBOAT_KEY" : "",
-    "DISCORDBOTWORLD_KEY" : "",
-    "DISCORDBOTSTK_KEY" : "",
-    "DISCORDBESTBOTS_KEY" : "",
-    "ARCANEBOTCENTER_KEY" : "",
+  "BOTS_KEY": "",
+  "BOTSFRENCH_KEY": "",
+  "BOTSORG_KEY": "",
+  "CARBON_KEY": "",
+  "BOTSFORDISCORD_KEY": "",
+  "BOTSPACE_KEY": "",
+  "DISCORDBOTSGROUP_KEY": "",
+  "DIVINEDISCORDBOTS_KEY": "",
+  "DISCORDBOAT_KEY": "",
+  "DISCORDBOTWORLD_KEY": "",
+  "DISCORDBOTSTK_KEY": "",
+  "DISCORDBESTBOTS_KEY": "",
+  "ARCANEBOTCENTER_KEY": "",
 
-    "WEEB" : "WEEB_API",
-    "GENIUS" : "LYRICS_API",
-    "MANGA" : "GOOGLE_MANGA_SEARCH",
-    "CHARACTER" : "GOOGLE_CHARACTER_SEARCH",
-    "ANIME" : "GOOGLE_ANIME_SEARCH",
-    "GOOGLE" : "GOOGLE_API",
-    "SPOTIFY_SECRET" : "SPOTIFY_SECRET",
-    "SPOTIFY_ID" : "SPOTIFY_ID",
-    "YT_KEY" : "YOUTUBE_KEY",
-    "ARCADIA" : "ARCADIA_API",
-    "KSOFT" : "KSOFT_API",
-    "MEMER" : "MEMER_API",
+  "WEEB": "WEEB_API",
+  "GENIUS": "LYRICS_API",
+  "MANGA": "GOOGLE_MANGA_SEARCH",
+  "CHARACTER": "GOOGLE_CHARACTER_SEARCH",
+  "ANIME": "GOOGLE_ANIME_SEARCH",
+  "GOOGLE": "GOOGLE_API",
+  "SPOTIFY_SECRET": "SPOTIFY_SECRET",
+  "SPOTIFY_ID": "SPOTIFY_ID",
+  "YT_KEY": "YOUTUBE_KEY",
+  "ARCADIA": "ARCADIA_API",
+  "KSOFT": "KSOFT_API",
+  "MEMER": "MEMER_API",
 
-    "NODE_EU" : {
-        "HOST" : "",
-        "PASSWORD" : ""
-    },
+  "NODE_EU": {
+    "HOST": "",
+    "PASSWORD": ""
+  },
 
-    "NODE_US" : {
-        "HOST" : "",
-        "PASSWORD" : ""
-    },
+  "NODE_US": {
+    "HOST": "",
+    "PASSWORD": ""
+  },
 
-    "NODE_ASIA" : {
-        "HOST" : "",
-        "PASSWORD" : ""
-    }
+  "NODE_ASIA": {
+    "HOST": "",
+    "PASSWORD": ""
+  }
 }

@@ -48,6 +48,7 @@ else:
 
 loop = asyncio.get_event_loop()
 
+
 class PIP(object):
     @classmethod
     def run(cls, command, check_output=False):
@@ -239,7 +240,8 @@ def req_ensure_py3():
     log.info("Checking for python 3.5+")
 
     if sys.version_info < (3, 5):
-        log.warning("Python 3.5+ is required. This version is %s", sys.version.split()[0])
+        log.warning("Python 3.5+ is required. This version is %s",
+                    sys.version.split()[0])
         log.warning("Attempting to locate python 3.5...")
 
         pycom = None
@@ -269,15 +271,18 @@ def req_ensure_py3():
         else:
             log.info('Trying "python3.5"')
             try:
-                pycom = subprocess.check_output('python3.5 -c "exit()"'.split()).strip().decode()
+                pycom = subprocess.check_output(
+                    'python3.5 -c "exit()"'.split()).strip().decode()
             except:  # noqa: E722
                 pass
 
             if pycom:
-                log.info("\nPython 3 found.  Re-launching bot using: %s run.py\n", pycom)
+                log.info(
+                    "\nPython 3 found.  Re-launching bot using: %s run.py\n", pycom)
                 pyexec(pycom, 'run.py')
 
-        log.critical("Could not find python 3.5.  Please run the bot using python 3.5")
+        log.critical(
+            "Could not find python 3.5.  Please run the bot using python 3.5")
         bugger_off()
 
 
@@ -288,7 +293,8 @@ def req_ensure_encoding():
         log.info("Setting console encoding to UTF-8")
 
         import io
-        sys.stdout = io.TextIOWrapper(sys.stdout.detach(), encoding='utf8', line_buffering=True)
+        sys.stdout = io.TextIOWrapper(
+            sys.stdout.detach(), encoding='utf8', line_buffering=True)
         # only slightly evil
         sys.__stdout__ = sh.stream = sys.stdout
 
@@ -303,7 +309,8 @@ def req_ensure_env():
     try:
         assert os.path.isdir('config'), 'folder "config" not found'
         assert os.path.isdir('config/i18n'), 'folder "config.i18n" not found'
-        assert os.path.isfile('config/i18n/english.json'), 'file "english.json" not found'
+        assert os.path.isfile(
+            'config/i18n/english.json'), 'file "english.json" not found'
         assert os.path.isdir('cogs'), 'folder "cogs" not found'
         assert os.path.isdir('utils'), 'folder "utils" not found'
     except AssertionError as e:
@@ -330,8 +337,9 @@ def req_ensure_folders():
 
 
 def opt_check_disk_space(warnlimit_mb=200):
-    if disk_usage('.').free < warnlimit_mb*1024*2:
-        log.warning("Less than %sMB of free space remains on this device" % warnlimit_mb)
+    if disk_usage('.').free < warnlimit_mb * 1024 * 2:
+        log.warning(
+            "Less than %sMB of free space remains on this device" % warnlimit_mb)
 
 
 #################################################
@@ -408,7 +416,6 @@ def main():
         exc_type, exc_obj, exc_tb = sys.exc_info()
         fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
         print(exc_type, fname, exc_tb.tb_lineno)
-
 
     finally:
         if not m or not m.init_ok:

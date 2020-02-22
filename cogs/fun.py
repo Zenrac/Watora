@@ -17,6 +17,7 @@ from utils.watora import get_server_prefixes, is_lover, is_basicpatron, get_str,
 
 class Fun(commands.Cog):
     """The fun cog"""
+
     def __init__(self, bot):
         self.bot = bot
         self.minesweeper_levels = {
@@ -37,7 +38,7 @@ class Fun(commands.Cog):
         """
         nrows = max(1, min(14, nrows))
         ncols = max(1, min(14, ncols))
-        nbombs = max(0, min(ncols*nrows, nbombs))
+        nbombs = max(0, min(ncols * nrows, nbombs))
         bombs = []
         posibilities = []
         for r in range(nrows):
@@ -55,24 +56,29 @@ class Fun(commands.Cog):
         board = [[0] * ncols for _ in range(nrows)]
         for r in range(nrows):
             for c in range(ncols):
-                has_bomb = any(map(lambda b: b['x'] == r and b['y'] == c, bombs))
+                has_bomb = any(
+                    map(lambda b: b['x'] == r and b['y'] == c, bombs))
                 if has_bomb:
                     board[r][c] = -1
                 else:
                     adjc = 0
                     for i in range(r - 1, r + 2):
                         for j in range(c - 1, c + 2):
-                            adjc += sum(map(lambda b: 1 if b['x'] == i and b['y'] == j else 0, bombs))
+                            adjc += sum(map(lambda b: 1 if b['x']
+                                            == i and b['y'] == j else 0, bombs))
                     board[r][c] = adjc
 
-        REPR = [':bomb:', ':cyclone:', ':one:', ':two:', ':three:', ':four:', ':five:', ':six:', ':seven:', ':eight:']
-        msg = '\n'.join(''.join(map(lambda n: "||{}||".format(REPR[n+1] if len(REPR) > n+1 else ':cyclone:'), row)) for row in board)
+        REPR = [':bomb:', ':cyclone:', ':one:', ':two:', ':three:',
+                ':four:', ':five:', ':six:', ':seven:', ':eight:']
+        msg = '\n'.join(''.join(map(lambda n: "||{}||".format(
+            REPR[n + 1] if len(REPR) > n + 1 else ':cyclone:'), row)) for row in board)
         if len(msg) > 2000:
-            return self.generate_minesweeper_board(min(ncols-1, 10), min(nrows-1, 10), nbombs)  # Prevent from infinite loop.
+            # Prevent from infinite loop.
+            return self.generate_minesweeper_board(min(ncols - 1, 10), min(nrows - 1, 10), nbombs)
         return msg
 
     @commands.command(aliases=["mine", "mines", "demineur", "démineur"])
-    async def minesweeper(self, ctx, level_or_rows = 'BEGINNER', ncols: int = 10, nbombs: int = 10):
+    async def minesweeper(self, ctx, level_or_rows='BEGINNER', ncols: int = 10, nbombs: int = 10):
         """
             {command_prefix}minesweeper [level]
             {command_prefix}minesweeper [number of rows] [number of cols] [number of bombs]
@@ -174,7 +180,8 @@ class Fun(commands.Cog):
                 results.append(random.randint(1, face))
 
             if number != 1:
-                roll = '{} ({})'.format(sum(results), ' + '.join([str(m) for m in results]))
+                roll = '{} ({})'.format(
+                    sum(results), ' + '.join([str(m) for m in results]))
             else:
                 roll = sum(results)
 
@@ -370,7 +377,8 @@ class Fun(commands.Cog):
 
         {help}
         """
-        messages = [ctx.message]  # a list of messages to delete when we're all done
+        messages = [
+            ctx.message]  # a list of messages to delete when we're all done
         question = format_mentions(question)
         answers = []
         for i in range(1, 11):
@@ -383,7 +391,8 @@ class Fun(commands.Cog):
             if not entry:
                 break
 
-            prefixes = [get_server_prefixes(ctx.bot, ctx.guild), f"<@!{self.bot.user.id}>", self.bot.user.mention]
+            prefixes = [get_server_prefixes(
+                ctx.bot, ctx.guild), f"<@!{self.bot.user.id}>", self.bot.user.mention]
             if any([entry.content.startswith(p) for p in prefixes]):
                 break
 
@@ -417,7 +426,8 @@ class Fun(commands.Cog):
         if len(ctx.message.mentions) > (2 if self.bot.user.mention in ctx.prefix else 1):
             return await ctx.send(get_str(ctx, "cmd-meme-one-user"))
         if ctx.message.mentions:
-            user = ctx.message.mentions[-1]  # mention on a nicknamed user on mobile creates weird issue (no '!' where it should)
+            # mention on a nicknamed user on mobile creates weird issue (no '!' where it should)
+            user = ctx.message.mentions[-1]
             if str(user.id) not in pic:  # It was a prefix
                 user = None
                 if len(ctx.message.mentions) > 1:
@@ -428,7 +438,8 @@ class Fun(commands.Cog):
                 if target:
                     user = target
 
-            check_str = [u for u in ctx.guild.members if u.name.lower() == pic.lower()]
+            check_str = [
+                u for u in ctx.guild.members if u.name.lower() == pic.lower()]
             if check_str:
                 user = check_str[0]
 
@@ -438,7 +449,8 @@ class Fun(commands.Cog):
         pic = pic.strip('<>')
 
         msg = " ".join(msg.split())  # remove useless spaces
-        msg = msg.replace('\r', '').replace('\n', '').replace("-", "--").replace("_", "__").replace("?", "~q").replace("#", "~h").replace(" ", "_").replace("%", "~p").replace("/", "~s").replace('"', "''")
+        msg = msg.replace('\r', '').replace('\n', '').replace("-", "--").replace("_", "__").replace(
+            "?", "~q").replace("#", "~h").replace(" ", "_").replace("%", "~p").replace("/", "~s").replace('"', "''")
         try:
             part1 = msg.split("|")[0]
         except IndexError:
@@ -454,9 +466,11 @@ class Fun(commands.Cog):
         if not get_image_from_url(pic):
             return await ctx.send(get_str(ctx, "command-invalid-usage").format("{}help meme".format(get_server_prefixes(ctx.bot, ctx.guild))))
         if part2 != "_":
-            total = "https://memegen.link/custom/{}/{}.jpg?alt={}".format(part1, part2, pic)
+            total = "https://memegen.link/custom/{}/{}.jpg?alt={}".format(
+                part1, part2, pic)
         else:
-            total = "https://memegen.link/custom/{}/_.jpg?alt={}".format(part1, pic)
+            total = "https://memegen.link/custom/{}/_.jpg?alt={}".format(
+                part1, pic)
         embed = discord.Embed()
         embed.set_author(name=ctx.author.name, icon_url=ctx.author.avatar_url)
 
@@ -487,7 +501,8 @@ class Fun(commands.Cog):
         {help}
         """
         if ctx.message.mentions:
-            user = ctx.message.mentions[-1]  # mention on a nicknamed user on mobile creates weird issue (no '!' where it should)
+            # mention on a nicknamed user on mobile creates weird issue (no '!' where it should)
+            user = ctx.message.mentions[-1]
             if str(user.id) not in name:  # It was a prefix
                 user = None
                 if len(ctx.message.mentions) > 1:
@@ -495,8 +510,10 @@ class Fun(commands.Cog):
             name = user.name
         pseudo = name.split(" ")
         mode = None
-        modes = ["standard", "taiko", "ctb", "catch the beat", "mania", "default", "defaut", "défaut", "normal", "osu"]
-        conv = {"standard": "0", "taiko": "1", "ctb": "2", "catch the beat": "2", "mania": "3", "default": "0", "défaut": "0", "defaut": "0", "normal": "0", "osu": "0"}
+        modes = ["standard", "taiko", "ctb", "catch the beat",
+                 "mania", "default", "defaut", "défaut", "normal", "osu"]
+        conv = {"standard": "0", "taiko": "1", "ctb": "2", "catch the beat": "2", "mania": "3",
+                "default": "0", "défaut": "0", "defaut": "0", "normal": "0", "osu": "0"}
         mode = [word for word in pseudo if word.lower() in modes]
 
         if not mode:
@@ -514,8 +531,10 @@ class Fun(commands.Cog):
             color = "pink"
         mode = conv[mode.lower()]
         em = discord.Embed()
-        em.set_author(name="osu!", icon_url="https://image.noelshack.com/fichiers/2018/11/4/1521143059-ici.png", url=f"https://osu.ppy.sh/u/{pseudo}")
-        em.set_image(url=f"https://lemmmy.pw/osusig/sig.php?colour={color}&uname={pseudo}&mode={mode}&pp=0&onlineindicator=undefined&xpbar")
+        em.set_author(name="osu!", icon_url="https://image.noelshack.com/fichiers/2018/11/4/1521143059-ici.png",
+                      url=f"https://osu.ppy.sh/u/{pseudo}")
+        em.set_image(
+            url=f"https://lemmmy.pw/osusig/sig.php?colour={color}&uname={pseudo}&mode={mode}&pp=0&onlineindicator=undefined&xpbar")
         try:
             await ctx.send(embed=em)
         except discord.Forbidden:
@@ -572,7 +591,7 @@ class Fun(commands.Cog):
 
     @commands.cooldown(rate=3, per=1.5, type=commands.BucketType.user)
     @commands.command(aliases=['f', 'press', 'respect', 'respects'])
-    async def pressf(self, ctx, *, target:str = None):
+    async def pressf(self, ctx, *, target: str = None):
         """
             {command_prefix}f (something)
 
@@ -586,7 +605,8 @@ class Fun(commands.Cog):
         desc += f' to {target}.' if target else '.'
 
         e = discord.Embed(description=desc)
-        e.set_footer(text=f"Total of {settings.respect} respect{'s' if settings.respect != 1 else ''} on this server.")
+        e.set_footer(
+            text=f"Total of {settings.respect} respect{'s' if settings.respect != 1 else ''} on this server.")
 
         await ctx.send(embed=e)
 

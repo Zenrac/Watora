@@ -17,7 +17,8 @@ class Welcomer(commands.Cog):
 
     async def welcomer(self, member, settings, goodbye=False):
         await self.bot.wait_until_ready()
-        channels = [channel for channel in member.guild.channels if isinstance(channel, discord.TextChannel)]
+        channels = [channel for channel in member.guild.channels if isinstance(
+            channel, discord.TextChannel)]
         if goodbye:
             dict = settings.goodbyes
         else:

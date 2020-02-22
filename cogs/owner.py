@@ -134,7 +134,8 @@ class Owner(commands.Cog):
             try:
                 self.bot.load_extension("cogs." + c)
             except Exception as e:
-                msg += (":x: **{}** have not been loaded... ``{}: {}``\n".format(c, type(e).__name__, e))
+                msg += (":x: **{}** have not been loaded... ``{}: {}``\n".format(c,
+                                                                                 type(e).__name__, e))
                 continue
             msg += (":heavy_check_mark: **{}** has been reloaded !\n".format(c))
         return await ctx.send(msg)
@@ -186,7 +187,8 @@ class Owner(commands.Cog):
             embed.color = 0x71368a
         else:
             embed.color = ctx.me.color
-        embed.add_field(name="Disk", value=f"{bytes2human(psutil.disk_usage('/').used)}/{bytes2human(psutil.disk_usage('/').total)} ({psutil.disk_usage('/').percent}%)", inline=False)
+        embed.add_field(
+            name="Disk", value=f"{bytes2human(psutil.disk_usage('/').used)}/{bytes2human(psutil.disk_usage('/').total)} ({psutil.disk_usage('/').percent}%)", inline=False)
         try:
             await ctx.send(embed=embed)
         except discord.Forbidden:
@@ -205,7 +207,8 @@ class Owner(commands.Cog):
             embed.color = 0x71368a
         else:
             embed.color = ctx.me.color
-        embed.add_field(name="CPU", value=str(f"{psutil.cpu_percent()}%"), inline=False)
+        embed.add_field(name="CPU", value=str(
+            f"{psutil.cpu_percent()}%"), inline=False)
         try:
             await ctx.send(embed=embed)
         except discord.Forbidden:
@@ -224,7 +227,8 @@ class Owner(commands.Cog):
             embed.color = 0x71368a
         else:
             embed.color = ctx.me.color
-        embed.add_field(name="Memory", value=f"{bytes2human(psutil.virtual_memory().used)}/{bytes2human(psutil.virtual_memory().total)} ({psutil.virtual_memory().percent}%)", inline=False)
+        embed.add_field(
+            name="Memory", value=f"{bytes2human(psutil.virtual_memory().used)}/{bytes2human(psutil.virtual_memory().total)} ({psutil.virtual_memory().percent}%)", inline=False)
         try:
             await ctx.send(embed=embed)
         except discord.Forbidden:
@@ -239,16 +243,22 @@ class Owner(commands.Cog):
         Displays some cool informations.
         """
         embed = discord.Embed()
-        embed.set_author(name=self.bot.user.name, icon_url=self.bot.user.avatar_url)
+        embed.set_author(name=self.bot.user.name,
+                         icon_url=self.bot.user.avatar_url)
         if not ctx.guild:
             embed.color = 0x71368a
         else:
             embed.color = ctx.me.color
-        embed.add_field(name="Platform", value=str(platform.platform()), inline=False)
-        embed.add_field(name="CPU", value=str(f"{psutil.cpu_percent()}%"), inline=False)
-        embed.add_field(name="Memory", value=f"{bytes2human(psutil.virtual_memory().used)}/{bytes2human(psutil.virtual_memory().total)} ({psutil.virtual_memory().percent}%)", inline=False)
-        embed.add_field(name="Swap", value=f"{bytes2human(psutil.swap_memory().used)}/{bytes2human(psutil.swap_memory().total)} ({psutil.swap_memory().percent}%)", inline=False)
-        embed.add_field(name="Disk", value=f"{bytes2human(psutil.disk_usage('/').used)}/{bytes2human(psutil.disk_usage('/').total)} ({psutil.disk_usage('/').percent}%)", inline=False)
+        embed.add_field(name="Platform", value=str(
+            platform.platform()), inline=False)
+        embed.add_field(name="CPU", value=str(
+            f"{psutil.cpu_percent()}%"), inline=False)
+        embed.add_field(
+            name="Memory", value=f"{bytes2human(psutil.virtual_memory().used)}/{bytes2human(psutil.virtual_memory().total)} ({psutil.virtual_memory().percent}%)", inline=False)
+        embed.add_field(
+            name="Swap", value=f"{bytes2human(psutil.swap_memory().used)}/{bytes2human(psutil.swap_memory().total)} ({psutil.swap_memory().percent}%)", inline=False)
+        embed.add_field(
+            name="Disk", value=f"{bytes2human(psutil.disk_usage('/').used)}/{bytes2human(psutil.disk_usage('/').total)} ({psutil.disk_usage('/').percent}%)", inline=False)
         try:
             await ctx.send(embed=embed)
         except discord.Forbidden:
@@ -267,9 +277,10 @@ class Owner(commands.Cog):
             if n.available:
                 region = n.region
                 if n.stats:
-                    cpu = round(n.stats.system_load*100, 2)
-                    cpull = round(n.stats.lavalink_load*100, 2)
-                    node_uptime = str(timedelta(milliseconds=n.stats.uptime)).split(".")[0]
+                    cpu = round(n.stats.system_load * 100, 2)
+                    cpull = round(n.stats.lavalink_load * 100, 2)
+                    node_uptime = str(
+                        timedelta(milliseconds=n.stats.uptime)).split(".")[0]
                     core = n.stats.cpu_cores
                     llp = n.stats.players
                     llpp = n.stats.playing_players
@@ -282,7 +293,8 @@ class Owner(commands.Cog):
                                f"System Load : {cpu}% (lavalink {cpull}%)\n\n"
                                f"**Shard Players :**\nCreated: {player}\nPlaying : {playing}\n\n")
             else:
-                description = (f"```fix\nNode {n.name}```\n*{n.region}*\n\n**NOT AVAILABLE!**")
+                description = (
+                    f"```fix\nNode {n.name}```\n*{n.region}*\n\n**NOT AVAILABLE!**")
             embed.description += description
 
         try:
@@ -339,11 +351,15 @@ class Owner(commands.Cog):
 
         connected = len(players.find_all(lambda p: p.is_connected))
         paused = len(players.find_all(lambda p: p.paused))
-        playing = len(players.find_all(lambda p: p.is_playing and not p.paused))
+        playing = len(players.find_all(
+            lambda p: p.is_playing and not p.paused))
         voice = len([g for g in self.bot.guilds if g.me and g.me.voice])
-        volume = len(self.bot.lavalink.players.find_all(lambda p: p.volume != def_v))
-        defeq = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
-        equalizer = len(self.bot.lavalink.players.find_all(lambda p: any(p.equalizer)))
+        volume = len(self.bot.lavalink.players.find_all(
+            lambda p: p.volume != def_v))
+        defeq = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+                 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+        equalizer = len(self.bot.lavalink.players.find_all(
+            lambda p: any(p.equalizer)))
 
         embed.add_field(name="Players", value=len(players), inline=False)
         embed.add_field(name="Custom Volume", value=volume, inline=False)
@@ -352,7 +368,8 @@ class Owner(commands.Cog):
         embed.add_field(name="Connected", value=connected, inline=False)
         embed.add_field(name="Playing", value=playing, inline=False)
         embed.add_field(name="Paused", value=paused, inline=False)
-        embed.add_field(name="Stopped", value=connected-playing-paused, inline=False)
+        embed.add_field(name="Stopped", value=connected -
+                        playing - paused, inline=False)
 
         try:
             await ctx.send(embed=embed)
@@ -373,13 +390,16 @@ class Owner(commands.Cog):
         for p in playing:
             channel = self.bot.get_channel(p.channel)
             if channel:
-                log.info(f"Send to {channel.guild} members in voice : {[g.name for g in p.connected_channel.members]}")
+                log.info(
+                    f"Send to {channel.guild} members in voice : {[g.name for g in p.connected_channel.members]}")
                 try:
                     if "@users" in texts:
-                        msg = texts.replace("@users", ' '.join([m.mention for m in p.connected_channel.members if not m.bot]))
+                        msg = texts.replace("@users", ' '.join(
+                            [m.mention for m in p.connected_channel.members if not m.bot]))
                         await channel.send(msg)
                     elif "@user" in texts:
-                        msg = texts.replace("@user", ' '.join([m.mention for m in p.connected_channel.members if not m.bot]))
+                        msg = texts.replace("@user", ' '.join(
+                            [m.mention for m in p.connected_channel.members if not m.bot]))
                         await channel.send(msg)
                     else:
                         await channel.send(texts)
@@ -412,9 +432,11 @@ class Owner(commands.Cog):
     @commands.is_owner()
     async def goodserv(self, ctx):
         """find a good serv"""
-        serv_fr = [g for g in self.bot.guilds if g.id in self.bot.languages_map and self.bot.languages_map[g.id] == "french" and len(g.members) > 50]
+        serv_fr = [g for g in self.bot.guilds if g.id in self.bot.languages_map and self.bot.languages_map[g.id]
+                   == "french" and len(g.members) > 50]
         serv_fr.sort(key=lambda x: len(x.members), reverse=True)
-        msg = [f"{g.name} - **{g.id}** ({len(g.members)} members)\n" for g in serv_fr]
+        msg = [
+            f"{g.name} - **{g.id}** ({len(g.members)} members)\n" for g in serv_fr]
         to_send = ""
         for line in msg:
             if len(to_send) + len(line) > 1980:  # TODO find a better way to do this
@@ -442,7 +464,7 @@ class Owner(commands.Cog):
 
     @commands.command(aliases=['log'])
     @commands.is_owner()
-    async def logger(self, ctx, *, name_logger = None):
+    async def logger(self, ctx, *, name_logger=None):
 
         if not name_logger:
             for name in ['launcher', 'discord', 'lavalink', 'listenmoe']:

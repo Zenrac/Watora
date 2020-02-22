@@ -20,6 +20,8 @@ owner_id = int(config["OWNER_ID"])
 def_v = int(config["DEF_VOL"])
 def_time = int(config["DEF_TIMEOUT"])
 def_vote = int(config["DEF_VOTE"])
+db_host = config["DB_HOST"]
+db_port = config["DB_PORT"]
 
 log = logging.getLogger("launcher")
 uptime = time()
@@ -45,12 +47,14 @@ class NoVoiceChannel(VoiceConnectionError):
 
 class Jikan(object):
     """Class to make an object from a dict."""
+
     def __init__(self, d):
         for a, b in d.items():
             if isinstance(b, (list, tuple)):
-               setattr(self, a, [Jikan(x) if isinstance(x, dict) else x for x in b])
+                setattr(self, a, [Jikan(x) if isinstance(
+                    x, dict) else x for x in b])
             else:
-               setattr(self, a, Jikan(b) if isinstance(b, dict) else b)
+                setattr(self, a, Jikan(b) if isinstance(b, dict) else b)
 
 
 def get_server_prefixes(bot, server):
@@ -94,7 +98,8 @@ def get_str(ctx, cmd, bot=None, can_owo=True):
         try:
             text = no_lang_loaded[cmd]
         except KeyError:
-            if 'Weeb' not in bot.cogs or (cmd.split("-")[1] not in [g.name for g in bot.cogs['Weeb'].get_commands()]):  # I didn't translated the help for weeb commands.
+            # I didn't translated the help for weeb commands.
+            if 'Weeb' not in bot.cogs or (cmd.split("-")[1] not in [g.name for g in bot.cogs['Weeb'].get_commands()]):
                 log.error(f"TranslationError {lang} : {cmd} is not existing.")
             text = "This translation isn't working, please report this command and what you done to my dev with `=bug`."
 
@@ -102,7 +107,8 @@ def get_str(ctx, cmd, bot=None, can_owo=True):
         text = owo.text_to_owo(text)
         if 'help' in cmd or 'bot' in cmd or 'success' in cmd or 'failed' in cmd or 'dm' in cmd or 'warning' in cmd or '```' in text:
             #  I've to admit that it's ugly but it's a lazy way to check if Watora sends a code block
-            text = text.replace('\\', '')  # basically if it's in a code block remove back slashes cus they are displayed
+            # basically if it's in a code block remove back slashes cus they are displayed
+            text = text.replace('\\', '')
     return text
 
 
@@ -134,7 +140,8 @@ def url_is_image(url):
 
     ext = url.split('.')[-1].split("?")[0].lower()
     mimetype, encoding = mimetypes.guess_type(ext)
-    if ext in ["webp", "gif"] or (mimetype and mimetype.startswith('image')):  # discord image url
+    # discord image url
+    if ext in ["webp", "gif"] or (mimetype and mimetype.startswith('image')):
         return True
 
     return False
@@ -190,17 +197,17 @@ def sweet_bar(current, max, length: int = 10):
 
 async def is_basicpatron(self, author, fetch=False, resp=None):
     """Checks if the user is basicpatron on my server."""
-    return await check_if_role(self, author, fetch, resp, 341716510122835969, 341723457693810689, 341726906661470210)
+    return await check_if_role(self, author, fetch, resp, config["LOVER_ROLE"], config["BASIC_PATRON_ROLE"], config["PATRON_ROLE"])
 
 
 async def is_patron(self, author, fetch=False, resp=None):
     """Checks if the user is patron on my server."""
-    return await check_if_role(self, author, fetch, resp, 341723457693810689, 341726906661470210)
+    return await check_if_role(self, author, fetch, resp, config["PATRON_ROLE"], config["LOVER_ROLE"])
 
 
 async def is_lover(self, author, fetch=False, resp=None):
     """Checks if the user is Lover on my server."""
-    return await check_if_role(self, author, fetch, resp, 341726906661470210)
+    return await check_if_role(self, author, fetch, resp, config["LOVER_ROLE"])
 
 
 async def is_voter(self, author, fetch=False, resp=None):
@@ -232,7 +239,8 @@ async def check_if_role(self, author, fetch, resp, *role_id):
 def is_admin(author, channel):
     """Checks if the user has administrator permission in the guild"""
     perms = channel.permissions_for(author)
-    if perms.administrator or perms.manage_guild or author.id == owner_id:  # perms.administrator is useless here lul
+    # perms.administrator is useless here lul
+    if perms.administrator or perms.manage_guild or author.id == owner_id:
         return True
     return False
 
@@ -241,7 +249,8 @@ def is_alone(author):
     """Checks if the user is alone in a voice channel"""
     if not author.guild.me.voice or not author.voice:
         return False
-    num_voice = sum(1 for m in author.voice.channel.members if not (m.voice.deaf or m.bot or m.voice.self_deaf))
+    num_voice = sum(1 for m in author.voice.channel.members if not (
+        m.voice.deaf or m.bot or m.voice.self_deaf))
     if num_voice == 1 and author.guild.me.voice.channel == author.voice.channel:
         return True
     return False

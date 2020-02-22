@@ -22,14 +22,14 @@ ARCANEBOTCENTER_API = 'https://arcane-botcenter.xyz/api/{}/stats'
 
 ALL_APIS = {
     # DISCORD_BOTS_API : 'BOTS_KEY',
-    DISCORD_BOTSORG_API : 'BOTSORG_KEY',
-    BOTSFORDISCORD_API : 'BOTSFORDISCORD_KEY',
-    BOTLISTSPACE_API : 'BOTSPACE_KEY',
-    DISCORD_BOTSGROUP_API : 'DISCORDBOTSGROUP_KEY',
-    DIVINEDISCORDBOTS_API : 'DIVINEDISCORDBOTS_KEY',
-    DISCORDBOAT_API : 'DISCORDBOAT_KEY',
-    DISCORDBOTWORLD_API : 'DISCORDBOTWORLD_KEY',
-    DISCORDBESTBOTS_API : 'DISCORDBESTBOTS_KEY',
+    DISCORD_BOTSORG_API: 'BOTSORG_KEY',
+    BOTSFORDISCORD_API: 'BOTSFORDISCORD_KEY',
+    BOTLISTSPACE_API: 'BOTSPACE_KEY',
+    DISCORD_BOTSGROUP_API: 'DISCORDBOTSGROUP_KEY',
+    DIVINEDISCORDBOTS_API: 'DIVINEDISCORDBOTS_KEY',
+    DISCORDBOAT_API: 'DISCORDBOAT_KEY',
+    DISCORDBOTWORLD_API: 'DISCORDBOTWORLD_KEY',
+    DISCORDBESTBOTS_API: 'DISCORDBESTBOTS_KEY',
     # DISCORDFRENCH_API : 'BOTSFRENCH_KEY',
     # ARCANEBOTCENTER_API : 'ARCANEBOTCENTER_KEY'
 }
@@ -37,14 +37,17 @@ ALL_APIS = {
 
 class Update(commands.Cog):
     """Cog for updating carbonitex.net, bots.discord.pw etc... and change bot status"""
+
     def __init__(self, bot):
         self.bot = bot
         self.timer = time()
         self.status_timer = time()
         self.votes = []
         timeout = aiohttp.ClientTimeout(total=20)
-        self.session = aiohttp.ClientSession(loop=self.bot.loop, timeout=timeout)
-        asyncio.ensure_future(self.message_status(bypass=True, force_update=False))
+        self.session = aiohttp.ClientSession(
+            loop=self.bot.loop, timeout=timeout)
+        asyncio.ensure_future(self.message_status(
+            bypass=True, force_update=False))
 
     def cog_unload(self):
         asyncio.ensure_future(self.session.close())
@@ -75,9 +78,11 @@ class Update(commands.Cog):
                     max_value = float(pbar[1])
                     min_value = float(pbar[0])
                     if max_value <= min_value:
-                        title = "%shelp | %s guilds" % (globprefix, guild_count)
+                        title = "%shelp | %s guilds" % (
+                            globprefix, guild_count)
                     else:
-                        title = f"%sdon | Servers cost: {min_value}€/{max_value}€" % (globprefix)
+                        title = f"%sdon | Servers cost: {min_value}€/{max_value}€" % (
+                            globprefix)
                 else:
                     title = "%shelp | %s guilds" % (globprefix, guild_count)
 
@@ -141,22 +146,26 @@ class Update(commands.Cog):
         settings = await SettingsDB.get_instance().get_glob_settings()
 
         for m in self.bot.shards.keys():
-            settings.server_count[str(m)] = len([g for g in self.bot.guilds if g.shard_id == m])
+            settings.server_count[str(m)] = len(
+                [g for g in self.bot.guilds if g.shard_id == m])
 
         await SettingsDB.get_instance().set_glob_settings(settings)
         self.bot.config = settings
 
     @commands.Cog.listener()
     async def on_guild_join(self, guild):
-        log.debug(f"[Guild] Joined : {guild.id}/{guild.name} (owner : {guild.owner})")
+        log.debug(
+            f"[Guild] Joined : {guild.id}/{guild.name} (owner : {guild.owner})")
         await self.message_status()
         await self.update()
 
     @commands.Cog.listener()
     async def on_guild_remove(self, guild):
-        log.debug(f"[Guild] Removed : {guild.id}/{guild.name} (owner : {guild.owner})")
+        log.debug(
+            f"[Guild] Removed : {guild.id}/{guild.name} (owner : {guild.owner})")
         await self.message_status()
         await self.update()
+
 
 def setup(bot):
     bot.add_cog(Update(bot))

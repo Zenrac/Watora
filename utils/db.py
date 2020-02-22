@@ -1,10 +1,7 @@
 import motor.motor_asyncio
 
 from abc import ABC
-from utils.watora import globprefix, def_time, def_v, def_vote
-
-hoster = "localhost"
-port = 27017
+from utils.watora import globprefix, def_time, def_v, def_vote, db_host, db_port
 
 
 class Settings(ABC):
@@ -59,7 +56,7 @@ class SettingsDB:
     _instance = None
 
     def __init__(self):
-        self.client = motor.motor_asyncio.AsyncIOMotorClient(hoster, port)
+        self.client = motor.motor_asyncio.AsyncIOMotorClient(db_host, db_port)
         self.db = self.client.Watora
         self.guild_settings_collection = self.db.settings
         self.glob_settings_collection = self.db.glob

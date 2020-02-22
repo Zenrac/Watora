@@ -43,7 +43,8 @@ class Useful(commands.Cog):
                 ids = [r.id for r in ctx.author.roles]
                 if husband_role_id in ids:  # Watora's Husband can marry Watora
                     embed.title = "❤ " + get_str(ctx, "cmd-marry-happily")
-                    embed.description = get_str(ctx, "cmd-marry-success").format(f"**{ctx.author.name}**", f"**{user.name}**")
+                    embed.description = get_str(
+                        ctx, "cmd-marry-success").format(f"**{ctx.author.name}**", f"**{user.name}**")
                     await ctx.send(embed=embed)
                     if str(user.id) in settings.marry:
                         before = settings.marry[str(user.id)]['id']
@@ -54,12 +55,14 @@ class Useful(commands.Cog):
                     settings.marry[str(ctx.author.id)] = {}
                     settings.marry[str(ctx.author.id)]['id'] = str(user.id)
                     settings.marry[str(ctx.author.id)]['date'] = date
-                    settings.marry[str(ctx.author.id)]['name'] = user.name  # stock the name in case of a day where the user is not on any bot servers anymore.
+                    # stock the name in case of a day where the user is not on any bot servers anymore.
+                    settings.marry[str(ctx.author.id)]['name'] = user.name
 
                     settings.marry[str(user.id)] = {}
                     settings.marry[str(user.id)]['id'] = str(ctx.author.id)
                     settings.marry[str(user.id)]['date'] = date
-                    settings.marry[str(user.id)]['name'] = ctx.author.name  # stock the name in case of a day where the user is not on any bot servers anymore.
+                    # stock the name in case of a day where the user is not on any bot servers anymore.
+                    settings.marry[str(user.id)]['name'] = ctx.author.name
 
                     await SettingsDB.get_instance().set_glob_settings(settings)
                     return
@@ -82,13 +85,15 @@ class Useful(commands.Cog):
             else:
                 return await self.bot.send_cmd_help(ctx)
 
-        embed.title = "💍 " + get_str(ctx, "cmd-marry-proposed").format(ctx.author.name, user.name)
+        embed.title = "💍 " + \
+            get_str(ctx, "cmd-marry-proposed").format(ctx.author.name, user.name)
 
         if str(user.id) in settings.marry:
             married_with = (await self.bot.safe_fetch('user', int(settings.marry[str(user.id)]['id']))
-                or settings.marry[str(user.id)]['name'])
+                            or settings.marry[str(user.id)]['name'])
             married_since = settings.marry[str(user.id)]['date']
-            embed.description = "{} ({})".format(get_str(ctx, "cmd-marry-user-a-married").format(user.name, married_with), married_since)
+            embed.description = "{} ({})".format(get_str(
+                ctx, "cmd-marry-user-a-married").format(user.name, married_with), married_since)
             if married_with == ctx.author:
                 embed.description = get_str(ctx, "cmd-marry-a-together")
             try:
@@ -96,12 +101,14 @@ class Useful(commands.Cog):
             except discord.Forbidden:
                 return await ctx.send(get_str(ctx, "need-embed-permission"), delete_after=20)
         elif str(ctx.author.id) in settings.marry:
-            embed.description = get_str(ctx, "cmd-marry-author-a-married").format("`{}divorce`".format(get_server_prefixes(ctx.bot, ctx.guild)))
+            embed.description = get_str(ctx, "cmd-marry-author-a-married").format(
+                "`{}divorce`".format(get_server_prefixes(ctx.bot, ctx.guild)))
             try:
                 return await ctx.send(embed=embed)
             except discord.Forbidden:
                 return await ctx.send(get_str(ctx, "need-embed-permission"), delete_after=20)
-        embed.description = get_str(ctx, "cmd-marry-confirmation").format("`yes`", "`no`")
+        embed.description = get_str(
+            ctx, "cmd-marry-confirmation").format("`yes`", "`no`")
         confirm_message = await ctx.send(embed=embed)
 
         def check(m):
@@ -132,8 +139,9 @@ class Useful(commands.Cog):
         if response_message.content.lower().startswith('y'):
             if str(user.id) in settings.marry:  # 2nd check if it changed since the command call
                 married_with = (await self.bot.safe_fetch('user', int(settings.marry[str(user.id)]['id']))
-                    or settings.marry[str(user.id)]['name'])
-                embed.description = get_str(ctx, "cmd-marry-user-a-married").format(user.name, married_with)
+                                or settings.marry[str(user.id)]['name'])
+                embed.description = get_str(
+                    ctx, "cmd-marry-user-a-married").format(user.name, married_with)
                 if married_with == ctx.author:
                     embed.description = get_str(ctx, "cmd-marry-a-together")
                 try:
@@ -141,14 +149,16 @@ class Useful(commands.Cog):
                 except discord.Forbidden:
                     return await ctx.send(get_str(ctx, "need-embed-permission"), delete_after=20)
             elif str(ctx.author.id) in settings.marry:
-                embed.description = get_str(ctx, "cmd-marry-author-a-married").format("`{}divorce`".format(get_server_prefixes(ctx.bot, ctx.guild)))
+                embed.description = get_str(ctx, "cmd-marry-author-a-married").format(
+                    "`{}divorce`".format(get_server_prefixes(ctx.bot, ctx.guild)))
                 try:
                     return await ctx.send(embed=embed)
                 except discord.Forbidden:
                     return await ctx.send(get_str(ctx, "need-embed-permission"), delete_after=20)
 
             embed.title = "❤ " + get_str(ctx, "cmd-marry-happily")
-            embed.description = get_str(ctx, "cmd-marry-success").format(f"**{ctx.author.name}**", f"**{user.name}**")
+            embed.description = get_str(
+                ctx, "cmd-marry-success").format(f"**{ctx.author.name}**", f"**{user.name}**")
             await ctx.send(embed=embed)
 
             date = datetime.today().strftime("%d %b %Y")
@@ -156,12 +166,14 @@ class Useful(commands.Cog):
             settings.marry[str(ctx.author.id)] = {}
             settings.marry[str(ctx.author.id)]['id'] = str(user.id)
             settings.marry[str(ctx.author.id)]['date'] = date
-            settings.marry[str(ctx.author.id)]['name'] = user.name  # stock the name in case of a day where the user is not on any bot servers anymore.
+            # stock the name in case of a day where the user is not on any bot servers anymore.
+            settings.marry[str(ctx.author.id)]['name'] = user.name
 
             settings.marry[str(user.id)] = {}
             settings.marry[str(user.id)]['id'] = str(ctx.author.id)
             settings.marry[str(user.id)]['date'] = date
-            settings.marry[str(user.id)]['name'] = ctx.author.name  # stock the name in case of a day where the user is not on any bot servers anymore.
+            # stock the name in case of a day where the user is not on any bot servers anymore.
+            settings.marry[str(user.id)]['name'] = ctx.author.name
 
             await SettingsDB.get_instance().set_glob_settings(settings)
         elif response_message.content.lower().startswith('n'):
@@ -188,7 +200,8 @@ class Useful(commands.Cog):
         married_with = await self.bot.safe_fetch('user', int(married["id"])) or married['name']
         datetime_date = datetime.strptime(married_since, '%d %b %Y')
         since_married = (ctx.message.created_at - datetime_date).days
-        since_married_full = "{} ({})".format(f"**{married_since}**", get_str(ctx, "cmd-userinfo-days-ago").format(since_married) if since_married > 1 else get_str(ctx, "cmd-userinfo-day-ago").format(since_married))
+        since_married_full = "{} ({})".format(f"**{married_since}**", get_str(ctx, "cmd-userinfo-days-ago").format(
+            since_married) if since_married > 1 else get_str(ctx, "cmd-userinfo-day-ago").format(since_married))
 
         confirm_message = await ctx.send(get_str(ctx, "cmd-divorce-confirmation").format(f"`{married_with}`", since_married_full, "`yes`", "`no`"))
 
@@ -215,7 +228,8 @@ class Useful(commands.Cog):
             try:
                 del settings.marry[married['id']]
             except KeyError:
-                log.error(f"ERROR: {settings.marry[married['id']]} seems to not be married with {settings.marry[str(ctx.author.id)]} but they just divorce")
+                log.error(
+                    f"ERROR: {settings.marry[married['id']]} seems to not be married with {settings.marry[str(ctx.author.id)]} but they just divorce")
             await SettingsDB.get_instance().set_glob_settings(settings)
 
             await ctx.send("☑ " + get_str(ctx, "cmd-divorce-success"))
@@ -242,7 +256,7 @@ class Useful(commands.Cog):
                         a = len(cmd)
                 for cmd in cmds[command.lower()]:
                     if len(cmd) < a:
-                        for n in range(a-len(cmd)):
+                        for n in range(a - len(cmd)):
                             msg += " "
                     help = get_str(ctx, f"cmd-{cmd}-help").split("\n")[0]
                     msg += "{} : {}\n".format(cmd, help)
@@ -250,7 +264,8 @@ class Useful(commands.Cog):
                 return await ctx.send(msg)
 
             if command.startswith(get_server_prefixes(ctx.bot, ctx.guild)):
-                command = command[len(get_server_prefixes(ctx.bot, ctx.guild)):]
+                command = command[len(
+                    get_server_prefixes(ctx.bot, ctx.guild)):]
             if not self.bot.get_command(command):
                 return await ctx.send(get_str(ctx, "cmd-help-cmd-not-found").format(f"`{command}`"))
 
@@ -260,12 +275,14 @@ class Useful(commands.Cog):
 
         else:
             embed = discord.Embed()
-            embed.set_author(name=get_str(ctx, "cmd-help-title"), url="https://watora.xyz/Commands", icon_url=self.bot.user.avatar_url)
+            embed.set_author(name=get_str(ctx, "cmd-help-title"),
+                             url="https://watora.xyz/Commands", icon_url=self.bot.user.avatar_url)
             if not ctx.guild:
                 embed.color = 0x71368a
             else:
                 embed.color = ctx.me.color
-            embed.description = get_str(ctx, "cmd-help-description") + "\n" + get_str(ctx, "cmd-help-support").format('[**World of Watora**](https://discord.gg/ArJgTpM).\n**__**')
+            embed.description = get_str(ctx, "cmd-help-description") + "\n" + get_str(
+                ctx, "cmd-help-support").format('[**World of Watora**](https://discord.gg/ArJgTpM).\n**__**')
             if ctx.guild:
                 settings = await SettingsDB.get_instance().get_guild_settings(ctx.guild.id)
                 is_admin = ctx.channel.permissions_for(ctx.author).manage_guild
@@ -275,12 +292,15 @@ class Useful(commands.Cog):
             for key in cmds:
                 try:
                     title = key[0].upper() + key[1:]
-                    descrip = '**,** '.join([f"`{cm}`" for cm in cmds[key] if not ctx.guild or is_admin or ((cm.lower() not in settings.disabledcommands) and (cm.lower() not in disabled))])
+                    descrip = '**,** '.join([f"`{cm}`" for cm in cmds[key] if not ctx.guild or is_admin or (
+                        (cm.lower() not in settings.disabledcommands) and (cm.lower() not in disabled))])
                     if descrip:
-                        embed.add_field(name=f'{title} ({len(cmds[key])})', value=descrip, inline=False)
+                        embed.add_field(
+                            name=f'{title} ({len(cmds[key])})', value=descrip, inline=False)
                 except KeyError:
                     pass
-            embed.add_field(name="__", value=get_str(ctx, "cmd-help-more-info-cmd") + " **`{}help [command]`**".format(get_server_prefixes(ctx.bot, ctx.guild)) + "\n" + get_str(ctx, "cmd-help-more-info-cat") + " **`{}help [category]`**".format(get_server_prefixes(ctx.bot, ctx.guild)))
+            embed.add_field(name="__", value=get_str(ctx, "cmd-help-more-info-cmd") + " **`{}help [command]`**".format(get_server_prefixes(
+                ctx.bot, ctx.guild)) + "\n" + get_str(ctx, "cmd-help-more-info-cat") + " **`{}help [category]`**".format(get_server_prefixes(ctx.bot, ctx.guild)))
             try:
                 await ctx.send(embed=embed)
             except discord.Forbidden:
@@ -300,22 +320,30 @@ class Useful(commands.Cog):
         # channels = len([c for c in self.bot.get_all_channels()]) # BLOCKING CODE FFS
         embed = discord.Embed()
         owner = await self.bot.safe_fetch('user', owner_id) or str(owner_id)
-        embed.set_author(name=f"{self.bot.user.name} v{ver}", icon_url=self.bot.user.avatar_url)
+        embed.set_author(name=f"{self.bot.user.name} v{ver}",
+                         icon_url=self.bot.user.avatar_url)
         if isinstance(ctx.channel, discord.abc.GuildChannel):
             embed.color = ctx.guild.me.color
         # embed.add_field(name="Version", value=ver, inline=False)
-        embed.add_field(name="Library", value="Discord.py v{}".format(str(discord.__version__)), inline=False)
+        embed.add_field(name="Library", value="Discord.py v{}".format(
+            str(discord.__version__)), inline=False)
         embed.add_field(name="Uptime", value=str(get_uptime()))
-        embed.add_field(name="Guild{}".format("s" if servers > 1 else ""), value=servers)
+        embed.add_field(name="Guild{}".format(
+            "s" if servers > 1 else ""), value=servers)
         # embed.add_field(name="Channels", value=channels)
-        embed.add_field(name="Shard{}".format("s" if self.bot.shard_count > 1 else ""), value=self.bot.shard_count)
+        embed.add_field(name="Shard{}".format(
+            "s" if self.bot.shard_count > 1 else ""), value=self.bot.shard_count)
         # embed.add_field(name="Users", value=users)
         embed.add_field(name="Owner", value=owner)
         embed.add_field(name="Commands", value=len(self.bot.commands))
-        embed.add_field(name="Autoplaylists", value=len(settings.autoplaylists))
-        embed.add_field(name="Donation", value="[Donate](http://watora.xyz/Donate/)")
-        embed.add_field(name="Website", value="[Watora.xyz](https://watora.xyz/)")
-        embed.add_field(name="My Server", value="[Invitation](https://discordapp.com/invite/ArJgTpM)")
+        embed.add_field(name="Autoplaylists",
+                        value=len(settings.autoplaylists))
+        embed.add_field(name="Donation",
+                        value="[Donate](http://watora.xyz/Donate/)")
+        embed.add_field(
+            name="Website", value="[Watora.xyz](https://watora.xyz/)")
+        embed.add_field(
+            name="My Server", value="[Invitation](https://discordapp.com/invite/ArJgTpM)")
         try:
             await ctx.send(embed=embed)
         except discord.Forbidden:
@@ -332,11 +360,12 @@ class Useful(commands.Cog):
         embed = discord.Embed()
         if isinstance(ctx.channel, discord.abc.GuildChannel):
             embed.color = ctx.guild.me.color
-        embed.set_author(name="Pong!", icon_url="https://cdn.discordapp.com/attachments/268495024801447936/349241478750404609/dmOYQuS.png")
+        embed.set_author(
+            name="Pong!", icon_url="https://cdn.discordapp.com/attachments/268495024801447936/349241478750404609/dmOYQuS.png")
         start = perf_counter()
         await ctx.channel.trigger_typing()
         end = perf_counter()
-        embed.description = "%s ms!" % int((end - start)*1000)
+        embed.description = "%s ms!" % int((end - start) * 1000)
         try:
             await ctx.send(embed=embed)
         except discord.Forbidden:
@@ -395,11 +424,13 @@ class Useful(commands.Cog):
                     if pos == 6:
                         msg += f"`{pos}` **{user}** : **{nb}** vote{'s' if nb > 1 else ''}\n"
                     else:
-                        e.set_footer(text=f"{pos} - {user} : {nb} vote{'s' if nb > 1 else ''}", icon_url=user.avatar_url)
+                        e.set_footer(
+                            text=f"{pos} - {user} : {nb} vote{'s' if nb > 1 else ''}", icon_url=user.avatar_url)
         if isinstance(ctx.channel, discord.abc.GuildChannel):
             e.color = ctx.guild.me.color
         e.set_thumbnail(url=self.bot.user.avatar_url)
-        e.set_author(name=f"Top Voters of {month}:", url=f"https://discordbots.org/bot/{self.bot.user.id}/vote")
+        e.set_author(
+            name=f"Top Voters of {month}:", url=f"https://discordbots.org/bot/{self.bot.user.id}/vote")
         e.description = f"{msg}\n**[Vote for {self.bot.user.name} on Discord Bot List](https://discordbots.org/bot/{self.bot.user.id}/vote)**"
 
         try:
@@ -468,11 +499,13 @@ class Useful(commands.Cog):
                         embed.set_author(name=get_str(ctx, "cmd-avatar-someone-avatar")
                                          .format("'" if user.name.lower()[0] in ["a", "e", "i", "u", "y", "o"] else "e ", user))
                     else:
-                        embed.set_author(name=get_str(ctx, "cmd-avatar-someone-avatar").format(user))
+                        embed.set_author(name=get_str(
+                            ctx, "cmd-avatar-someone-avatar").format(user))
 
         ava = user.avatar_url
         embed.set_image(url=ava or user.default_avatar_url)
-        embed.set_author(name=embed.author.name, url=ava or user.default_avatar_url)  # Hacky
+        embed.set_author(name=embed.author.name,
+                         url=ava or user.default_avatar_url)  # Hacky
         try:
             await ctx.send(embed=embed)
         except discord.Forbidden:
@@ -495,7 +528,8 @@ class Useful(commands.Cog):
 
         if user.voice:
             other_people = len(user.voice.channel .members) - 1
-            voice_fmt = '%s' % (get_str(ctx, "cmd-userinfo-voice-members") if other_people > 1 else get_str(ctx, "cmd-userinfo-voice-member")) if other_people else get_str(ctx, "cmd-userinfo-voice-alone")
+            voice_fmt = '%s' % (get_str(ctx, "cmd-userinfo-voice-members") if other_people > 1 else get_str(
+                ctx, "cmd-userinfo-voice-member")) if other_people else get_str(ctx, "cmd-userinfo-voice-alone")
             voice = voice_fmt.format(user.voice.channel.name, other_people)
         else:
             voice = get_str(ctx, "cmd-userinfo-not-connected")
@@ -508,28 +542,36 @@ class Useful(commands.Cog):
         user_joined = joined_at.strftime("%d %b %Y %H:%M")
         user_created = user.created_at.strftime("%d %b %Y %H:%M")
         try:
-            member_number = sorted(ctx.guild.members, key=lambda m: m.joined_at).index(user) + 1
+            member_number = sorted(
+                ctx.guild.members, key=lambda m: m.joined_at).index(user) + 1
         except TypeError:
             member_number = 0
 
-        created_on = "{}\n(".format(user_created) + "{}".format(get_str(ctx, "cmd-userinfo-days-ago") if since_created > 1 else get_str(ctx, "cmd-userinfo-day-ago")).format(since_created) + ")"
-        joined_on = "{}\n(".format(user_joined) + "{}".format(get_str(ctx, "cmd-userinfo-days-ago") if since_joined > 1 else get_str(ctx, "cmd-userinfo-day-ago")).format(since_joined) + ")"
+        created_on = "{}\n(".format(user_created) + "{}".format(get_str(ctx, "cmd-userinfo-days-ago")
+                                                                if since_created > 1 else get_str(ctx, "cmd-userinfo-day-ago")).format(since_created) + ")"
+        joined_on = "{}\n(".format(user_joined) + "{}".format(get_str(ctx, "cmd-userinfo-days-ago")
+                                                              if since_joined > 1 else get_str(ctx, "cmd-userinfo-day-ago")).format(since_joined) + ")"
 
         game = "{}".format(user.status)
         game = game[0].upper() + game[1:]
         if user.activity:
             if isinstance(user.activity, discord.Spotify):
-                game = get_str(ctx, "cmd-userinfo-listening-music").format(user.activity.title, user.activity.artist)
+                game = get_str(
+                    ctx, "cmd-userinfo-listening-music").format(user.activity.title, user.activity.artist)
             elif user.activity.type == discord.ActivityType.playing:
-                game = get_str(ctx, "cmd-userinfo-playing") + " {}".format(user.activity.name)
+                game = get_str(ctx, "cmd-userinfo-playing") + \
+                    " {}".format(user.activity.name)
             elif user.activity.type == discord.ActivityType.watching:  # watching
-                game = get_str(ctx, "cmd-userinfo-watching") + " {}".format(user.activity.name)
+                game = get_str(ctx, "cmd-userinfo-watching") + \
+                    " {}".format(user.activity.name)
             elif user.activity.type == discord.ActivityType.streaming:
-                game = get_str(ctx, "cmd-userinfo-streaming") + " [{}]({})".format(user.activity, user.activity.url)
+                game = get_str(ctx, "cmd-userinfo-streaming") + \
+                    " [{}]({})".format(user.activity, user.activity.url)
 
         if roles:
             try:
-                roles = sorted(roles, key=[x.name for x in user.guild.roles[::-1] if x.name != "@everyone"].index)
+                roles = sorted(roles, key=[
+                               x.name for x in user.guild.roles[::-1] if x.name != "@everyone"].index)
             except ValueError:  # idk
                 pass
             nbroles = len(roles)
@@ -541,17 +583,22 @@ class Useful(commands.Cog):
         data = discord.Embed(description=game)
         if not isinstance(ctx.channel, discord.abc.PrivateChannel):
             data.colour = user.colour
-        data.add_field(name=get_str(ctx, "cmd-userinfo-joined-discord"), value=created_on)
-        data.add_field(name=get_str(ctx, "cmd-userinfo-joined-guild"), value=joined_on)
+        data.add_field(name=get_str(
+            ctx, "cmd-userinfo-joined-discord"), value=created_on)
+        data.add_field(name=get_str(
+            ctx, "cmd-userinfo-joined-guild"), value=joined_on)
         # data.add_field(name="{}".format(get_str(ctx, "cmd-userinfo-servers-shared") if shared > 2 else get_str(ctx, "cmd-userinfo-server-shared")), value=shared)
         data.add_field(name=get_str(ctx, "cmd-userinfo-voice"), value=voice)
         settings = await SettingsDB.get_instance().get_glob_settings()
         if str(user.id) in settings.marry:
             married_with = await self.bot.safe_fetch('user', int(settings.marry[str(user.id)]['id'])) or settings.marry[str(user.id)]['name']
             married_since = settings.marry[str(user.id)]['date']
-            data.add_field(name=get_str(ctx, "cmd-userinfo-married-with"), value=f"💕 {married_with} ({married_since})", inline=False)
-        data.add_field(name="{}".format(get_str(ctx, "cmd-userinfo-roles") if nbroles > 1 else get_str(ctx, "cmd-userinfo-role")) + " [%s]" % nbroles, value=roles, inline=False)
-        data.set_footer(text=get_str(ctx, "cmd-userinfo-member", can_owo=False) + " #{} | ".format(member_number) + get_str(ctx, "cmd-userinfo-user-id", can_owo=False) + ":{}".format(user.id))
+            data.add_field(name=get_str(ctx, "cmd-userinfo-married-with"),
+                           value=f"💕 {married_with} ({married_since})", inline=False)
+        data.add_field(name="{}".format(get_str(ctx, "cmd-userinfo-roles") if nbroles >
+                                        1 else get_str(ctx, "cmd-userinfo-role")) + " [%s]" % nbroles, value=roles, inline=False)
+        data.set_footer(text=get_str(ctx, "cmd-userinfo-member", can_owo=False) + " #{} | ".format(
+            member_number) + get_str(ctx, "cmd-userinfo-user-id", can_owo=False) + ":{}".format(user.id))
 
         name = str(user)
         name = " ~ ".join((name, user.nick)) if user.nick else name
@@ -598,9 +645,10 @@ class Useful(commands.Cog):
         text_channels = len([x for x in guild.channels
                              if type(x) == discord.TextChannel])
         voice_channels = len([x for x in guild.channels
-                             if type(x) == discord.VoiceChannel])
+                              if type(x) == discord.VoiceChannel])
         passed = (ctx.message.created_at - guild.created_at).days
-        created_at = get_str(ctx, "cmd-serverinfo-since", can_owo=False).format(guild.created_at.strftime("%d %b %Y %H:%M"), passed)
+        created_at = get_str(ctx, "cmd-serverinfo-since", can_owo=False).format(
+            guild.created_at.strftime("%d %b %Y %H:%M"), passed)
 
         colour = ''.join([random.choice('0123456789ABCDEF') for x in range(6)])
         colour = int(colour, 16)
@@ -608,19 +656,27 @@ class Useful(commands.Cog):
         data = discord.Embed(
             description=created_at,
             colour=discord.Colour(value=colour))
-        data.add_field(name=get_str(ctx, "cmd-serverinfo-region"), value=str(guild.region))
-        data.add_field(name=get_str(ctx, "cmd-serverinfo-users"), value="{}/{} ({} bot{})".format(online, total_users, total_bot, 's' if total_bot > 2 else ''))
-        data.add_field(name=get_str(ctx, "cmd-serverinfo-textchannels"), value=text_channels)
-        data.add_field(name=get_str(ctx, "cmd-serverinfo-voicechannels"), value=voice_channels)
-        data.add_field(name=get_str(ctx, "cmd-serverinfo-roles"), value=len(guild.roles))
-        data.add_field(name=get_str(ctx, "cmd-serverinfo-owner"), value=str(guild.owner))
-        data.set_footer(text=get_str(ctx, "cmd-serverinfo-server-id") + ": " + str(guild.id))
+        data.add_field(name=get_str(ctx, "cmd-serverinfo-region"),
+                       value=str(guild.region))
+        data.add_field(name=get_str(ctx, "cmd-serverinfo-users"), value="{}/{} ({} bot{})".format(
+            online, total_users, total_bot, 's' if total_bot > 2 else ''))
+        data.add_field(name=get_str(
+            ctx, "cmd-serverinfo-textchannels"), value=text_channels)
+        data.add_field(name=get_str(
+            ctx, "cmd-serverinfo-voicechannels"), value=voice_channels)
+        data.add_field(name=get_str(ctx, "cmd-serverinfo-roles"),
+                       value=len(guild.roles))
+        data.add_field(name=get_str(ctx, "cmd-serverinfo-owner"),
+                       value=str(guild.owner))
+        data.set_footer(text=get_str(
+            ctx, "cmd-serverinfo-server-id") + ": " + str(guild.id))
         claimed = await self.bot.server_is_claimed(guild.id)
         if claimed:
             user_id = int(claimed[0])
             claimed = list(claimed[1].items())[0]
             user = await self.bot.safe_fetch('member', user_id, guild=guild) or user_id
-            data.add_field(name="Patreon Server", value="Claimed by {}. Since {}".format(user, claimed[1]))
+            data.add_field(
+                name="Patreon Server", value="Claimed by {}. Since {}".format(user, claimed[1]))
 
         if guild.icon_url:
             data.set_author(name=guild.name, url=guild.icon_url)
@@ -657,16 +713,23 @@ class Useful(commands.Cog):
         all_users = ', '.join(all_users)
         em = discord.Embed(title=role.name, color=role.color)
         em.add_field(name='ID', value=role.id, inline=False)
-        em.add_field(name='{}'.format(get_str(ctx, "cmd-roleinfo-users") if role_count > 1 else get_str(ctx, "cmd-roleinfo-user")), value=role_count)
+        em.add_field(name='{}'.format(get_str(ctx, "cmd-roleinfo-users") if role_count >
+                                      1 else get_str(ctx, "cmd-roleinfo-user")), value=role_count)
         if str(role.color) != "#000000":
-            em.add_field(name=get_str(ctx, "cmd-roleinfo-color"), value=str(role.color))
-            em.set_thumbnail(url='http://www.colorhexa.com/%s.png' % str(role.color).strip("#"))
-        em.add_field(name=get_str(ctx, "cmd-roleinfo-mentionable"), value=get_str(ctx, "music-plsettings-yes") if role.mentionable else get_str(ctx, "music-plsettings-no"))
+            em.add_field(name=get_str(ctx, "cmd-roleinfo-color"),
+                         value=str(role.color))
+            em.set_thumbnail(url='http://www.colorhexa.com/%s.png' %
+                             str(role.color).strip("#"))
+        em.add_field(name=get_str(ctx, "cmd-roleinfo-mentionable"), value=get_str(ctx,
+                                                                                  "music-plsettings-yes") if role.mentionable else get_str(ctx, "music-plsettings-no"))
         if 0 < role_count < 16:
-            em.add_field(name=get_str(ctx, "cmd-roleinfo-all-users"), value=all_users, inline=False)
-        em.add_field(name=get_str(ctx, "cmd-roleinfo-creation"), value=role.created_at.strftime("%Y-%m-%d"))
+            em.add_field(name=get_str(ctx, "cmd-roleinfo-all-users"),
+                         value=all_users, inline=False)
+        em.add_field(name=get_str(ctx, "cmd-roleinfo-creation"),
+                     value=role.created_at.strftime("%Y-%m-%d"))
         if str(role.color) != "#000000":
-            em.set_thumbnail(url='http://www.colorhexa.com/%s.png' % str(role.color).strip("#"))
+            em.set_thumbnail(url='http://www.colorhexa.com/%s.png' %
+                             str(role.color).strip("#"))
         try:
             await ctx.send(embed=em)
         except discord.Forbidden:
@@ -699,22 +762,38 @@ class Useful(commands.Cog):
         {help}
         """
         em = discord.Embed(description=get_str(ctx, "cmd-credits-title"))
-        em.add_field(name="Zenrac", value="[{}]({})".format(get_str(ctx, "cmd-credits-bot-dev"), "https://github.com/Zenrac"))
-        em.add_field(name="Rapptz - Danny", value='[discord.py]({})'.format("https://github.com/Rapptz/discord.py/tree/rewrite"))
-        em.add_field(name="Ifran-dahir", value='[Jikan]({})'.format("https://jikan.moe/"))
-        em.add_field(name="Sedmelluq", value='[Lavaplayer]({})'.format("https://github.com/sedmelluq/"))
-        em.add_field(name="Frederikam", value='[Lavalink]({})'.format("https://github.com/Frederikam/Lavalink"))
-        em.add_field(name="Devoxin", value='[Lavalink.py]({})'.format("https://github.com/Devoxin/Lavalink.py"))
-        em.add_field(name="Wolke & Akio", value='[weeb.sh API]({})'.format("https://weeb.sh/"))
-        em.add_field(name="AndyTempel", value='[weeb.sh Wrapper]({})'.format("https://github.com/AndyTempel/weebapi"))
-        em.add_field(name="Dank Memer", value='[Meme-Server]({})'.format("https://github.com/DankMemer/meme-server"))
-        em.add_field(name="RickBot IMGGEN", value='[Meme-Server]({})'.format("https://services.is-going-to-rickroll.me/"))
-        em.add_field(name="AndyTempel", value='[KSoft.Si API]({})'.format("https://api.ksoft.si/"))
-        em.add_field(name="Sworder & Ota", value='[arcadia-api]({})'.format("https://arcadia-api.xyz"))
-        em.add_field(name="LazyShpee", value='[iode]({})'.format("https://github.com/LazyShpee"))
-        em.add_field(name="Akio", value='[MTCL]({})'.format("https://mctl.io/"))
-        em.add_field(name="Peko", value='[{}]({})'.format(get_str(ctx, "cmd-credits-watora-designer"), "http://lumino.sakura.ne.jp"))
-        em.add_field(name=get_str(ctx, "cmd-current-translation-written-by", can_owo=False), value=get_str(ctx, "cmd-current-translation-author", can_owo=False), inline=False)
+        em.add_field(name="Zenrac", value="[{}]({})".format(
+            get_str(ctx, "cmd-credits-bot-dev"), "https://github.com/Zenrac"))
+        em.add_field(name="Rapptz - Danny", value='[discord.py]({})'.format(
+            "https://github.com/Rapptz/discord.py/tree/rewrite"))
+        em.add_field(name="Ifran-dahir",
+                     value='[Jikan]({})'.format("https://jikan.moe/"))
+        em.add_field(name="Sedmelluq", value='[Lavaplayer]({})'.format(
+            "https://github.com/sedmelluq/"))
+        em.add_field(name="Frederikam", value='[Lavalink]({})'.format(
+            "https://github.com/Frederikam/Lavalink"))
+        em.add_field(name="Devoxin", value='[Lavalink.py]({})'.format(
+            "https://github.com/Devoxin/Lavalink.py"))
+        em.add_field(name="Wolke & Akio",
+                     value='[weeb.sh API]({})'.format("https://weeb.sh/"))
+        em.add_field(name="AndyTempel", value='[weeb.sh Wrapper]({})'.format(
+            "https://github.com/AndyTempel/weebapi"))
+        em.add_field(name="Dank Memer", value='[Meme-Server]({})'.format(
+            "https://github.com/DankMemer/meme-server"))
+        em.add_field(name="RickBot IMGGEN", value='[Meme-Server]({})'.format(
+            "https://services.is-going-to-rickroll.me/"))
+        em.add_field(name="AndyTempel", value='[KSoft.Si API]({})'.format(
+            "https://api.ksoft.si/"))
+        em.add_field(name="Sworder & Ota",
+                     value='[arcadia-api]({})'.format("https://arcadia-api.xyz"))
+        em.add_field(name="LazyShpee", value='[iode]({})'.format(
+            "https://github.com/LazyShpee"))
+        em.add_field(name="Akio", value='[MTCL]({})'.format(
+            "https://mctl.io/"))
+        em.add_field(name="Peko", value='[{}]({})'.format(
+            get_str(ctx, "cmd-credits-watora-designer"), "http://lumino.sakura.ne.jp"))
+        em.add_field(name=get_str(ctx, "cmd-current-translation-written-by", can_owo=False),
+                     value=get_str(ctx, "cmd-current-translation-author", can_owo=False), inline=False)
 
         try:
             await ctx.send(embed=em)
@@ -738,13 +817,15 @@ class Useful(commands.Cog):
         except KeyError:
             pass
         if not patchchannel:
-            e = discord.Embed(description='See all changelogs on my official server!')
+            e = discord.Embed(
+                description='See all changelogs on my official server!')
             if not ctx.guild:
                 e.color = 0x71368a
             else:
                 e.color = ctx.me.color
             e.set_thumbnail(url=self.bot.user.avatar_url)
-            e.add_field(name='{}:'.format(get_str(ctx, "cmd-invitation-my-server")), value='[World of Watora]({})'.format("https://discord.gg/ArJgTpM"))
+            e.add_field(name='{}:'.format(get_str(ctx, "cmd-invitation-my-server")),
+                        value='[World of Watora]({})'.format("https://discord.gg/ArJgTpM"))
             return await ctx.send(embed=e)
         async for lmsg in patchchannel.history(limit=2):
             if lmsg.author.id == owner_id:
@@ -783,7 +864,8 @@ class Useful(commands.Cog):
                 await SettingsDB.get_instance().set_glob_settings(settings)
                 await ctx.send('Message set!')
 
-        e = discord.Embed().set_footer(text=get_str(ctx, "cmd-don-thx-in-advance", can_owo=False))
+        e = discord.Embed().set_footer(text=get_str(
+            ctx, "cmd-don-thx-in-advance", can_owo=False))
 
         try:
             e.colour = ctx.author.colour
@@ -798,7 +880,8 @@ class Useful(commands.Cog):
             pbar = settings.donation['bar']
 
         e.description = f"**{datetime.now().strftime('%B %Y')}**"
-        e.add_field(name=get_str(ctx, "cmd-don-make-a-donation"), value="[**Paypal**]({})".format("https://www.paypal.me/watora") + "\n[**Patreon**]({})".format("https://www.patreon.com/watora"), inline=False)
+        e.add_field(name=get_str(ctx, "cmd-don-make-a-donation"), value="[**Paypal**]({})".format(
+            "https://www.paypal.me/watora") + "\n[**Patreon**]({})".format("https://www.patreon.com/watora"), inline=False)
         donators = settings.donation.get('donators', {})
         if donators:
             desc = ""
@@ -811,7 +894,8 @@ class Useful(commands.Cog):
                         if await is_lover(self.bot, int(k), resp=fetched_member):
                             tier = 10
 
-                    username = fetched_member['user']['username'] + '#' + fetched_member['user']['discriminator']
+                    username = fetched_member['user']['username'] + \
+                        '#' + fetched_member['user']['discriminator']
                     text = format_mentions(v)[:100]
                     desc += f'`{username}` **${tier}/m** : {text}\n'
             if desc:
@@ -827,13 +911,15 @@ class Useful(commands.Cog):
             min_value = float(pbar[0])
             prog_bar_str = sweet_bar(min_value, max_value)
             pbar = "`{}€/{}€` {}".format(min_v, max_v, prog_bar_str)
-            e.add_field(name=get_str(ctx, "cmd-don-server-cost") + ' :', value=pbar)
+            e.add_field(name=get_str(
+                ctx, "cmd-don-server-cost") + ' :', value=pbar)
             prog_bar_str = ''
             if max_value < min_value:
                 max_value = [m for m in self.next_cost if float(m) > max_value]
                 if max_value:
                     prog_bar_str = sweet_bar(min_value, float(max_value[0]))
-                    pbar = "`{}€/{}€` {}".format(min_v, max_value[0], prog_bar_str)
+                    pbar = "`{}€/{}€` {}".format(min_v,
+                                                 max_value[0], prog_bar_str)
                     e.add_field(name="Upgrade server cost :", value=pbar)
         await ctx.send(embed=e)
 
@@ -845,7 +931,8 @@ class Useful(commands.Cog):
 
         {help}
         """
-        msg = get_str(ctx, "cmd-perms-info").format(get_server_prefixes(ctx.bot, ctx.guild) if ctx.guild else "=")
+        msg = get_str(ctx, "cmd-perms-info").format(
+            get_server_prefixes(ctx.bot, ctx.guild) if ctx.guild else "=")
         try:
             await ctx.author.send(msg)
         except discord.HTTPException:
@@ -926,9 +1013,10 @@ class Useful(commands.Cog):
                 e.color = ctx.me.color
             e.set_thumbnail(url=self.bot.user.avatar_url)
             e.add_field(name='{}:'.format(get_str(ctx, "cmd-invitation-add-me")), value='[{}]({})'.format(get_str(ctx, "cmd-invitation"),
-                        f"https://discordapp.com/oauth2/authorize?client_id={self.bot.user.id}&scope=bot&response_type=code&redirect_uri=https%3A%2F%2Fwatora.xyz%2Fen%2FThank-you"),
+                                                                                                          f"https://discordapp.com/oauth2/authorize?client_id={self.bot.user.id}&scope=bot&response_type=code&redirect_uri=https%3A%2F%2Fwatora.xyz%2Fen%2FThank-you"),
                         inline=False)
-            e.add_field(name='{}:'.format(get_str(ctx, "cmd-invitation-my-server")), value='[World of Watora]({})'.format("https://discord.gg/ArJgTpM"))
+            e.add_field(name='{}:'.format(get_str(ctx, "cmd-invitation-my-server")),
+                        value='[World of Watora]({})'.format("https://discord.gg/ArJgTpM"))
             await ctx.send(embed=e)
 
     @commands.cooldown(rate=1, per=600.0, type=commands.BucketType.user)
@@ -948,17 +1036,21 @@ class Useful(commands.Cog):
 
         channel = 268495043235545088
 
-        e.set_author(name=str(msg.author), icon_url=msg.author.avatar_url or msg.author.default_avatar_url)
+        e.set_author(name=str(
+            msg.author), icon_url=msg.author.avatar_url or msg.author.default_avatar_url)
         e.description = content
         e.timestamp = msg.created_at
 
         if msg.guild:
-            e.add_field(name='Server', value='{0.name} (ID: {0.id})'.format(msg.guild), inline=False)
+            e.add_field(name='Server', value='{0.name} (ID: {0.id})'.format(
+                msg.guild), inline=False)
 
-        e.add_field(name='Channel', value='{0} (ID: {0.id})'.format(msg.channel), inline=False)
+        e.add_field(name='Channel', value='{0} (ID: {0.id})'.format(
+            msg.channel), inline=False)
         e.set_footer(text='Author ID: ' + str(msg.author.id))
 
         confirm_message = await ctx.send("Your suggestion **about Watora** is going to be sent to Watora's developper. Are you sure about that ?\nWrite `yes` or `no`.\n```diff\n- Warning: Any kind of abuse will make your account blacklisted from the bot (it means that you'll not be able to use Watora anymore).\n+ Please only write it in ENGLISH (or french...)```")
+
         def check(m):
             if m.author.bot or m.author != ctx.author:
                 return False
@@ -1004,14 +1096,17 @@ class Useful(commands.Cog):
 
         channel = 268495081202384896
 
-        e.set_author(name=str(msg.author), icon_url=msg.author.avatar_url or msg.author.default_avatar_url)
+        e.set_author(name=str(
+            msg.author), icon_url=msg.author.avatar_url or msg.author.default_avatar_url)
         e.description = content
         e.timestamp = msg.created_at
 
         if msg.guild:
-            e.add_field(name='Server', value='{0.name} (ID: {0.id})'.format(msg.guild), inline=False)
+            e.add_field(name='Server', value='{0.name} (ID: {0.id})'.format(
+                msg.guild), inline=False)
 
-        e.add_field(name='Channel', value='{0} (ID: {0.id})'.format(msg.channel), inline=False)
+        e.add_field(name='Channel', value='{0} (ID: {0.id})'.format(
+            msg.channel), inline=False)
         e.set_footer(text='Author ID: ' + str(msg.author.id))
 
         confirm_message = await ctx.send("Your bug report **about Watora** is going to be sent to Watora's developper. Are you sure about that ?\nWrite `yes` or `no`.\n```diff\n- Warning: Any kind of abuse will make your account blacklisted from the bot (it means that you'll not be able to use Watora anymore).\n+ Please only write it in ENGLISH (or french...)```")
@@ -1058,14 +1153,17 @@ class Useful(commands.Cog):
 
         channel = 346251537217093632
 
-        e.set_author(name=str(msg.author), icon_url=msg.author.avatar_url or msg.author.default_avatar_url)
+        e.set_author(name=str(
+            msg.author), icon_url=msg.author.avatar_url or msg.author.default_avatar_url)
         e.description = content
         e.timestamp = msg.created_at
 
         if msg.guild:
-            e.add_field(name='Server', value='{0.name} (ID: {0.id})'.format(msg.guild), inline=False)
+            e.add_field(name='Server', value='{0.name} (ID: {0.id})'.format(
+                msg.guild), inline=False)
 
-        e.add_field(name='Channel', value='{0} (ID: {0.id})'.format(msg.channel), inline=False)
+        e.add_field(name='Channel', value='{0} (ID: {0.id})'.format(
+            msg.channel), inline=False)
         e.set_footer(text='Author ID: ' + str(msg.author.id))
 
         confirm_message = await ctx.send("Your feedback **about Watora** is going to be sent to Watora's developper. Are you sure about that ?\nWrite `yes` or `no`.\n```diff\n- Warning: Any kind of abuse will make your account blacklisted from the bot (it means that you'll not be able to use Watora anymore).\n+ Please only write it in ENGLISH (or french...)```")
@@ -1113,7 +1211,8 @@ class Useful(commands.Cog):
         {help}
         """
         nshards = len(self.bot.shards)
-        msg = "```xl\nCurrently on {} shard{} with {} guilds (all: {}).\n\n".format(nshards, "s" if nshards > 1 else "", len(self.bot.guilds), self.bot.guild_count)
+        msg = "```xl\nCurrently on {} shard{} with {} guilds (all: {}).\n\n".format(
+            nshards, "s" if nshards > 1 else "", len(self.bot.guilds), self.bot.guild_count)
         for i, n in enumerate(list(self.bot.shards.keys())):
             gshard = 0
             for s in self.bot.guilds:
@@ -1133,7 +1232,8 @@ class Useful(commands.Cog):
         Where there are the most ppl using Watora ?
         """
         c = Counter(x.region for x in self.bot.guilds)
-        msg = "```xl\nCurrently on {} guild{} (all: {}).\n\n".format(len(self.bot.guilds), "s" if len(self.bot.guilds) > 1 else "", self.bot.guild_count)
+        msg = "```xl\nCurrently on {} guild{} (all: {}).\n\n".format(len(
+            self.bot.guilds), "s" if len(self.bot.guilds) > 1 else "", self.bot.guild_count)
         for (x, y) in c.most_common():
             msg += f"[{x}] : {y}\n"
         msg += "```"
@@ -1158,7 +1258,7 @@ class Useful(commands.Cog):
             msg += "**{}** : **{}** ({})\n".format(c, s.name, s.id)
         if servers:
             for i in range(0, len(msg), n):
-                await ctx.send(msg[i:i+n])
+                await ctx.send(msg[i:i + n])
         else:
             await ctx.send("On 0 server.")
 
@@ -1207,7 +1307,7 @@ class Useful(commands.Cog):
         msg.reverse()
         msg = '\n\n'.join(msg)
         for i in range(0, len(msg), n):
-            await ctx.send(msg[i:i+n])
+            await ctx.send(msg[i:i + n])
 
     @checks.has_permissions(manage_roles=True)
     @commands.guild_only()
@@ -1399,7 +1499,7 @@ class Useful(commands.Cog):
 
     @commands.command(aliases=['redeem'])
     @commands.cooldown(rate=1, per=2.0, type=commands.BucketType.user)
-    async def claim(self, ctx, guild_id:int = None):
+    async def claim(self, ctx, guild_id: int = None):
         """
             {command_prefix}claim (guild_id)
 
@@ -1452,7 +1552,8 @@ class Useful(commands.Cog):
             return await ctx.send("Claim cancelled.")
 
         if str(ctx.author.id) not in settings.claim:
-            settings.claim[str(ctx.author.id)] = {str(guild.id): datetime.today().strftime("%d %b %Y")}
+            settings.claim[str(ctx.author.id)] = {str(
+                guild.id): datetime.today().strftime("%d %b %Y")}
         else:
             max_claim = 2
             if await is_lover(self.bot, ctx.author):
@@ -1461,16 +1562,17 @@ class Useful(commands.Cog):
                 max_claim = 9e40
             if len(settings.claim[str(ctx.author.id)]) >= max_claim:
                 return await ctx.send("You reached your max claim server count ({}).\n"
-                    "You can unclaim one of your claimed server by issuing `{}unclaim (guild_id)`\n"
-                    "To see your current claimed server, use the command `{}claimlist`".format(max_claim, get_server_prefixes(ctx.bot, guild), get_server_prefixes(ctx.bot, guild)))
-            settings.claim[str(ctx.author.id)][str(guild.id)] = datetime.today().strftime("%d %b %Y")
+                                      "You can unclaim one of your claimed server by issuing `{}unclaim (guild_id)`\n"
+                                      "To see your current claimed server, use the command `{}claimlist`".format(max_claim, get_server_prefixes(ctx.bot, guild), get_server_prefixes(ctx.bot, guild)))
+            settings.claim[str(ctx.author.id)][str(guild.id)
+                                               ] = datetime.today().strftime("%d %b %Y")
 
         await ctx.send('Server successfully claimed !')
         await SettingsDB.get_instance().set_glob_settings(settings)
 
     @commands.command(aliases=['unredeem'])
     @commands.cooldown(rate=1, per=2.0, type=commands.BucketType.user)
-    async def unclaim(self, ctx, guild_id:int = None):
+    async def unclaim(self, ctx, guild_id: int = None):
         """
             {command_prefix}unclaim (guild_id)
 
@@ -1479,7 +1581,8 @@ class Useful(commands.Cog):
         if not guild_id:
             guild_id = str(ctx.guild.id)
         else:
-            guild_id = str(guild_id)  # param is type int just to ensure that it can be converted to int easily thanks to discord.py
+            # param is type int just to ensure that it can be converted to int easily thanks to discord.py
+            guild_id = str(guild_id)
         if not await is_patron(self.bot, ctx.author):
             return await ctx.send("You need to be at least Super Patron on my server to claim/unclaim a server!")
         settings = await SettingsDB.get_instance().get_glob_settings()
@@ -1513,7 +1616,8 @@ class Useful(commands.Cog):
         desc = ''
         for i, m in enumerate(settings.claim[str(member.id)].items(), start=1):
             guild = await self.bot.safe_fetch('guild', int(m[0]))
-            desc += f'`{i}. `' + (('**' + guild.name + '** ') if guild else '') + f'(`{m[0]}`) ' + f'({m[1]})\n'
+            desc += f'`{i}. `' + (('**' + guild.name + '** ')
+                                  if guild else '') + f'(`{m[0]}`) ' + f'({m[1]})\n'
         embed = discord.Embed(description=desc)
         embed.set_author(name=member.name, icon_url=member.avatar_url)
         max_claim = 2
@@ -1521,7 +1625,8 @@ class Useful(commands.Cog):
             max_claim = 5
         if member.id == owner_id:
             max_claim = 9e40
-        embed.set_footer(text=f"Claim {len(settings.claim[str(member.id)])}/{max_claim}")
+        embed.set_footer(
+            text=f"Claim {len(settings.claim[str(member.id)])}/{max_claim}")
         await ctx.send(embed=embed)
 
     @commands.guild_only()
@@ -1578,7 +1683,7 @@ class Useful(commands.Cog):
             if str(channel.id) in settings.disabledchannels:
                 cmd_disabled = len(settings.disabledchannels[str(channel.id)])
                 opt = '({} command{})'.format(cmd_disabled, 's'
-                      if cmd_disabled != 1 else '') if cmd_disabled != 0 else ''
+                                              if cmd_disabled != 1 else '') if cmd_disabled != 0 else ''
                 ignore_channels.append(f"#{channel.name} {opt}")
         ignore = ', '.join(ignore_channels)
         if ignore_channels == []:
@@ -1652,7 +1757,8 @@ class Useful(commands.Cog):
 
         embed = discord.Embed()
 
-        embed.set_author(name=get_str(ctx, "cmd-settings-title"), icon_url=guild.icon_url)
+        embed.set_author(name=get_str(
+            ctx, "cmd-settings-title"), icon_url=guild.icon_url)
         if not guild:
             embed.color = 0x71368a
         else:
@@ -1682,28 +1788,36 @@ class Useful(commands.Cog):
             ac_desc = get_str(ctx, "music-plsettings-no")
 
         struct = "*{} :* **{}**"
-        embed.description = get_str(ctx, "cmd-help-support").format('[World of Watora](https://discord.gg/ArJgTpM)')
+        embed.description = get_str(
+            ctx, "cmd-help-support").format('[World of Watora](https://discord.gg/ArJgTpM)')
 
         msg = []
         names = ['guild-pref', 'language', 'owo']
-        values = [get_server_prefixes(ctx.bot, guild), lang, [get_str(ctx, "music-plsettings-no"), get_str(ctx, "music-plsettings-yes")][settings.owo]]
+        values = [get_server_prefixes(ctx.bot, guild), lang, [get_str(
+            ctx, "music-plsettings-no"), get_str(ctx, "music-plsettings-yes")][settings.owo]]
         for i, name in enumerate(names):
-            msg.append(struct.format(get_str(ctx, f"cmd-settings-{name}"), values[i]))
-        embed.add_field(name=get_str(ctx, "cmd-settings-glob"), value='\n'.join(msg))
+            msg.append(struct.format(
+                get_str(ctx, f"cmd-settings-{name}"), values[i]))
+        embed.add_field(name=get_str(ctx, "cmd-settings-glob"),
+                        value='\n'.join(msg))
 
         msg = []
         names = ['clans', 'autoroles', 'o-roles', 'dj-roles']
         values = [clan, set_autoroles_msg, set_roles_msg, set_dj_roles]
         for i, name in enumerate(names):
-            msg.append(struct.format(get_str(ctx, f"cmd-settings-{name}"), values[i]))
-        embed.add_field(name=get_str(ctx, "cmd-userinfo-roles"), value='\n'.join(msg), inline=False)
+            msg.append(struct.format(
+                get_str(ctx, f"cmd-settings-{name}"), values[i]))
+        embed.add_field(name=get_str(ctx, "cmd-userinfo-roles"),
+                        value='\n'.join(msg), inline=False)
 
         msg = []
         names = ['cc', 'dc']
         values = [cc, dc]
         for i, name in enumerate(names):
-            msg.append(struct.format(get_str(ctx, f"cmd-settings-{name}"), values[i]))
-        embed.add_field(name=get_str(ctx, "cmd-settings-commands"), value='\n'.join(msg), inline=False)
+            msg.append(struct.format(
+                get_str(ctx, f"cmd-settings-{name}"), values[i]))
+        embed.add_field(name=get_str(ctx, "cmd-settings-commands"),
+                        value='\n'.join(msg), inline=False)
 
         msg = []
         names = ['bluser']
@@ -1715,22 +1829,29 @@ class Useful(commands.Cog):
             names.append('ic')
             values.append(ignore)
         for i, name in enumerate(names):
-            msg.append(struct.format(get_str(ctx, f"cmd-settings-{name}"), values[i]))
-        embed.add_field(name=get_str(ctx, "cmd-settings-permissions"), value='\n'.join(msg), inline=False)
+            msg.append(struct.format(
+                get_str(ctx, f"cmd-settings-{name}"), values[i]))
+        embed.add_field(name=get_str(ctx, "cmd-settings-permissions"),
+                        value='\n'.join(msg), inline=False)
 
         msg = []
         names = ['wm', 'gm']
         values = [welcome, goodbye]
         for i, name in enumerate(names):
-            msg.append(struct.format(get_str(ctx, f"cmd-settings-{name}"), values[i]))
-        embed.add_field(name=get_str(ctx, "cmd-settings-messages"), value='\n'.join(msg), inline=False)
+            msg.append(struct.format(
+                get_str(ctx, f"cmd-settings-{name}"), values[i]))
+        embed.add_field(name=get_str(ctx, "cmd-settings-messages"),
+                        value='\n'.join(msg), inline=False)
 
         msg = []
         names = ['autoplay', 'lazy', 'lvc', 'dv', 'vote', 'ac', 'np']
-        values = [[get_str(ctx, "music-plsettings-no"), get_str(ctx, "music-plsettings-yes")][settings.autoplay], [get_str(ctx, "music-plsettings-no"), get_str(ctx, "music-plsettings-yes")][settings.lazy], timer, vol, vote, ac_desc, np]
+        values = [[get_str(ctx, "music-plsettings-no"), get_str(ctx, "music-plsettings-yes")][settings.autoplay], [get_str(
+            ctx, "music-plsettings-no"), get_str(ctx, "music-plsettings-yes")][settings.lazy], timer, vol, vote, ac_desc, np]
         for i, name in enumerate(names):
-            msg.append(struct.format(get_str(ctx, f"cmd-settings-{name}"), values[i]))
-        embed.add_field(name=get_str(ctx, "cmd-settings-player"), value='\n'.join(msg), inline=False)
+            msg.append(struct.format(
+                get_str(ctx, f"cmd-settings-{name}"), values[i]))
+        embed.add_field(name=get_str(ctx, "cmd-settings-player"),
+                        value='\n'.join(msg), inline=False)
 
         try:
             await ctx.send(embed=embed)

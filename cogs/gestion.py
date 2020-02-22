@@ -14,11 +14,16 @@ from utils.chat_formatting import pagify, box
 from utils.watora import globprefix, log, owner_id, get_server_prefixes, get_str, no_lang_loaded
 
 cmds = {}
-cmds['music']      = ["join", "np", "play", "queue", "search", "skip", "forceskip", "replay", "previous", "relatedsong", "replaynow", "previousnow", "stop", "pl", "radio", "repeat", "pause", "volume", "playnow", "playnext", "clear", "promote", "shuffle", "remove", "moveto", "lyrics", "bassboost", "equalizer", "blindtest", "blindtestscore"]
-cmds['fun']        = ["8ball", "minesweeper", "ily", "roll", "flip", "me", "customcommand", "choice", "ascii", "meme", "picture", "osu", "marry", "divorce", "anime", "manga", "char", "nextep"]
-cmds['useful']     = ["don", "info", "poll", "stats", "credits", "changelog", "permsinfo", "version", "infoshard", "avatar", "userinfo", "serverinfo", "roleinfo", "getrole", "ping", "invitation", "suggestion", "bug", "feedback", "clan", "joinclan"]
-cmds['moderation'] = ["kick", "ban", "hackban", "voicekick", "clean", "purge", "stfu"]
-cmds['config']     = ["prefix", "language", "owo", 'blacklist', 'settings', "defvolume", "defvote", "autoleave", "npmsg", "welcome", "goodbye", "autorole", "ignore", "disabledcommand", "setdj", "bind", "lazy", "autoplay", "autoconnect"]
+cmds['music'] = ["join", "np", "play", "queue", "search", "skip", "forceskip", "replay", "previous", "relatedsong", "replaynow", "previousnow", "stop", "pl", "radio",
+                 "repeat", "pause", "volume", "playnow", "playnext", "clear", "promote", "shuffle", "remove", "moveto", "lyrics", "bassboost", "equalizer", "blindtest", "blindtestscore"]
+cmds['fun'] = ["8ball", "minesweeper", "ily", "roll", "flip", "me", "customcommand", "choice",
+               "ascii", "meme", "picture", "osu", "marry", "divorce", "anime", "manga", "char", "nextep"]
+cmds['useful'] = ["don", "info", "poll", "stats", "credits", "changelog", "permsinfo", "version", "infoshard", "avatar",
+                  "userinfo", "serverinfo", "roleinfo", "getrole", "ping", "invitation", "suggestion", "bug", "feedback", "clan", "joinclan"]
+cmds['moderation'] = ["kick", "ban", "hackban",
+                      "voicekick", "clean", "purge", "stfu"]
+cmds['config'] = ["prefix", "language", "owo", 'blacklist', 'settings', "defvolume", "defvote", "autoleave", "npmsg",
+                  "welcome", "goodbye", "autorole", "ignore", "disabledcommand", "setdj", "bind", "lazy", "autoplay", "autoconnect"]
 
 cmd_list = {
     'Social actions':           ['tickle', 'cuddle', 'kiss', 'pat', 'lick', 'hug', 'poke', 'slap', 'punch', 'stare', 'bite', 'shoot'],
@@ -29,10 +34,10 @@ cmd_list = {
 }
 
 # Arcadia API
-#cmd_list.update({
- #   'Filters':                  ['triggered', 'triggeredinvert', 'illuminati', 'invert', 'convmatrix', 'convinvert', 'convolute', 'pixelate', 'tobecontinued', 'wasted', 'beautiful', 'bob', 'distortion', 'glitch', 'mosaic', 'blurple', 'halloween', 'orangly', 'blood', 'bloodhelp', 'blur', 'discordlogo', 'displace', 'ghost', 'grayscale', 'implode', 'posterize', 'sepia', 'snow', 'time', 'animeprotest', 'angry', 'codebabes', 'hitler', 'link', 'respect', 'whoisthis', 'shocked', 'alexflipnote'],
-  #  'Generators':               ['presidentialalert', 'thisexample', 'thisfilm', 'hibiki', 'shy', 'searching', 'bluneko', 'wanted', 'bravery', 'brilliance', 'balance', 'loveship']
-#})
+# cmd_list.update({
+#   'Filters':                  ['triggered', 'triggeredinvert', 'illuminati', 'invert', 'convmatrix', 'convinvert', 'convolute', 'pixelate', 'tobecontinued', 'wasted', 'beautiful', 'bob', 'distortion', 'glitch', 'mosaic', 'blurple', 'halloween', 'orangly', 'blood', 'bloodhelp', 'blur', 'discordlogo', 'displace', 'ghost', 'grayscale', 'implode', 'posterize', 'sepia', 'snow', 'time', 'animeprotest', 'angry', 'codebabes', 'hitler', 'link', 'respect', 'whoisthis', 'shocked', 'alexflipnote'],
+#  'Generators':               ['presidentialalert', 'thisexample', 'thisfilm', 'hibiki', 'shy', 'searching', 'bluneko', 'wanted', 'bravery', 'brilliance', 'balance', 'loveship']
+# })
 # Eclyssia API
 cmd_list.update({
     'Filters':                  ['blur', 'triggered', 'whatspokemon', 'captcha', 'beautiful', 'greyscale', 'invert', 'pixelate', 'posterize', 'sepia'],
@@ -46,14 +51,14 @@ cmd_list.update({
 # Dank Memer API
 cmd_meme = {
     '1 avatar': ['wanted', 'hitler', 'goggles', 'radialblur', 'airpods',
-        'warp', 'aborted', 'affect', 'bongocat', 'cancer', 'dab', 'dank', 'deepfry',
-        'delete', 'disability', 'door', 'egg', 'failure', 'fakenews', 'fedora', 'gay', 'jail',
-        'laid', 'magik', 'rip', 'roblox', 'salty', 'satan', 'sickban', 'trash', 'ugly', 'warp', 'whodidthis'],
+                 'warp', 'aborted', 'affect', 'bongocat', 'cancer', 'dab', 'dank', 'deepfry',
+                 'delete', 'disability', 'door', 'egg', 'failure', 'fakenews', 'fedora', 'gay', 'jail',
+                 'laid', 'magik', 'rip', 'roblox', 'salty', 'satan', 'sickban', 'trash', 'ugly', 'warp', 'whodidthis'],
     '1 text': ['inator', 'stroke', 'violence', 'violentsparks', 'thesearch', 'sneakyfox',
-        'piccolo', 'nothing', 'abandon', 'justpretending', 'fuck', 'expanddong', 'doglemon', 'corporate',
-        'confusedcat', 'citation', 'cheating', 'armor', 'balloon', 'boo', 'brain', 'changemymind', 'crysip', 'excuseme',
-        'facts', 'humansgood', 'knowyourlocation', 'master', 'note', 'ohno', 'plan', 'savehumanity', 'shit', 'slapsroof',
-        'surprised', 'vr', 'walking'],
+               'piccolo', 'nothing', 'abandon', 'justpretending', 'fuck', 'expanddong', 'doglemon', 'corporate',
+               'confusedcat', 'citation', 'cheating', 'armor', 'balloon', 'boo', 'brain', 'changemymind', 'crysip', 'excuseme',
+               'facts', 'humansgood', 'knowyourlocation', 'master', 'note', 'ohno', 'plan', 'savehumanity', 'shit', 'slapsroof',
+               'surprised', 'vr', 'walking'],
     '2 avatars': ['bed', 'madethis', 'screams', 'robinslap', 'spank'],
     '1 avatar 1 text 1 username': ['byemom', 'quote', 'tweet', 'youtube'],
     '1 avatar 1 text': ['garfield', 'floor', 'unpopular', 'whothisis']
@@ -92,7 +97,8 @@ class Gestion(commands.Cog):
             self.languages.append(file.replace(".json", ""))
         for lang in self.languages:
             try:
-                self.bot.loaded_languages[lang] = dataIO.load_json(f"config/i18n/{lang+'.json'}")
+                self.bot.loaded_languages[lang] = dataIO.load_json(
+                    f"config/i18n/{lang+'.json'}")
             except ValueError as e:
                 log.warning(f"[Translation] Failed to load {lang}\n({e})")
             else:
@@ -161,15 +167,18 @@ class Gestion(commands.Cog):
             pass
         spammers = Counter()
         channel = ctx.message.channel
-        prefixes = [get_server_prefixes(ctx.bot, ctx.guild), ctx.me.mention, "watora"]
+        prefixes = [get_server_prefixes(
+            ctx.bot, ctx.guild), ctx.me.mention, "watora"]
         if callable(prefixes):
             prefixes = prefixes(ctx.message.guild)
 
         def is_possible_command_invoke(entry):
-            valid_call = any(entry.content.startswith(prefix.lower()) for prefix in prefixes)
+            valid_call = any(entry.content.startswith(prefix.lower())
+                             for prefix in prefixes)
             return valid_call and not entry.content[1:2].isspace()
 
-        can_delete = ctx.channel.permissions_for(channel.guild.me).manage_messages
+        can_delete = ctx.channel.permissions_for(
+            channel.guild.me).manage_messages
 
         if not can_delete:
             api_calls = 0
@@ -194,7 +203,7 @@ class Gestion(commands.Cog):
                         spammers[entry.author.display_name] += 1
                         api_calls += 1
         else:
-            predicate = lambda m: m.author == self.bot.user or is_possible_command_invoke(m)  # noqa: E731
+            def predicate(m): return m.author == self.bot.user or is_possible_command_invoke(m)  # noqa: E731
             try:
                 deleted = await ctx.channel.purge(limit=search, before=ctx.message, check=predicate)
             except discord.NotFound:
@@ -202,12 +211,15 @@ class Gestion(commands.Cog):
             spammers = Counter(m.author.display_name for m in deleted)
 
         deleted = sum(spammers.values())
-        messages = ["{} {}".format(deleted, get_str(ctx, "cmd-clean-cleaned-message") if deleted == 1 else get_str(ctx, "cmd-clean-cleaned-messages"))]
+        messages = ["{} {}".format(deleted, get_str(
+            ctx, "cmd-clean-cleaned-message") if deleted == 1 else get_str(ctx, "cmd-clean-cleaned-messages"))]
 
         if deleted:
             messages.append('')
-            spammers = sorted(spammers.items(), key=lambda t: t[1], reverse=True)
-            messages.extend(map(lambda t: '- **{0[0]}**: {0[1]}'.format(t), spammers))
+            spammers = sorted(spammers.items(),
+                              key=lambda t: t[1], reverse=True)
+            messages.extend(
+                map(lambda t: '- **{0[0]}**: {0[1]}'.format(t), spammers))
 
         if search > 1:  # Don't send message if user wrote 1 (custom command?)
             await ctx.send('\n'.join(messages), delete_after=5)
@@ -335,10 +347,11 @@ class Gestion(commands.Cog):
                     return await ctx.send(get_str(ctx, "cmd-ignore-not-disabled").format("`{}`".format(channel.name)))
                 if not settings.disabledchannels[cid]:
                     return await ctx.send(get_str(ctx, "cmd-ignore-all-disabled").format("`{}`".format(channel.name)))
-                info = '`{}`'.format('`, `'.join(settings.disabledchannels[cid]))
+                info = '`{}`'.format('`, `'.join(
+                    settings.disabledchannels[cid]))
                 if len(info) > 1700:
                     await ctx.send(get_str(ctx, "cmd-ignore-number-commands").format(
-                                          len(settings.disabledchannels[cid]), channel.name))
+                        len(settings.disabledchannels[cid]), channel.name))
                 else:
                     await ctx.send(get_str(ctx, "cmd-ignore-now").format(f"`{channel.name}`", "\n\n{}".format(info)))
             elif command:
@@ -365,11 +378,13 @@ class Gestion(commands.Cog):
                                     settings.disabledchannels[cid].remove(c)
                                     disabled_cmds.append(c)
                         elif total_command in settings.disabledchannels[cid]:
-                            settings.disabledchannels[cid].remove(total_command)
+                            settings.disabledchannels[cid].remove(
+                                total_command)
                     else:
                         return await ctx.send(get_str(ctx, "cmd-ignore-enabled").format("0", "`{}`".format(channel.name)))
                     if settings.disabledchannels[cid]:
-                        info = '`{}`'.format('`, `'.join(settings.disabledchannels[cid]))
+                        info = '`{}`'.format('`, `'.join(
+                            settings.disabledchannels[cid]))
                         if len(info) > 1700:
                             await ctx.send(get_str(ctx, "cmd-ignore-enabled").format(len(disabled_cmds), "`{}`".format(channel.name)))
                         else:
@@ -380,7 +395,8 @@ class Gestion(commands.Cog):
                 else:
                     disabled_cmds = [1]
                     if cid not in settings.disabledchannels:
-                        settings.disabledchannels[cid] = cmd if isinstance(cmd, list) else [total_command]
+                        settings.disabledchannels[cid] = cmd if isinstance(cmd, list) else [
+                            total_command]
                     else:
                         if isinstance(cmd, list):
                             disabled_cmds = []
@@ -389,8 +405,10 @@ class Gestion(commands.Cog):
                                     settings.disabledchannels[cid].append(c)
                                     disabled_cmds.append(c)
                         elif total_command not in settings.disabledchannels[cid]:
-                            settings.disabledchannels[cid].append(total_command)
-                    info = '`{}`'.format('`, `'.join(settings.disabledchannels[cid]))
+                            settings.disabledchannels[cid].append(
+                                total_command)
+                    info = '`{}`'.format('`, `'.join(
+                        settings.disabledchannels[cid]))
                     if len(info) > 1700:
                         await ctx.send(get_str(ctx, "cmd-ignore-disabled").format(len(disabled_cmds), "`{}`".format(channel.name)))
                     else:
@@ -517,7 +535,8 @@ class Gestion(commands.Cog):
         if not settings.disabledcommands:
             return await ctx.send(get_str(ctx, "cmd-dc-delete-no-disabled-commands").format("{}dc add".format(get_server_prefixes(ctx.bot, ctx.guild))))
 
-        msg = "{}\n{}".format(get_str(ctx, "cmd-dc-list-list"), '`{}`'.format('`, `'.join(settings.disabledcommands)))
+        msg = "{}\n{}".format(get_str(ctx, "cmd-dc-list-list"),
+                              '`{}`'.format('`, `'.join(settings.disabledcommands)))
 
         to_send = ""
         for line in msg:
@@ -564,7 +583,8 @@ class Gestion(commands.Cog):
             if user:
                 name = str(user.id)  # or int conv fail with .lower() etc
 
-        targets = [r for r in ctx.guild.members if r.name.lower() == name.lower() or str(r.id) == name]
+        targets = [r for r in ctx.guild.members if r.name.lower() ==
+                   name.lower() or str(r.id) == name]
         if not targets:  # maybe a role
             is_role = True
             target = self.bot.get_role(ctx, name)
@@ -602,7 +622,8 @@ class Gestion(commands.Cog):
             if user:
                 name = str(user.id)  # or int conv fail with .lower() etc
 
-        targets = [r for r in ctx.guild.members if r.name.lower() == name.lower() or str(r.id) == name]
+        targets = [r for r in ctx.guild.members if r.name.lower() ==
+                   name.lower() or str(r.id) == name]
         if not targets:  # maybe a role
             is_role = True
             target = self.bot.get_role(ctx, name)
@@ -671,7 +692,8 @@ class Gestion(commands.Cog):
             if ctx.guild:
                 embed.color = ctx.me.color
             footer = f"I need help to get translated in other languages ! Please join **[my server](https://discord.gg/ArJgTpM)** if you feel interested."
-            embed.description = "**Available languages**\n\n{}\n\n{}".format(msg, footer)
+            embed.description = "**Available languages**\n\n{}\n\n{}".format(
+                msg, footer)
             try:
                 return await ctx.send(embed=embed)
             except discord.Forbidden:
@@ -858,7 +880,8 @@ class Gestion(commands.Cog):
             not_found = total - len(users)
             users = ", ".join(users)
             if not_found:
-                users += "\n\n ... and {} users I could not find".format(not_found)
+                users += "\n\n ... and {} users I could not find".format(
+                    not_found)
             return list(pagify(users, delims=[" ", "\n"]))
 
         return []
@@ -878,7 +901,8 @@ class Gestion(commands.Cog):
             not_found = total - len(users)
             users = ", ".join(users)
             if not_found:
-                users += "\n\n ... and {} users I could not find".format(not_found)
+                users += "\n\n ... and {} users I could not find".format(
+                    not_found)
             return list(pagify(users, delims=[" ", "\n"]))
 
         return []

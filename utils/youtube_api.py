@@ -37,7 +37,6 @@ class YoutubeAPI:
         self.session = aiosession or aiohttp.ClientSession(loop=self.bot.loop)
         self.loop = loop or asyncio.get_event_loop()
 
-
     async def make_request(self, url):
         """Used to call youtune API"""
         url = f'{self.url}{url}&key={self.youtube_token}'
@@ -48,7 +47,6 @@ class YoutubeAPI:
                 return rep
         return {}
 
-
     async def youtube_search(self, query):
         """Allows to search"""
         search_response = await self.make_request(f'search?part=snippet&q={quote_plus(query)}')
@@ -58,12 +56,12 @@ class YoutubeAPI:
         for search_result in search_response.get('items', []):
             if search_result['id']['kind'] == 'youtube#video':
                 track = {}
-                track['uri'] = 'https://www.youtube.com/watch?v=' + search_result['id']['videoId']
+                track['uri'] = 'https://www.youtube.com/watch?v=' + \
+                    search_result['id']['videoId']
                 track['title'] = search_result['snippet']['title']
                 videos.append(track)
 
         return videos
-
 
     async def get_youtube_title(self, player=None, *, id: list):
         if not isinstance(id, list):
@@ -80,7 +78,6 @@ class YoutubeAPI:
                     found[m['id']] = m['snippet']['title']
         return found
 
-
     async def get_youtube_infos(self, id):
         rep = await self.make_request(f'videos?part=snippet&id={id}')
         if not rep:
@@ -89,7 +86,6 @@ class YoutubeAPI:
         description = rep['items'][0]['snippet']['description']
 
         return thumbnail, description
-
 
     async def get_youtube_thumbnail(self, rep):
         """Gets song thumbnail from an ID or a youtube api response"""
@@ -105,7 +101,6 @@ class YoutubeAPI:
             if best_pixel < pixel:
                 best_res = res
         return best_res['url']
-
 
     async def get_recommendation(self, id: str, player=None):
         """Gets music recommendations from YouTube API from a specified ID"""

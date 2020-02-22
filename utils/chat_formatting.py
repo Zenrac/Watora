@@ -27,6 +27,7 @@ COLOR = int("2AA198", 16)
 
 tasks = {}
 
+
 def box(text, lang=''):
     ret = '```{}\n{}\n```'.format(lang, text)
     return ret
@@ -112,14 +113,15 @@ class Paginator:
 
     @property
     def embed(self):
-        lower_bound = self.page*self.items_per_page
-        upper_bound = lower_bound+self.items_per_page
+        lower_bound = self.page * self.items_per_page
+        upper_bound = lower_bound + self.items_per_page
         to_display = self.items[lower_bound:upper_bound]
         desc = ""
         for content in to_display:
             desc += content
         embed = discord.Embed(color=self.color, description=desc)
-        embed.set_author(name=f"{self.data['primary_artist']['name']} - {self.data['title']}", url=self.data["url"])
+        embed.set_author(
+            name=f"{self.data['primary_artist']['name']} - {self.data['title']}", url=self.data["url"])
         embed.set_thumbnail(url=self.data["header_image_url"])
         if self.pages_needed > 1:
             embed.set_footer(text=f"{self.page+1}/{self.pages_needed}")
@@ -131,7 +133,7 @@ class Paginator:
 
     @property
     def pages_needed(self):
-        return math.ceil(len(self.items)/self.items_per_page)
+        return math.ceil(len(self.items) / self.items_per_page)
 
     def check(self, reaction, user):
         return reaction.message.id == self.msg.id and user.id == self.ctx.author.id
@@ -186,7 +188,8 @@ class Paginator:
 
 
 class Equalizer:
-    REACTIONS = (ARROW_LEFT, ARROW_RIGHT, ARROW_TOP, ARROW_TOPTOP, ARROW_BOTTOM, ARROW_BOTTOM, STOP, RESET)
+    REACTIONS = (ARROW_LEFT, ARROW_RIGHT, ARROW_TOP, ARROW_TOPTOP,
+                 ARROW_BOTTOM, ARROW_BOTTOM, STOP, RESET)
 
     def __init__(self, ctx, player):
         self.ctx = ctx
@@ -207,7 +210,8 @@ class Equalizer:
     @property
     def embed(self):
         desc = "```yaml\n               EQUALIZER                    ```"
-        desc += '```brainfuck\n' + self.visual(self.player.equalizer, self.position) + '```'
+        desc += '```brainfuck\n' + \
+            self.visual(self.player.equalizer, self.position) + '```'
         embed = discord.Embed(color=self.color, description=desc)
         return embed
 
@@ -234,7 +238,7 @@ class Equalizer:
                 if reaction.emoji == ARROW_LEFT:
                     pos = self.position - 1
                     if pos < 0:
-                        pos = self._band_count-1
+                        pos = self._band_count - 1
                     self.position = pos
 
                 elif reaction.emoji == ARROW_RIGHT:
@@ -250,12 +254,14 @@ class Equalizer:
                     self.position = 0
 
                 elif reaction.emoji == ARROW_TOP:
-                    change = min((self.player.equalizer[self.position] + 0.25), 1)
+                    change = min(
+                        (self.player.equalizer[self.position] + 0.25), 1)
                     if change != self.player.equalizer[self.position]:
                         await self.player.set_gain(*(self.position, change))
 
                 elif reaction.emoji == ARROW_BOTTOM:
-                    change = max((self.player.equalizer[self.position] - 0.25), -0.25)
+                    change = max(
+                        (self.player.equalizer[self.position] - 0.25), -0.25)
                     if change != self.player.equalizer[self.position]:
                         await self.player.set_gain(*(self.position, change))
 
@@ -292,7 +298,7 @@ class Equalizer:
         bands = [r for r in range(10)]
         bands = [f'{self.freqs[band]:>2}' for band in bands]
         bands += [' A', ' B', ' C', ' D', ' E']
-        bottom = ' '*7 + ''.join(bands)
+        bottom = ' ' * 7 + ''.join(bands)
         if position is not None:  # cus 0 doesn't work with only not
             bottom += f'\n{" " * 8}{"  " * position}^'
 
@@ -318,8 +324,10 @@ class Equalizer:
         block += bottom
         return block
 
+
 class Lazyer:
-    REACTIONS = (ARROW_LEFTLEFT, PAUSE, STOP, ARROW_RIGHTRIGHT, REPLAY, REPLAY_ONE, SHUFFLE, VOL_UP, VOL_DOWN)
+    REACTIONS = (ARROW_LEFTLEFT, PAUSE, STOP, ARROW_RIGHTRIGHT,
+                 REPLAY, REPLAY_ONE, SHUFFLE, VOL_UP, VOL_DOWN)
 
     def __init__(self, channel, bot, player):
         self.channel = channel

@@ -18,18 +18,22 @@ ksoft_api = "https://api.ksoft.si/images/random-image"
 cmd = '{command_prefix}'
 doc = '"""'
 
+
 class Weeb(commands.Cog):
     """Cog for weeb content such as kiss, hug"""
 
     def __init__(self, bot):
         self.bot = bot
-        self._cd = commands.CooldownMapping.from_cooldown(1.0, 3.0, commands.BucketType.user)
+        self._cd = commands.CooldownMapping.from_cooldown(
+            1.0, 3.0, commands.BucketType.user)
         self.lazy_api = "https://i.ode.bz/auto"
         self.session = aiohttp.ClientSession(loop=self.bot.loop)
-        self.ksoft_headers = {'authorization': f'Bearer {self.bot.tokens["KSOFT"]}'}
+        self.ksoft_headers = {
+            'authorization': f'Bearer {self.bot.tokens["KSOFT"]}'}
         self.dankmemer_header = {'authorization': self.bot.tokens['MEMER']}
         weebclient.pluggable(bot=bot, api_key=self.bot.tokens['WEEB'])
-        arcadiaclient.pluggable(bot=bot, token=self.bot.tokens['ARCADIA'], aiosession=self.session)
+        arcadiaclient.pluggable(
+            bot=bot, token=self.bot.tokens['ARCADIA'], aiosession=self.session)
 
     def cog_unload(self):
         asyncio.ensure_future(self.session.close())
@@ -50,7 +54,7 @@ class Weeb(commands.Cog):
     async def cog_check(self, ctx):
         bucket = self._cd.get_bucket(ctx.message)
         retry_after = bucket.update_rate_limit()
-        if await is_basicpatron(self.bot, ctx.author): # less cd for Patrons
+        if await is_basicpatron(self.bot, ctx.author):  # less cd for Patrons
             if retry_after:
                 if retry_after < 2:
                     bucket.reset()
@@ -72,7 +76,7 @@ class Weeb(commands.Cog):
                     pass
 
     async def get_meme_image(self, image_type: str, url: str = None, text: str = None,
-                        timeout: int = 300, **args):
+                             timeout: int = 300, **args):
         """
         Basic get_image function using aiohttp
         Returns a Discord File
@@ -98,7 +102,8 @@ class Weeb(commands.Cog):
 
         {help}
         """
-        embed = discord.Embed(description="Powered by weeb.sh and arcadia-api.")
+        embed = discord.Embed(
+            description="Powered by weeb.sh and arcadia-api.")
         embed.set_author(name="Image list", icon_url=self.bot.user.avatar_url)
         if not ctx.guild:
             embed.color = 0x71368a
@@ -123,15 +128,15 @@ class Weeb(commands.Cog):
                 weeb_cmd.append(v)
 
     aliases = {
-        'clagwimoth' : ", '?', '??', '???'",
-        'neko' : ", 'catgirl', 'catgirls'",
-        'delet_this' : ', "deletethis", "deletthis", "delete_that", "delete_this", "deletethat"',
-        'discord_memes' : '", discordmemes", "discord_meme", "discordmeme"',
-        'tail' : ', "wag"',
-        'waifu_insult' : ', "waifuinsult", "waifuinsults"',
-        'initial_d' : ', "initiald"',
-        'greet' : ', "aurevoir", "cya", "greetings", "greeting"',
-        'love' : ', "deredere"'
+        'clagwimoth': ", '?', '??', '???'",
+        'neko': ", 'catgirl', 'catgirls'",
+        'delet_this': ', "deletethis", "deletthis", "delete_that", "delete_this", "deletethat"',
+        'discord_memes': '", discordmemes", "discord_meme", "discordmeme"',
+        'tail': ', "wag"',
+        'waifu_insult': ', "waifuinsult", "waifuinsults"',
+        'initial_d': ', "initiald"',
+        'greet': ', "aurevoir", "cya", "greetings", "greeting"',
+        'love': ', "deredere"'
     }
 
     for m in weeb_cmd:
@@ -151,7 +156,7 @@ async def {m}(self, ctx):
     except discord.Forbidden:
         await ctx.send(get_str(ctx, "need-embed-permission"))
         """
-        exec (a)
+        exec(a)
 
     for m in cmd_list['Filters']:
         a = f"""
@@ -202,7 +207,7 @@ async def _{m}(self, ctx, pic=None):
     except discord.Forbidden:
         await ctx.send(get_str(ctx, "need-embed-permission"))
         """
-        exec (a)
+        exec(a)
 
     for m in cmd_meme['1 avatar']:
         a = f"""
@@ -255,7 +260,7 @@ async def _{m}(self, ctx, pic=None):
     except discord.Forbidden:
         await ctx.send(get_str(ctx, "need-embed-permission"))
         """
-        exec (a)
+        exec(a)
     for m in cmd_meme['1 text']:
         a = f"""
 @commands.command(name='{m}', aliases=['{m}s'])
@@ -280,7 +285,7 @@ async def _{m}(self, ctx, *, text):
     except discord.Forbidden:
         await ctx.send(get_str(ctx, "need-embed-permission"))
         """
-        exec (a)
+        exec(a)
 
     for m in cmd_meme['2 avatars']:
         a = f"""
@@ -356,7 +361,7 @@ async def _{m}(self, ctx, pic=None, pic2=None):
     except discord.Forbidden:
         await ctx.send(get_str(ctx, "need-embed-permission"))
         """
-        exec (a)
+        exec(a)
 
     for m in cmd_meme['1 avatar 1 text']:
         a = f"""
@@ -403,7 +408,7 @@ async def _{m}(self, ctx, pic=None, *, text=None):
     except discord.Forbidden:
         await ctx.send(get_str(ctx, "need-embed-permission"))
         """
-        exec (a)
+        exec(a)
 
     for m in cmd_meme['1 avatar 1 text 1 username']:
         a = f"""
@@ -451,7 +456,7 @@ async def _{m}(self, ctx, pic=None, *, text: str = None):
     except discord.Forbidden:
         await ctx.send(get_str(ctx, "need-embed-permission"))
         """
-        exec (a)
+        exec(a)
 
     @commands.command()
     async def hentai(self, ctx):
@@ -533,7 +538,8 @@ async def _{m}(self, ctx, pic=None, *, text: str = None):
         if target == ctx.me and not await is_lover(self.bot, ctx.author):
             return await ctx.send(get_str(ctx, "cmd-weeb-dont-touch-me"))
         image = await self.bot.weebsh.get_random(image_type="bite")
-        embed = discord.Embed(description=get_str(ctx, "cmd-bite").format(f'**{target.name}**', f'**{author.name}**'))
+        embed = discord.Embed(description=get_str(
+            ctx, "cmd-bite").format(f'**{target.name}**', f'**{author.name}**'))
         embed = embed.set_image(url=image)
         try:
             await ctx.send(embed=embed)
@@ -551,7 +557,8 @@ async def _{m}(self, ctx, pic=None, *, text: str = None):
         if target == ctx.author:
             return await ctx.send(get_str(ctx, "cmd-weeb-alone"))
         pic = await self.bot.weebsh.get_random(image_type="stare")
-        embed = discord.Embed(description=get_str(ctx, "cmd-stare").format(f'**{author.name}**', f'**{target.name}**'))
+        embed = discord.Embed(description=get_str(
+            ctx, "cmd-stare").format(f'**{author.name}**', f'**{target.name}**'))
         embed.set_image(url=pic)
         try:
             await ctx.send(embed=embed)
@@ -574,7 +581,8 @@ async def _{m}(self, ctx, pic=None, *, text: str = None):
         if target == ctx.me and not await is_lover(self.bot, ctx.author):
             return await ctx.send(get_str(ctx, "cmd-weeb-dont-touch-me"))
         pic = await self.bot.weebsh.get_random(image_type="tickle")
-        embed = discord.Embed(description=get_str(ctx, "cmd-tickle").format(f'**{target.name}**', f'**{author.name}**'))
+        embed = discord.Embed(description=get_str(
+            ctx, "cmd-tickle").format(f'**{target.name}**', f'**{author.name}**'))
         embed.set_image(url=pic)
         try:
             await ctx.send(embed=embed)
@@ -597,7 +605,8 @@ async def _{m}(self, ctx, pic=None, *, text: str = None):
         if target == ctx.me and not await is_lover(self.bot, ctx.author):
             return await ctx.send(get_str(ctx, "cmd-weeb-dont-touch-me"))
         pic = await self.bot.weebsh.get_random(image_type="cuddle")
-        embed = discord.Embed(description=get_str(ctx, "cmd-cuddle").format(f'**{target.name}**', f'**{author.name}**'))
+        embed = discord.Embed(description=get_str(
+            ctx, "cmd-cuddle").format(f'**{target.name}**', f'**{author.name}**'))
         embed.set_image(url=pic)
         try:
             await ctx.send(embed=embed)
@@ -620,7 +629,8 @@ async def _{m}(self, ctx, pic=None, *, text: str = None):
         if target == ctx.me and not await is_lover(self.bot, ctx.author):
             return await ctx.send(get_str(ctx, "cmd-weeb-dont-touch-me"))
         pic = await self.bot.weebsh.get_random(image_type="kiss")
-        embed = discord.Embed(description=get_str(ctx, "cmd-kiss").format(f'**{target.name}**', f'**{author.name}**'))
+        embed = discord.Embed(description=get_str(
+            ctx, "cmd-kiss").format(f'**{target.name}**', f'**{author.name}**'))
         embed.set_image(url=pic)
         try:
             await ctx.send(embed=embed)
@@ -643,7 +653,8 @@ async def _{m}(self, ctx, pic=None, *, text: str = None):
         if target == ctx.me and not await is_lover(self.bot, ctx.author):
             return await ctx.send(get_str(ctx, "cmd-weeb-dont-touch-me"))
         pic = await self.bot.weebsh.get_random(image_type="pat")
-        embed = discord.Embed(description=get_str(ctx, "cmd-pat").format(f'**{target.name}**', f'**{author.name}**'))
+        embed = discord.Embed(description=get_str(
+            ctx, "cmd-pat").format(f'**{target.name}**', f'**{author.name}**'))
         embed.set_image(url=pic)
         try:
             await ctx.send(embed=embed)
@@ -666,7 +677,8 @@ async def _{m}(self, ctx, pic=None, *, text: str = None):
         if target == ctx.me and not await is_lover(self.bot, ctx.author):
             return await ctx.send(get_str(ctx, "cmd-weeb-dont-touch-me"))
         pic = await self.bot.weebsh.get_random(image_type="lick")
-        embed = discord.Embed(description=get_str(ctx, "cmd-lick").format(f'**{target.name}**', f'**{author.name}**'))
+        embed = discord.Embed(description=get_str(
+            ctx, "cmd-lick").format(f'**{target.name}**', f'**{author.name}**'))
         embed.set_image(url=pic)
         try:
             await ctx.send(embed=embed)
@@ -689,7 +701,8 @@ async def _{m}(self, ctx, pic=None, *, text: str = None):
         if target == ctx.me and not await is_lover(self.bot, ctx.author):
             return await ctx.send(get_str(ctx, "cmd-weeb-dont-touch-me"))
         pic = await self.bot.weebsh.get_random(image_type="hug")
-        embed = discord.Embed(description=get_str(ctx, "cmd-hug").format(f'**{target.name}**', f'**{author.name}**'))
+        embed = discord.Embed(description=get_str(
+            ctx, "cmd-hug").format(f'**{target.name}**', f'**{author.name}**'))
         embed.set_image(url=pic)
         try:
             await ctx.send(embed=embed)
@@ -712,7 +725,8 @@ async def _{m}(self, ctx, pic=None, *, text: str = None):
         if target == ctx.me and not await is_lover(self.bot, ctx.author):
             return await ctx.send(get_str(ctx, "cmd-weeb-dont-touch-me"))
         pic = await self.bot.weebsh.get_random(image_type="poke")
-        embed = discord.Embed(description=get_str(ctx, "cmd-poke").format(f'**{target.name}**', f'**{author.name}**'))
+        embed = discord.Embed(description=get_str(
+            ctx, "cmd-poke").format(f'**{target.name}**', f'**{author.name}**'))
         embed.set_image(url=pic)
         try:
             await ctx.send(embed=embed)
@@ -730,10 +744,12 @@ async def _{m}(self, ctx, pic=None, *, text: str = None):
         if target == ctx.me and not await is_lover(self.bot, author):
             return await ctx.send(get_str(ctx, "cmd-weeb-dont-touch-me"))
         pic = await self.bot.weebsh.get_random(image_type="slap")
-        embed = discord.Embed(description=get_str(ctx, "cmd-slap").format(f'**{target.name}**', f'**{author.name}**'))
+        embed = discord.Embed(description=get_str(
+            ctx, "cmd-slap").format(f'**{target.name}**', f'**{author.name}**'))
         if target == ctx.author:
             pic = "https://s.put.re/1JQqwNT.gif"
-            embed = discord.Embed(description=get_str(ctx, "cmd-slap-yourself").format(f'**{author.name}**'))
+            embed = discord.Embed(description=get_str(
+                ctx, "cmd-slap-yourself").format(f'**{author.name}**'))
         embed.set_image(url=pic)
         try:
             await ctx.send(embed=embed)
@@ -751,10 +767,12 @@ async def _{m}(self, ctx, pic=None, *, text: str = None):
         if target == ctx.me and not await is_lover(self.bot, author):
             return await ctx.send(get_str(ctx, "cmd-weeb-dont-touch-me"))
         pic = await self.bot.weebsh.get_random(image_type="punch")
-        embed = discord.Embed(description=get_str(ctx, "cmd-punch").format(f'**{target.name}**', f'**{author.name}**'))
+        embed = discord.Embed(description=get_str(
+            ctx, "cmd-punch").format(f'**{target.name}**', f'**{author.name}**'))
         if target == ctx.author:
             pic = "https://s.put.re/1JQqwNT.gif"
-            embed = discord.Embed(description=get_str(ctx, "cmd-punch-yourself").format(f'**{author.name}**'))
+            embed = discord.Embed(description=get_str(
+                ctx, "cmd-punch-yourself").format(f'**{author.name}**'))
         embed.set_image(url=pic)
         try:
             await ctx.send(embed=embed)
@@ -774,7 +792,8 @@ async def _{m}(self, ctx, pic=None, *, text: str = None):
         if target == ctx.me and not await is_lover(self.bot, author):
             return await ctx.send(get_str(ctx, "cmd-shoot-watora"))
         pic = await self.bot.weebsh.get_random(image_type="bang")
-        embed = discord.Embed(description=get_str(ctx, "cmd-shoot").format(f'**{author.name}**', f'**{target.name}**'))
+        embed = discord.Embed(description=get_str(
+            ctx, "cmd-shoot").format(f'**{author.name}**', f'**{target.name}**'))
         embed.set_image(url=pic)
         try:
             await ctx.send(embed=embed)
@@ -850,7 +869,8 @@ async def _{m}(self, ctx, pic=None, *, text: str = None):
                 if target:
                     user = target
 
-            check_str = [u for u in ctx.guild.members if u.name.lower() == pic.lower()]
+            check_str = [
+                u for u in ctx.guild.members if u.name.lower() == pic.lower()]
             if check_str:
                 user = check_str[0]
 
@@ -887,6 +907,7 @@ async def _{m}(self, ctx, pic=None, *, text: str = None):
             exc = traceback.format_exc().splitlines()
             result = exc[-1]
         await ctx.channel.send("```py\n--- In ---\n{}\n--- Out ---\n{}\n```".format(stmt, result))
+
 
 def setup(bot):
     bot.add_cog(Weeb(bot))

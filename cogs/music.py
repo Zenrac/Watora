@@ -46,9 +46,10 @@ class BlindTestSong:
         self.video_name = None
 
         self.invalid_words = ('tv', 'openings', 'opening', 'part', 'ending', 'op', 'ed', 'full',
-                         'lyrics', 'hd', 'official', 'feat', '1080p', '60fps', 'version', 'season')
+                              'lyrics', 'hd', 'official', 'feat', '1080p', '60fps', 'version', 'season')
 
-        self.invalid_separators = [';', ':', '|', '(', ')', '{', '}', '[', ']', '「', '」', ' -', ' -']
+        self.invalid_separators = [
+            ';', ':', '|', '(', ')', '{', '}', '[', ']', '「', '」', ' -', ' -']
 
     @property
     def is_anime(self):
@@ -73,14 +74,15 @@ class BlindTestSong:
                 else:
                     for m in range(6):
                         try:
-                            selection = await asyncio.wait_for(self.jikan.anime(self.id), timeout=m+2)
+                            selection = await asyncio.wait_for(self.jikan.anime(self.id), timeout=m + 2)
                             break
                         except (asyncio.TimeoutError, JikanException, aiohttp.ClientError):
                             selection = False
 
                     if selection:
                         selection = Jikan(selection)
-                        altenatives = [selection.title, selection.title_english, selection.title_japanese]
+                        altenatives = [
+                            selection.title, selection.title_english, selection.title_japanese]
                         altenatives += selection.title_synonyms
                         settings.cachedanimes[str(self.id)] = altenatives
                         await SettingsDB.get_instance().set_glob_settings(settings)
@@ -124,6 +126,7 @@ class BlindTestSong:
 
         titles = filter(None, titles)
         return list(set(titles))  # bye bye duplicates
+
 
 class BlindTest:
     def __init__(self, player):
@@ -171,7 +174,8 @@ class BlindTest:
         if self.is_running or bypass:
             embed = await self.get_classement()
             if embed.fields:
-                embed.title = get_str(self.guild, "cmd-blindtest-final-rank", bot=self.bot)
+                embed.title = get_str(
+                    self.guild, "cmd-blindtest-final-rank", bot=self.bot)
                 await self.bt_channel.send(embed=embed)
             if send_final:
                 await self.send_final_embed()
@@ -184,10 +188,12 @@ class BlindTest:
         self.points = {}
 
     async def send_final_embed(self):
-        e = discord.Embed(description=get_str(self.guild, "cmd-blindtest-enjoyed", bot=self.bot))
+        e = discord.Embed(description=get_str(
+            self.guild, "cmd-blindtest-enjoyed", bot=self.bot))
         e.description += "\n\n**[{}](https://www.patreon.com/bePatron?u=7139372)** {}".format(
             get_str(self.guild, "support-watora", bot=self.bot), get_str(self.guild, "support-watora-end", bot=self.bot))
-        e.description += '\n' + get_str(self.guild, "suggest-features", bot=self.bot).format(f"`{get_server_prefixes(self.bot, self.guild)}suggestion`")
+        e.description += '\n' + get_str(self.guild, "suggest-features", bot=self.bot).format(
+            f"`{get_server_prefixes(self.bot, self.guild)}suggestion`")
         await self.bt_channel.send(embed=e)
 
     def pop(self, next=False):
@@ -258,6 +264,7 @@ class BlindTest:
                 return True
         return False
 
+
 class CustomPlayer(lavalink.DefaultPlayer):
     def __init__(self, guild_id: int, node):
         super().__init__(guild_id, node)
@@ -300,7 +307,7 @@ class CustomPlayer(lavalink.DefaultPlayer):
         if settings.channel:
             self.channel = settings.channel
 
-    async def play(self, track = None, **kwargs):
+    async def play(self, track=None, **kwargs):
         if self.repeat and self.current:
             self.queue.append(self.current)
 
@@ -331,10 +338,10 @@ class CustomPlayer(lavalink.DefaultPlayer):
         kwargs = {}
         start_time = re.findall('[&?](t|start|starts|s)=(\d+)', url)
         if start_time:
-            kwargs['startTime'] = str(int(start_time[-1][-1])*1000)
+            kwargs['startTime'] = str(int(start_time[-1][-1]) * 1000)
         end_time = re.findall('[&?](e|end|ends)=(\d+)', url)
         if end_time:
-            kwargs['endTime'] = str(int(end_time[-1][-1])*1000)
+            kwargs['endTime'] = str(int(end_time[-1][-1]) * 1000)
 
         return kwargs
 
@@ -355,7 +362,8 @@ class CustomPlayer(lavalink.DefaultPlayer):
         except Exception:  # I don't want the task to finish because of a stupid thing
             pass
 
-        event = PlayerUpdateEvent(self, self.last_position, self.position_timestamp)
+        event = PlayerUpdateEvent(
+            self, self.last_position, self.position_timestamp)
         await self.node._dispatch_event(event)
 
     async def update_title(self):
@@ -364,7 +372,8 @@ class CustomPlayer(lavalink.DefaultPlayer):
             timestamps = self.current.extra.get('timestamps', [])
             for timestamp in reversed(timestamps):
                 time, title = timestamp
-                milliseconds = (sum(x * int(t) for x, t in zip([1, 60, 3600], reversed(time.split(":")))) * 1000)
+                milliseconds = (
+                    sum(x * int(t) for x, t in zip([1, 60, 3600], reversed(time.split(":")))) * 1000)
                 if self.last_position >= milliseconds:
                     title = title.strip()
                     if self.current.title != title:
@@ -385,10 +394,13 @@ class Music(commands.Cog):
         self.temp = None
         self.timeout_tasks = {}
         self.inact_tasks = {}
-        self._cd = commands.CooldownMapping.from_cooldown(1.0, 600.0, commands.BucketType.user)
-        self._skip_cd = commands.CooldownMapping.from_cooldown(1.0, 1.5, commands.BucketType.guild)
+        self._cd = commands.CooldownMapping.from_cooldown(
+            1.0, 600.0, commands.BucketType.user)
+        self._skip_cd = commands.CooldownMapping.from_cooldown(
+            1.0, 1.5, commands.BucketType.guild)
         self.session = aiohttp.ClientSession(loop=self.bot.loop)
-        self.youtube_api = YoutubeAPI(youtube_token=self.bot.tokens['YT_KEY'], loop=self.bot.loop, aiosession=self.session)
+        self.youtube_api = YoutubeAPI(
+            youtube_token=self.bot.tokens['YT_KEY'], loop=self.bot.loop, aiosession=self.session)
 
         self.list_radiolist = {
             'Monstercat': 'https://www.twitch.tv/monstercat',
@@ -407,18 +419,18 @@ class Music(commands.Cog):
         }
 
         self.parameters = {
-            'difficulty' : '[0-6]',
-            'mal' : '\S+',
-            'argument' : 'all|completed|watching|onhold|dropped|ptw',
-            'remove' : lambda m: all([c in ('completed', 'watching', 'onhold', 'dropped', 'ptw', 'nothing') for c in m.split(',')]),
-            'autoplaylist' : '\S+',
-            'longestword' : 'true|false',
-            'listening' : 'true|false',
-            'timeout' : lambda m: 2 < int(m) and int(m) <= 300,
-            'severity' : lambda m: 0 < int(m) and int(m) <= 100,
-            'percentage' : lambda m: sum((abs(int(c)) for c in m.split(','))) == 100,
-            'wait' : lambda m: 0 <= int(m) and int(m) <= 30,
-            'source' : '\S+'
+            'difficulty': '[0-6]',
+            'mal': '\S+',
+            'argument': 'all|completed|watching|onhold|dropped|ptw',
+            'remove': lambda m: all([c in ('completed', 'watching', 'onhold', 'dropped', 'ptw', 'nothing') for c in m.split(',')]),
+            'autoplaylist': '\S+',
+            'longestword': 'true|false',
+            'listening': 'true|false',
+            'timeout': lambda m: 2 < int(m) and int(m) <= 300,
+            'severity': lambda m: 0 < int(m) and int(m) <= 100,
+            'percentage': lambda m: sum((abs(int(c)) for c in m.split(','))) == 100,
+            'wait': lambda m: 0 <= int(m) and int(m) <= 30,
+            'source': '\S+'
         }
 
         self.anime_status = (
@@ -466,7 +478,8 @@ class Music(commands.Cog):
     async def prepare_spotify_integration(self):
         if self.bot.tokens['SPOTIFY_SECRET'] and self.bot.tokens['SPOTIFY_ID']:
             try:
-                self.bot.spotify = Spotify(self.bot.tokens['SPOTIFY_ID'], self.bot.tokens['SPOTIFY_SECRET'], aiosession=self.bot.session)
+                self.bot.spotify = Spotify(
+                    self.bot.tokens['SPOTIFY_ID'], self.bot.tokens['SPOTIFY_SECRET'], aiosession=self.bot.session)
                 await self.bot.spotify.get_token()  # validate token
             except aiohttp.ClientError:
                 log.warning('Your Spotify credentials could not be validated. Please make sure your client ID and client secret '
@@ -478,7 +491,8 @@ class Music(commands.Cog):
                                 'in the config file are correct. Disabling Spotify integration for this session.')
                     self.bot.spotify = None
                 else:
-                    log.info('Authenticated with Spotify successfully using client ID and secret.')
+                    log.info(
+                        'Authenticated with Spotify successfully using client ID and secret.')
 
     async def prepare_bt_difficulties(self):
         top_animes = {}
@@ -492,19 +506,22 @@ class Music(commands.Cog):
                 except (asyncio.TimeoutError, aiohttp.ClientError, JikanException):
                     await asyncio.sleep(m)
                 else:
-                    to_add = [m for m in anime_list['top'] if m['type'] == 'TV']
+                    to_add = [m for m in anime_list['top']
+                              if m['type'] == 'TV']
                     top_animes['top'].extend(to_add)
                     difficulty += 1
                     break
         if not self.bot.top_animes or len(self.bot.top_animes['top']) > len(top_animes['top']):
             self.bot.top_animes = top_animes
-            log.info(f'{len(top_animes["top"])} songs have been added to the cache.')
+            log.info(
+                f'{len(top_animes["top"])} songs have been added to the cache.')
 
         settings = await SettingsDB.get_instance().get_glob_settings()
         if not settings.animes or (len(settings.animes['top']) < len(self.bot.top_animes['top'])):
             settings.animes = self.bot.top_animes
             await SettingsDB.get_instance().set_glob_settings(settings)
-            log.info(f'{len(top_animes["top"])} songs have been added to the database.')
+            log.info(
+                f'{len(top_animes["top"])} songs have been added to the database.')
         else:
             self.bot.top_animes = settings.animes
 
@@ -512,22 +529,26 @@ class Music(commands.Cog):
         await self.bot.wait_until_ready()
         log.info("Preparing lavalink...")
 
-        self.bot.lavalink = lavalink.Client(bot=self.bot, loop=self.bot.loop, player=CustomPlayer, shard_count=self.bot.shard_count, user_id=self.bot.user.id)
+        self.bot.lavalink = lavalink.Client(
+            bot=self.bot, loop=self.bot.loop, player=CustomPlayer, shard_count=self.bot.shard_count, user_id=self.bot.user.id)
 
         eu = self.bot.tokens['NODE_EU']
         us = self.bot.tokens['NODE_US']
         asia = self.bot.tokens['NODE_ASIA']
 
         resume_config = {
-        'resume_key': 'RandomKey311200123',
-        'resume_timeout': 600
+            'resume_key': 'RandomKey311200123',
+            'resume_timeout': 600
         }
 
         # self.bot.lavalink.add_node(region='asia', host=asia['HOST'], password=asia['PASSWORD'], name='Asia', **resume_config)
-        self.bot.lavalink.add_node(region='eu', host=eu['HOST'], password=eu['PASSWORD'], name='Europe', port=2333, **resume_config)
-        self.bot.lavalink.add_node(region='us', host=us['HOST'], password=us['PASSWORD'], name='America', port=2333, **resume_config)
+        self.bot.lavalink.add_node(
+            region='eu', host=eu['HOST'], password=eu['PASSWORD'], name='Europe', port=2333, **resume_config)
+        self.bot.lavalink.add_node(
+            region='us', host=us['HOST'], password=us['PASSWORD'], name='America', port=2333, **resume_config)
 
-        self.bot.add_listener(self.bot.lavalink.voice_update_handler, 'on_socket_response')
+        self.bot.add_listener(
+            self.bot.lavalink.voice_update_handler, 'on_socket_response')
 
         self.bot.lavalink.add_event_hook(self.track_hook)
 
@@ -582,15 +603,18 @@ class Music(commands.Cog):
                 embed.set_image(url=thumb)
 
             requester = await self.bot.safe_fetch('member', event.track.requester, guild=channel.guild)
-            duration = lavalink.utils.format_time(event.track.duration).lstrip('0').lstrip(':')
+            duration = lavalink.utils.format_time(
+                event.track.duration).lstrip('0').lstrip(':')
 
             if not event.track.stream:
                 embed.description = f'{"🔁 " if event.player.repeat else ""}{get_str(channel.guild, "music-duration", bot=self.bot)}: {duration}'
 
             if requester:
-                embed.set_author(name=requester.name, icon_url=requester.avatar_url or requester.default_avatar_url, url=event.track.uri)
+                embed.set_author(
+                    name=requester.name, icon_url=requester.avatar_url or requester.default_avatar_url, url=event.track.uri)
 
-            asyncio.ensure_future(self.send_new_np_msg(event.player, channel, new_embed=embed))
+            asyncio.ensure_future(self.send_new_np_msg(
+                event.player, channel, new_embed=embed))
 
         elif isinstance(event, lavalink.events.QueueEndEvent):
             # TODO: Rewrite this
@@ -600,7 +624,8 @@ class Music(commands.Cog):
                         if event.player.timer_value is not False:  # Can be 0
                             gid = int(event.player.guild_id)
                             if gid not in self.inact_tasks:
-                                task = asyncio.ensure_future(self.inact_task(event.player))
+                                task = asyncio.ensure_future(
+                                    self.inact_task(event.player))
                                 self.inact_tasks[gid] = task
 
         elif isinstance(event, lavalink.events.TrackEndEvent):
@@ -620,12 +645,13 @@ class Music(commands.Cog):
             except discord.HTTPException:
                 pass
 
-    async def connect_player(self, ctx, player, channel_id:int, settings=None):
+    async def connect_player(self, ctx, player, channel_id: int, settings=None):
         """ Connects a player to a channel. """
         if not settings:
             settings = await SettingsDB.get_instance().get_guild_settings(ctx.guild.id)
         if settings.channel:
-            player.channel = ctx.guild.get_channel(settings.channel).id if ctx.guild.get_channel(settings.channel) else ctx.channel.id
+            player.channel = ctx.guild.get_channel(
+                settings.channel).id if ctx.guild.get_channel(settings.channel) else ctx.channel.id
         elif settings.channel is None:
             player.channel = ctx.channel.id
         else:
@@ -637,11 +663,13 @@ class Music(commands.Cog):
         """
             Estimates the time till the queue will 'position'
         """
-        estimated_time = sum(e.duration for e in islice(player.queue, position - 1) if not e.stream)
+        estimated_time = sum(e.duration for e in islice(
+            player.queue, position - 1) if not e.stream)
 
         # When the player plays a song, it eats the first playlist item, so we just have to add the time back
         if player.is_playing and player.current and not player.current.stream:
-            estimated_time += max(player.current.duration - player.position, 0)  # avoid stream to returns neg values
+            # avoid stream to returns neg values
+            estimated_time += max(player.current.duration - player.position, 0)
 
         return estimated_time
 
@@ -658,7 +686,8 @@ class Music(commands.Cog):
 
         if type(position) != str:
             time_until = await self.estimate_time_until(player, position)
-            time_until = lavalink.utils.format_time(time_until).lstrip('0').lstrip(':')
+            time_until = lavalink.utils.format_time(
+                time_until).lstrip('0').lstrip(':')
 
         return position, time_until
 
@@ -734,31 +763,36 @@ class Music(commands.Cog):
             if not results or not isinstance(results, dict) or not results['tracks']:
                 songs = await self.youtube_api.youtube_search(query)
                 if songs:
-                    log.debug(f'Found result from youtube-api : {songs} for query: {query}')
+                    log.debug(
+                        f'Found result from youtube-api : {songs} for query: {query}')
                     try:
                         results = await self.bot.lavalink.get_tracks(songs[0]['uri'])
                     except asyncio.TimeoutError:
-                        results = {'playlistInfo': {}, 'loadType': 'NO_MATCHES', 'tracks': []}
+                        results = {'playlistInfo': {},
+                                   'loadType': 'NO_MATCHES', 'tracks': []}
         else:
             if 'listen.moe' in query.lower() and 'fallback' not in query.lower():
                 if 'kpop' in query.lower():
-                     return await self.prepare_url(query=self.list_radiolist['Listen Moe K-POP'], node=node)
+                    return await self.prepare_url(query=self.list_radiolist['Listen Moe K-POP'], node=node)
                 return await self.prepare_url(query=self.list_radiolist['Listen Moe'], node=node)
 
-            if "&list" in query.lower() and "&index" in query.lower():  # if the user selected a song, don't load the whole playlist
+            # if the user selected a song, don't load the whole playlist
+            if "&list" in query.lower() and "&index" in query.lower():
                 query = query.split('&')[0]
             try:
                 results = await self.bot.lavalink.get_tracks(query)
             except asyncio.TimeoutError:
-                results = {'playlistInfo': {}, 'loadType': 'NO_MATCHES', 'tracks': []}
+                results = {'playlistInfo': {},
+                           'loadType': 'NO_MATCHES', 'tracks': []}
         if isinstance(results, dict):
             log.debug('[Prepare] Prepared url for {}'.format(query))
             return results
 
-        log.debug('[Prepare] Prepared url for {} without any result.'.format(query))
+        log.debug(
+            '[Prepare] Prepared url for {} without any result.'.format(query))
         return {'playlistInfo': {}, 'loadType': 'NO_MATCHES', 'tracks': []}
 
-    async def prepare_spotify(self, ctx, query, node=None, infinite_loop=False, max_tracks:int = 100):
+    async def prepare_spotify(self, ctx, query, node=None, infinite_loop=False, max_tracks: int = 100):
         """ Prepares a Spotify URI or URL to be played with lavalink"""
         # Convert URL to URI
         if match_url(query) and 'open.spotify' in query:
@@ -795,11 +829,13 @@ class Music(commands.Cog):
                             song = await self.prepare_url(query=query, node=node)
                             results['tracks'].append(song['tracks'][0])
                             results['loadType'] = "PLAYLIST_LOADED"
-                            results['playlistInfo'] = {'selectedTrack': -1, 'name': res['name']}
+                            results['playlistInfo'] = {
+                                'selectedTrack': -1, 'name': res['name']}
                         except (KeyError, IndexError, TypeError):
                             tracks_found -= 1
                         if len(res['tracks']['items']) != tracks_found:
-                            results['failed'] = len(res['tracks']['items']) - tracks_found
+                            results['failed'] = len(
+                                res['tracks']['items']) - tracks_found
 
                         if num % 5 == 0 or num == tracks_found:
                             await procmesg.edit(content=f"`{num}/{tracks_found}` - {base_content}")
@@ -809,21 +845,23 @@ class Music(commands.Cog):
                     except discord.HTTPException:
                         pass
                     if tracks_found == 0:
-                        raise SpotifyError(get_str(ctx, "music-spotify-all-failed"))
+                        raise SpotifyError(
+                            get_str(ctx, "music-spotify-all-failed"))
 
                 elif query.startswith('artist:') and not infinite_loop:
                     query = query.split(":", 1)[1]
                     res = await self.bot.spotify.get_artist_albums(query)
                     items = res['items']
-                    albums = [item for item in items if item['album_type'] == 'album']
+                    albums = [
+                        item for item in items if item['album_type'] == 'album']
                     if albums:
                         album = random.choice(albums)
                     elif items:
                         album = random.choice(items)
                     else:
-                        raise SpotifyError(get_str(ctx, "music-spotify-not-supported"))
+                        raise SpotifyError(
+                            get_str(ctx, "music-spotify-not-supported"))
                     return await self.prepare_spotify(ctx, album['uri'], infinite_loop=True)
-
 
                 elif query.startswith('user:') and 'playlist:' in query:
                     user = query.split(":",)[1]
@@ -834,17 +872,21 @@ class Music(commands.Cog):
                     tracks_found = len(res['tracks']['items'])
                     for num, i in enumerate(res['tracks']['items'][:max_tracks], start=1):
                         try:
-                            query = i['track']['name'] + ' ' + i['track']['artists'][0]['name']
+                            query = i['track']['name'] + ' ' + \
+                                i['track']['artists'][0]['name']
                             log.debug('[Spotify] Processing {0}'.format(query))
                             song = await self.prepare_url(query=query, node=node)
                             results['tracks'].append(song['tracks'][0])
                             results['loadType'] = "PLAYLIST_LOADED"
-                            results['playlistInfo'] = {'selectedTrack': -1, 'name': res['name']}
-                            log.debug('[Spotify] Processing finished for {0}'.format(query))
+                            results['playlistInfo'] = {
+                                'selectedTrack': -1, 'name': res['name']}
+                            log.debug(
+                                '[Spotify] Processing finished for {0}'.format(query))
                         except (KeyError, IndexError, TypeError):
                             tracks_found -= 1
                         if len(res['tracks']['items']) != tracks_found:
-                            results['failed'] = len(res['tracks']['items']) - tracks_found
+                            results['failed'] = len(
+                                res['tracks']['items']) - tracks_found
 
                         if num % 5 == 0 or num == tracks_found:
                             await procmesg.edit(content=f"`{num}/{tracks_found}` - {base_content}")
@@ -854,7 +896,8 @@ class Music(commands.Cog):
                     except discord.HTTPException:
                         pass
                     if tracks_found == 0:
-                        raise SpotifyError(get_str(ctx, "music-spotify-all-failed"))
+                        raise SpotifyError(
+                            get_str(ctx, "music-spotify-all-failed"))
                 elif query.startswith('playlist:') and not infinite_loop:
                     query = query.split(":", 1)[1]
                     res = await self.bot.spotify.get_playlist_tracks(query)
@@ -862,7 +905,8 @@ class Music(commands.Cog):
                     query = original_query.replace('spotify:', f'{author}:')
                     return await self.prepare_spotify(ctx, query, infinite_loop=True)
                 else:
-                    raise SpotifyError(get_str(ctx, "music-spotify-not-supported"))
+                    raise SpotifyError(
+                        get_str(ctx, "music-spotify-not-supported"))
 
                 log.debug('[Spotify] Process finished.')
                 return results
@@ -905,13 +949,14 @@ class Music(commands.Cog):
                     except ValueError:
                         pass
                     if error_count < 5:  # if 5 fails in a row.. stop trying.
-                        return await self.autoplaylist_loop(player, error_count=error_count+1)
+                        return await self.autoplaylist_loop(player, error_count=error_count + 1)
         return False
 
     def find_best_result(self, results):
-        not_good = ('amv', ' ep', ' ép', 'trailer', 'openings', 'all opening', 'endings', 'scene')
+        not_good = ('amv', ' ep', ' ép', 'trailer', 'openings',
+                    'all opening', 'endings', 'scene')
         is_good = ('opening', 'ending', 'ost', 'op', 'ed', 'end')
-        best_results  = results['tracks'].copy()
+        best_results = results['tracks'].copy()
         for result in results['tracks']:
             title = result['info']['title']
 
@@ -950,7 +995,8 @@ class Music(commands.Cog):
                 asyncio.ensure_future(self.delete_old_npmsg(player))
                 player.channel = None
             if not sum(1 for m in player.connected_channel.members if not (m.voice.deaf or m.bot or m.voice.self_deaf)):
-                log.debug("[Blintest] Disabling blindtest cus I'm alone on {}.".format(player.connected_channel.guild.name))
+                log.debug("[Blintest] Disabling blindtest cus I'm alone on {}.".format(
+                    player.connected_channel.guild.name))
                 await player.blindtest.stop()
                 return False
             if player.blindtest.next_song:
@@ -963,7 +1009,8 @@ class Music(commands.Cog):
             results = await self.prepare_url(query=song_url, node=player.node, source=player.blindtest.source)
             if results and results['tracks']:
                 track = self.find_best_result(results)
-                track = self.prepare_track(track)  # not sure if it's usefull for blindtest lul
+                # not sure if it's usefull for blindtest lul
+                track = self.prepare_track(track)
                 if not song.title:
                     song.title = track['info']['title']
                 player.blindtest.current_song.video_url = track['info']['uri']
@@ -975,15 +1022,17 @@ class Music(commands.Cog):
                     track['info']['artwork'] = None
                 if player not in self.bot.lavalink.players.players.values():
                     return False  # Who knows at it could take some times before being here
-                player.add(requester=player.node._manager._lavalink.bot.user.id, track=track)
+                player.add(
+                    requester=player.node._manager._lavalink.bot.user.id, track=track)
                 if not player.is_playing:  # useless check but who knows ?
                     await self.player_play(player, song_url)
                 if channel and not player.blindtest.listening_mode:
                     await channel.send(get_str(channel.guild, 'cmd-blindtest-next-song', bot=self.bot))
-                    player.blindtest.current_task.append(asyncio.ensure_future(self.wait_blindtest_answer(player, channel)))
+                    player.blindtest.current_task.append(asyncio.ensure_future(
+                        self.wait_blindtest_answer(player, channel)))
                 return True
             elif error_count < 5:
-                return await self.blindtest_loop(player, error_count=error_count+1)
+                return await self.blindtest_loop(player, error_count=error_count + 1)
         return False
 
     async def wait_blindtest_answer(self, player, channel):
@@ -1003,7 +1052,8 @@ class Music(commands.Cog):
                 return False
             return player.blindtest.answer_is_valid(query=m.content)
 
-        scd_embed = discord.Embed(title=get_str(channel.guild, "cmd-blindtest-rank", bot=self.bot))
+        scd_embed = discord.Embed(title=get_str(
+            channel.guild, "cmd-blindtest-rank", bot=self.bot))
         response_message = None
         point = 0
         player.blindtest.current_song.started_at = current_time()
@@ -1017,7 +1067,8 @@ class Music(commands.Cog):
             if player.blindtest.songs and not player.blindtest.next_song:
                 player.blindtest.pop(next=True)
                 await player.blindtest.next_song.add_alternative_titles()
-            player.blindtest.current_song.found_reason = get_str(channel.guild, "cmd-blindtest-timeout", bot=self.bot)
+            player.blindtest.current_song.found_reason = get_str(
+                channel.guild, "cmd-blindtest-timeout", bot=self.bot)
             asyncio.ensure_future(player.skip())
             # no await here cus otherwise it'll be cancelled
             # while loading the shit.. anyway, just keep it
@@ -1027,9 +1078,12 @@ class Music(commands.Cog):
                 return
 
             cid = str(response_message.author.id)
-            mega_bonus = (response_message.content == player.blindtest.current_song.title)
-            naked_query = re.sub(r'\W+', ' ', player.blindtest.current_song.title).strip()
-            bonus = (response_message.content.lower() in [player.blindtest.current_song.title.lower(), naked_query])
+            mega_bonus = (response_message.content ==
+                          player.blindtest.current_song.title)
+            naked_query = re.sub(
+                r'\W+', ' ', player.blindtest.current_song.title).strip()
+            bonus = (response_message.content.lower() in [
+                     player.blindtest.current_song.title.lower(), naked_query])
             point = 3 if mega_bonus else (2 if bonus else 1)
             if cid in player.blindtest.points:
                 player.blindtest.points[cid] += point
@@ -1057,10 +1111,12 @@ class Music(commands.Cog):
     async def blindtest_embed(self, p, channel, msg=None, bonus=0):
         guild = self.bot.get_guild(int(p.guild_id))
         color = self.get_color(msg.guild if msg else guild)
-        embed = discord.Embed(colour=color, title=f"**{p.blindtest.current_song.title}**", url=p.blindtest.current_song.url)
+        embed = discord.Embed(
+            colour=color, title=f"**{p.blindtest.current_song.title}**", url=p.blindtest.current_song.url)
         embed.description = f'{get_str(channel.guild, "cmd-blindtest-video", bot=self.bot)} : **[{p.blindtest.current_song.video_name}]({p.blindtest.current_song.video_url})**'
         if bonus:
-            embed.description += '\n' + get_str(channel.guild, 'cmd-blindtest-{}'.format(['good', 'very-good', 'perfect'][bonus-1]), bot=self.bot)
+            embed.description += '\n' + get_str(channel.guild, 'cmd-blindtest-{}'.format(
+                ['good', 'very-good', 'perfect'][bonus - 1]), bot=self.bot)
         if p.blindtest.current_song.image_url:
             embed.set_thumbnail(url=p.blindtest.current_song.image_url)
         else:
@@ -1068,12 +1124,15 @@ class Music(commands.Cog):
             if thumb:
                 embed.set_thumbnail(url=thumb)
         if msg:
-            embed.set_footer(text=get_str(channel.guild, "cmd-blindtest-found-in", bot=self.bot, can_owo=False).format(round(current_time() - p.blindtest.current_song.started_at, 2)))
+            embed.set_footer(text=get_str(channel.guild, "cmd-blindtest-found-in", bot=self.bot,
+                                          can_owo=False).format(round(current_time() - p.blindtest.current_song.started_at, 2)))
             requester = msg.author
-            embed.set_author(name=requester.name, icon_url=requester.avatar_url or requester.default_avatar_url)
+            embed.set_author(
+                name=requester.name, icon_url=requester.avatar_url or requester.default_avatar_url)
         else:
             if not p.blindtest.current_song.found_reason:
-                p.blindtest.current_song.found_reason = get_str(channel.guild, "cmd-blindtest-not-found", bot=self.bot)
+                p.blindtest.current_song.found_reason = get_str(
+                    channel.guild, "cmd-blindtest-not-found", bot=self.bot)
             embed.set_author(name=p.blindtest.current_song.found_reason)
         await channel.send(embed=embed)
 
@@ -1101,14 +1160,16 @@ class Music(commands.Cog):
                     await player.play()
                 return True
             else:
-                await self.autoplay_loop(player, attempt=attempt+1)  # No idea if it's useful, but prevent from infinite loop.
+                # No idea if it's useful, but prevent from infinite loop.
+                await self.autoplay_loop(player, attempt=attempt + 1)
                 return True
 
         return False
 
     async def update_all_listen_moe_players(self, kpop=False):
         """Updates all listen moe players to display the new current song"""
-        playing = self.bot.lavalink.players.find_all(lambda p: p.is_playing)  # maybe useless to check p.current but who knows ?
+        playing = self.bot.lavalink.players.find_all(
+            lambda p: p.is_playing)  # maybe useless to check p.current but who knows ?
         for p in playing:
             if p.current and 'listen.moe' in p.current.uri.lower():
                 if 'kpop' in p.current.uri.lower() and not kpop:  # basic checks to ignore useless updates
@@ -1121,7 +1182,8 @@ class Music(commands.Cog):
     async def update_all_mc_players(self):
         """Updates all monstercat players to display the new current song"""
         await asyncio.sleep(15)  # Twitch radio stream with API is a little bit before twitch live
-        playing = self.bot.lavalink.players.find_all(lambda p: p.is_playing)  # maybe useless to check p.current but who knows ?
+        # maybe useless to check p.current but who knows ?
+        playing = self.bot.lavalink.players.find_all(lambda p: p.is_playing)
         for p in playing:
             if p.current and 'monstercat' in p.current.uri.lower() and 'twitch' in p.current.uri.lower():
                 log.debug(f'[Player] Updating monstercat on {p.guild_id}')
@@ -1137,12 +1199,14 @@ class Music(commands.Cog):
             else:
                 color = int("FF015B", 16)
             thumb = await self.get_thumbnail(p.current, p)
-            embed = discord.Embed(colour=color, title=f"**{p.current.title}**", url=p.current.uri)
+            embed = discord.Embed(
+                colour=color, title=f"**{p.current.title}**", url=p.current.uri)
             if thumb:
                 embed.set_image(url=thumb)
             requester = await self.bot.safe_fetch('member', p.current.requester, guild=c.guild)
             if requester:
-                embed.set_author(name=requester.name, icon_url=requester.avatar_url or requester.default_avatar_url, url=p.current.uri)
+                embed.set_author(
+                    name=requester.name, icon_url=requester.avatar_url or requester.default_avatar_url, url=p.current.uri)
 
             await self.send_new_np_msg(p, c, new_embed=embed)
 
@@ -1217,9 +1281,9 @@ class Music(commands.Cog):
             "lyrics": lyrics
         }
 
-
     async def reload_np_msg(self, player):
-        await asyncio.sleep(1)  # Idk, it's too fast when first timestamp is 0:00
+        # Idk, it's too fast when first timestamp is 0:00
+        await asyncio.sleep(1)
         if not player.npmsg:
             return
         channel = player.npmsg.channel
@@ -1230,15 +1294,19 @@ class Music(commands.Cog):
         current = player.current
 
         color = self.get_color(channel.guild)
-        pos = lavalink.utils.format_time(player.position).lstrip('0').lstrip(':')
-        dur = lavalink.utils.format_time(current.duration).lstrip('0').lstrip(':')
+        pos = lavalink.utils.format_time(
+            player.position).lstrip('0').lstrip(':')
+        dur = lavalink.utils.format_time(
+            current.duration).lstrip('0').lstrip(':')
         thumb = await self.get_thumbnail(current, player)
         requester = await self.bot.safe_fetch('member', current.requester, guild=channel.guild)
         prog_bar_str = sweet_bar(player.position, current.duration)
-        embed = discord.Embed(colour=color, title=f"**{current.title}**", description=f"{'⏸' if player.paused else '🔁' if player.repeat else ''}`[{pos}/{dur}]` {prog_bar_str}")
+        embed = discord.Embed(colour=color, title=f"**{current.title}**",
+                              description=f"{'⏸' if player.paused else '🔁' if player.repeat else ''}`[{pos}/{dur}]` {prog_bar_str}")
         embed.url = current.uri
         if requester:
-            embed.set_author(name=requester.name, icon_url=requester.avatar_url or requester.default_avatar_url, url=current.uri)
+            embed.set_author(
+                name=requester.name, icon_url=requester.avatar_url or requester.default_avatar_url, url=current.uri)
         if thumb:
             embed.set_image(url=thumb)
 
@@ -1309,7 +1377,8 @@ class Music(commands.Cog):
         try:
             settings = await SettingsDB.get_instance().get_guild_settings(channel.guild.id)
             if settings.lazy:
-                log.debug('[Lazy] Creating a Lazyer instance for {}/{}.'.format(channel.guild.id, channel.guild.name))
+                log.debug(
+                    '[Lazy] Creating a Lazyer instance for {}/{}.'.format(channel.guild.id, channel.guild.name))
                 lazy = Lazyer(channel, self.bot, player)
                 lazy.embed = new_embed
                 await lazy.send_to_channel()
@@ -1330,15 +1399,19 @@ class Music(commands.Cog):
             elif create:
                 return player
             else:
-                log.warning(f"[Player] Found without connected channel.. disconnecting from {guild.id}/{guild.name}.")
+                log.warning(
+                    f"[Player] Found without connected channel.. disconnecting from {guild.id}/{guild.name}.")
                 await self.disconnect_player(player)
-                raise NoVoiceChannel(get_str(guild, "not-connected", bot=self.bot))
+                raise NoVoiceChannel(
+                    get_str(guild, "not-connected", bot=self.bot))
         if not player:
             if create:
-                player = self.bot.lavalink.players.create(guild_id=guild.id, endpoint=str(guild.region))
+                player = self.bot.lavalink.players.create(
+                    guild_id=guild.id, endpoint=str(guild.region))
                 log.debug(f'[Player] Creating {guild.id}/{guild.name}')
             else:
-                raise NoVoiceChannel(get_str(guild, "not-connected", bot=self.bot))
+                raise NoVoiceChannel(
+                    get_str(guild, "not-connected", bot=self.bot))
 
         return player
 
@@ -1348,11 +1421,11 @@ class Music(commands.Cog):
         if not start_time:
             start_time = re.findall('[&?](t|start|starts|s)=(\d+)', query)
             if start_time:
-                kwargs['startTime'] = str(int(start_time[-1][-1])*1000)
+                kwargs['startTime'] = str(int(start_time[-1][-1]) * 1000)
         if not end_time:
             end_time = re.findall('[&?](e|end|ends)=(\d+)', query)
             if end_time:
-                kwargs['endTime'] = str(int(end_time[-1][-1])*1000)
+                kwargs['endTime'] = str(int(end_time[-1][-1]) * 1000)
 
         await player.play(**kwargs)
 
@@ -1459,7 +1532,7 @@ class Music(commands.Cog):
 
     async def is_perso(self, guild, name):
         """Checks if an autoplaylist is personal or not"""
-        if name.isdigit() and 20 > len(name) > 16: # To change after 2090 cus ID will be longer or equal than 20.
+        if name.isdigit() and 20 > len(name) > 16:  # To change after 2090 cus ID will be longer or equal than 20.
             member = await self.bot.safe_fetch('member', int(name), guild=guild)
             if member:
                 return member
@@ -1480,7 +1553,8 @@ class Music(commands.Cog):
             if alone:
                 stop = False
                 i = 2
-                while ((len(anime_list['anime']) % 300) == 0 and not stop) and len(anime_list['anime']) != 900:  # Max 3 requests
+                # Max 3 requests
+                while ((len(anime_list['anime']) % 300) == 0 and not stop) and len(anime_list['anime']) != 900:
                     next_list = await self.bot.jikan.user(username=mal, request='animelist', argument=argument, page=i)
                     anime_list['anime'].extend(next_list['anime'])
                     if (len(next_list['anime']) % 300) == 0:
@@ -1496,7 +1570,8 @@ class Music(commands.Cog):
                     anime_list = await self.bot.jikan.top(type='anime')
             else:
                 if self.bot.top_animes:
-                    top_anime_list = self.bot.top_animes['top'][:int(difficulty*100)].copy()
+                    top_anime_list = self.bot.top_animes['top'][:int(
+                        difficulty * 100)].copy()
                     anime_list = {
                         'top': top_anime_list
                     }
@@ -1509,16 +1584,18 @@ class Music(commands.Cog):
             if anime.type == 'TV':
                 if remove and (int(anime.watching_status) in [self.anime_status.index(m) for m in remove.split(',') if m in self.anime_status]):
                     continue
-                animes.append(BlindTestSong(jikan=self.bot.jikan, title=anime.title, id=anime.mal_id, url=anime.url, image_url=anime.image_url))
+                animes.append(BlindTestSong(jikan=self.bot.jikan, title=anime.title,
+                                            id=anime.mal_id, url=anime.url, image_url=anime.image_url))
         for anime in getattr(anime_list, 'top', []):
             if anime.type == 'TV':
-                animes.append(BlindTestSong(jikan=self.bot.jikan, title=anime.title, id=anime.mal_id, url=anime.url, image_url=anime.image_url))
+                animes.append(BlindTestSong(jikan=self.bot.jikan, title=anime.title,
+                                            id=anime.mal_id, url=anime.url, image_url=anime.image_url))
 
         return animes
 
     async def prepare_blindtest(self, ctx, player, difficulty: int = None, mal: str = None, argument: str = 'all',
-        autoplaylist: str = None, longestword: str = 'false', timeout: int = 120, severity: int = 100,
-        listening: str = 'false', percentage='100,0,0', wait=5, remove: str = 'ptw', source: str = 'y'):
+                                autoplaylist: str = None, longestword: str = 'false', timeout: int = 120, severity: int = 100,
+                                listening: str = 'false', percentage='100,0,0', wait=5, remove: str = 'ptw', source: str = 'y'):
         """Prepares the blindtest before starting it."""
         songs = []
         if autoplaylist:
@@ -1555,9 +1632,11 @@ class Music(commands.Cog):
                 max_mal = 5 if (await self.bot.server_is_claimed(ctx.guild.id)) else 2
                 if nb > max_mal:
                     if await is_patron(self.bot, ctx.author.id):
-                        e = discord.Embed(description=get_str(ctx, "music-autoleave-need-claim").format(f"`{get_server_prefixes(ctx.bot, ctx.guild)}claim`"))
+                        e = discord.Embed(description=get_str(
+                            ctx, "music-autoleave-need-claim").format(f"`{get_server_prefixes(ctx.bot, ctx.guild)}claim`"))
                     else:
-                        e = discord.Embed(description=get_str(ctx, "cmd-blindtest-mal-same-time").format(f"`{max_mal}`") + "\n\n" + "**[Patreon](https://www.patreon.com/bePatron?u=7139372)**")
+                        e = discord.Embed(description=get_str(ctx, "cmd-blindtest-mal-same-time").format(
+                            f"`{max_mal}`") + "\n\n" + "**[Patreon](https://www.patreon.com/bePatron?u=7139372)**")
                     try:
                         return await ctx.send(embed=e)
                     except discord.Forbidden:
@@ -1632,16 +1711,17 @@ class Music(commands.Cog):
             if pos == 11:
                 embed.add_field(name=f'{pos}. {user}', value=points[user])
             else:
-                embed.set_footer(text=f"{pos}. {user} : {nb} {points[user]}", icon_url=user.avatar_url)
+                embed.set_footer(
+                    text=f"{pos}. {user} : {nb} {points[user]}", icon_url=user.avatar_url)
 
         if not embed.fields:
             return await ctx.send(get_str(ctx, "cmd-blindtestscore-no-saved").format(f'`{get_server_prefixes(ctx.bot, ctx.guild)}bt`'))
 
         embed.color = self.get_color(ctx.guild)
-        embed.set_author(name=f'{ctx.guild.name} - {get_str(ctx, "cmd-blindtest-rank")}', icon_url=ctx.guild.icon_url)
+        embed.set_author(
+            name=f'{ctx.guild.name} - {get_str(ctx, "cmd-blindtest-rank")}', icon_url=ctx.guild.icon_url)
 
         return await ctx.send(embed=embed)
-
 
     @commands.cooldown(rate=1, per=60, type=commands.BucketType.guild)
     @commands.command(aliases=['bt'])
@@ -1728,7 +1808,8 @@ class Music(commands.Cog):
             await player.blindtest.stop()
 
         if user_options.split(' ')[0] in ('anime', 'topanime'):
-            user_options = 'difficulty=0' + ' ' + ' '.join(user_options.split(' ')[1:])
+            user_options = 'difficulty=0' + ' ' + \
+                ' '.join(user_options.split(' ')[1:])
         options = {}
         matchs = re.findall('(\S+)[:=](\S+)', user_options)
 
@@ -1752,7 +1833,8 @@ class Music(commands.Cog):
 
         info = get_str(ctx, "cmd-blindtest-blindtest-info")
         load = result = None
-        timer_bonus = 1 if 'mal' not in options else len(options['mal'].split(','))
+        timer_bonus = 1 if 'mal' not in options else len(
+            options['mal'].split(','))
         tries = 5
         if 'argument' in options and 'remove' in options:
             if options['argument'] == options['remove']:
@@ -1892,12 +1974,12 @@ class Music(commands.Cog):
         if not results or not results['tracks']:
             if results['loadType'] == "LOAD_FAILED":
                 if 'mix' in results.get('exception', {}).get('message'):
-                    return await ctx.invoke(self.play_song, query=query.split('&list')[0])  # Skip YouTube mixes
+                    # Skip YouTube mixes
+                    return await ctx.invoke(self.play_song, query=query.split('&list')[0])
                 await ctx.send(get_str(ctx, "music-load-failed").format("`{}search`".format(get_server_prefixes(ctx.bot, ctx.guild))))
             elif results['loadType'] == "NO_MATCHES":
                 await ctx.send(get_str(ctx, "music-no-result").format("`{}search`".format(get_server_prefixes(ctx.bot, ctx.guild))))
             return
-
 
         embed = discord.Embed(colour=self.get_color(ctx.guild))
 
@@ -1924,9 +2006,12 @@ class Music(commands.Cog):
             embed.title = get_str(ctx, "music-enqueued")
             embed.description = f'**[{track["info"]["title"]}]({track["info"]["uri"]})**'
             position, time_until = await self.get_position_in_queue(ctx, player)
-            bottom = get_str(ctx, "music-position-in-queue", can_owo=False).format(f"{position}")
+            bottom = get_str(ctx, "music-position-in-queue",
+                             can_owo=False).format(f"{position}")
             if time_until and time_until != "00:00":
-                bottom += " - " + get_str(ctx, "music-estimated-time", can_owo=False).format(f"{time_until}")
+                bottom += " - " + \
+                    get_str(ctx, "music-estimated-time",
+                            can_owo=False).format(f"{time_until}")
             embed.set_footer(text=bottom)
             try:
                 await ctx.send(embed=embed)
@@ -2075,7 +2160,8 @@ class Music(commands.Cog):
             elif str(time).lower().startswith('p'):
                 to_go = timestamps[max(0, current_timestamp - 1)]
             else:
-                to_go = timestamps[min(len(timestamps) - 1, current_timestamp + 1)]
+                to_go = timestamps[min(
+                    len(timestamps) - 1, current_timestamp + 1)]
 
             return await ctx.invoke(self.moveto, time=to_go[0])
 
@@ -2107,12 +2193,13 @@ class Music(commands.Cog):
                 if j >= len(values):  # If I don't have a conversion from this to seconds
                     continue
 
-                track_time += (v * values[j])*1000
+                track_time += (v * values[j]) * 1000
 
         if track_time > player.current.duration:
             return await ctx.send(get_str(ctx, "music-moveto-exceeds"), delete_after=20)
 
-        new_duration = lavalink.utils.format_time(track_time).lstrip('0').lstrip(':')
+        new_duration = lavalink.utils.format_time(
+            track_time).lstrip('0').lstrip(':')
         await player.seek(track_time)
         await ctx.send(get_str(ctx, "music-moveto-moved").format(f'**{new_duration}**'))
 
@@ -2143,7 +2230,8 @@ class Music(commands.Cog):
         mbrs = my_vc.members
         settings = await SettingsDB.get_instance().get_guild_settings(ctx.guild.id)
         percent = settings.vote
-        reqvotes = ((len([1 for m in mbrs if not m.bot and not m.voice.self_deaf and not m.voice.deaf]))/(100/percent))
+        reqvotes = (
+            (len([1 for m in mbrs if not m.bot and not m.voice.self_deaf and not m.voice.deaf])) / (100 / percent))
         voter = ctx.message.author
 
         if voter.id == player.current.requester:
@@ -2230,7 +2318,8 @@ class Music(commands.Cog):
             mbrs = my_vc.members
             settings = await SettingsDB.get_instance().get_guild_settings(ctx.guild.id)
             percent = settings.vote
-            reqvotes = ((len([1 for m in mbrs if not m.bot and not m.voice.self_deaf and not m.voice.deaf]))/(100/percent))
+            reqvotes = (
+                (len([1 for m in mbrs if not m.bot and not m.voice.self_deaf and not m.voice.deaf])) / (100 / percent))
             voter = ctx.message.author
             if voter.id not in clear_votes:
                 clear_votes.add(voter.id)
@@ -2252,7 +2341,8 @@ class Music(commands.Cog):
         {help}
         """
         player = await self.get_player(ctx.guild)
-        current = player.current  # stock it into a var avoid changes between the beg and the end of the command
+        # stock it into a var avoid changes between the beg and the end of the command
+        current = player.current
 
         if not current:
             return await ctx.send(get_str(ctx, "not-playing"), delete_after=20)
@@ -2265,18 +2355,22 @@ class Music(commands.Cog):
         else:
             color = self.get_color(ctx.guild)
 
-        pos = lavalink.utils.format_time(player.position).lstrip('0').lstrip(':')
+        pos = lavalink.utils.format_time(
+            player.position).lstrip('0').lstrip(':')
         if current.stream:
             dur = 'LIVE'
         else:
-            dur = lavalink.utils.format_time(current.duration).lstrip('0').lstrip(':')
+            dur = lavalink.utils.format_time(
+                current.duration).lstrip('0').lstrip(':')
         thumb = await self.get_thumbnail(current, player)
         requester = await self.bot.safe_fetch('member', current.requester, guild=ctx.guild)
         prog_bar_str = sweet_bar(player.position, current.duration)
-        embed = discord.Embed(colour=color, title=f"**{current.title}**", description=f"{'⏸' if player.paused else '🔁' if player.repeat else ''}`[{pos}/{dur}]` {prog_bar_str}")
+        embed = discord.Embed(colour=color, title=f"**{current.title}**",
+                              description=f"{'⏸' if player.paused else '🔁' if player.repeat else ''}`[{pos}/{dur}]` {prog_bar_str}")
         embed.url = current.uri
         if requester:
-            embed.set_author(name=requester.name, icon_url=requester.avatar_url or requester.default_avatar_url, url=current.uri)
+            embed.set_author(
+                name=requester.name, icon_url=requester.avatar_url or requester.default_avatar_url, url=current.uri)
         if thumb:
             embed.set_image(url=thumb)
         settings = await SettingsDB.get_instance().get_guild_settings(ctx.guild.id)
@@ -2301,20 +2395,23 @@ class Music(commands.Cog):
         if not player.current:  # it can happen, but not commun
             return await ctx.send(get_str(ctx, "not-playing"), delete_after=20)
 
-        pos = lavalink.utils.format_time(player.position).lstrip('0').lstrip(':')
+        pos = lavalink.utils.format_time(
+            player.position).lstrip('0').lstrip(':')
 
         requester = await self.bot.safe_fetch('member', player.current.requester, guild=ctx.guild)
 
         if not player.current.stream:
             # prog_bar_str = sweet_bar(player.position, player.current.duration)
-            duration = lavalink.utils.format_time(player.current.duration).lstrip('0').lstrip(':')
+            duration = lavalink.utils.format_time(
+                player.current.duration).lstrip('0').lstrip(':')
 
         else:
             if "listen.moe" in player.current.uri.lower() or ('monstercat' in player.current.uri.lower() and 'twitch' in player.current.uri.lower()):
                 self.radio_update(player.current)
             duration = 'LIVE'
 
-        msg = f"{'⏸' if player.paused else '🔁' if player.repeat else ''}`[{pos}/{duration}]` " + f" **[{player.current.title}]({player.current.uri})** " + get_str(ctx, "music-queue-added-by") + f" **{requester.name}**.\n\n"
+        msg = f"{'⏸' if player.paused else '🔁' if player.repeat else ''}`[{pos}/{duration}]` " + f" **[{player.current.title}]({player.current.uri})** " + get_str(
+            ctx, "music-queue-added-by") + f" **{requester.name}**.\n\n"
 
         items_per_page = 10
         pages = math.ceil(len(player.queue) / items_per_page)
@@ -2328,23 +2425,29 @@ class Music(commands.Cog):
         for i, track in enumerate(player.queue[start:end], start=start):
             max_val = len(str(len(player.queue[start:end]) + start))
             str_index = str(i + 1)
-            str_index = "".join([' ' for x in range(max_val - len(str_index))]) + str_index
-            requester = await self.bot.safe_fetch('member', track.requester, guild=ctx.guild) or ctx.author  # better than having an error
+            str_index = "".join(
+                [' ' for x in range(max_val - len(str_index))]) + str_index
+            # better than having an error
+            requester = await self.bot.safe_fetch('member', track.requester, guild=ctx.guild) or ctx.author
             line = "`{}.` **[{}]({})** {} ".format(str_index, track.title.replace('[', '').replace(']', '').replace('*', '')[:40], track.uri,
                                                    get_str(ctx, "music-queue-added-by"))
             msg += line
-            available_spaces = 67 - len(line) + len(track.uri) + 8  # cus of the **
+            available_spaces = 67 - \
+                len(line) + len(track.uri) + 8  # cus of the **
             if requester:
                 msg += f"**{requester.name[:available_spaces]}**.\n"
 
-        embed = discord.Embed(title=None, description=msg, color=self.get_color(ctx.guild))  # Specify title to avoid issue when editing
+        embed = discord.Embed(title=None, description=msg, color=self.get_color(
+            ctx.guild))  # Specify title to avoid issue when editing
         bottom = ''
 
         if pages > 1:
             bottom = f'{page}/{pages}'
             if (items_per_page * page) < len(player.queue):
                 rest = len(player.queue) - (items_per_page * page)
-                bottom += " ..." + get_str(ctx, "music-queue-not-displayed", can_owo=False).format(rest) + '. - '
+                bottom += " ..." + \
+                    get_str(ctx, "music-queue-not-displayed",
+                            can_owo=False).format(rest) + '. - '
 
         position, time_until = await self.get_position_in_queue(ctx, player)
         bottom += f'{time_until}'
@@ -2408,7 +2511,8 @@ class Music(commands.Cog):
         if claimed_server:
             max_volume = 1000
         else:
-            fetched_member = await is_voter(self.bot, ctx.author, fetch=True)  # Keep the result: Smart way to only do 1 api call.
+            # Keep the result: Smart way to only do 1 api call.
+            fetched_member = await is_voter(self.bot, ctx.author, fetch=True)
             if fetched_member:
                 max_volume = 150
                 if await is_basicpatron(self.bot, ctx.author, resp=fetched_member):
@@ -2456,7 +2560,8 @@ class Music(commands.Cog):
             if 9000 < new_volume:
                 return await ctx.send("OMG IT'S OVER NINE THOUSAND !!!")
             if 100 <= new_volume <= 1000:
-                e = discord.Embed(description=get_str(ctx, "music-volume-higher-than-100") + "\n\n" + "**[Patreon](https://www.patreon.com/bePatron?u=7139372)**\n**[Vote (volume up to 150)](https://discordbots.org/bot/220644154177355777)**")
+                e = discord.Embed(description=get_str(ctx, "music-volume-higher-than-100") + "\n\n" +
+                                  "**[Patreon](https://www.patreon.com/bePatron?u=7139372)**\n**[Vote (volume up to 150)](https://discordbots.org/bot/220644154177355777)**")
                 try:
                     await ctx.send(embed=e)
                 except discord.Forbidden:
@@ -2566,8 +2671,8 @@ class Music(commands.Cog):
                 after -= 1
             if 1 <= position <= nb and 1 <= after <= nb:
                 position -= 1
-                for index in range(position, (after+1)):
-                    del player.queue[index-removed]
+                for index in range(position, (after + 1)):
+                    del player.queue[index - removed]
                     removed += 1
             else:
                 return await ctx.send(get_str(ctx, "music-promote-error").format(nb))
@@ -2664,7 +2769,8 @@ class Music(commands.Cog):
                 mbrs = my_vc.members
                 settings = await SettingsDB.get_instance().get_guild_settings(ctx.guild.id)
                 percent = settings.vote
-                reqvotes = ((len([1 for m in mbrs if not m.bot and not m.voice.self_deaf and not m.voice.deaf]))/(100/percent))
+                reqvotes = (
+                    (len([1 for m in mbrs if not m.bot and not m.voice.self_deaf and not m.voice.deaf])) / (100 / percent))
                 voter = ctx.message.author
                 if voter.id not in stop_votes:
                     stop_votes.add(voter.id)
@@ -2718,7 +2824,8 @@ class Music(commands.Cog):
                 if my_vc != ctx.author.voice.channel:
                     if (player.is_playing or player.queue) and not player.paused:
                         if sum(1 for m in player.connected_channel.members if not (m.voice.deaf or m.bot or m.voice.self_deaf)):
-                            raise NoVoiceChannel(get_str(ctx, "music-join-playing-a-song"))
+                            raise NoVoiceChannel(
+                                get_str(ctx, "music-join-playing-a-song"))
 
             await player.connect(channel.id)
             await ctx.send(get_str(ctx, "music-join-moved-success").format(f"**{channel}**"), delete_after=15)
@@ -2726,7 +2833,8 @@ class Music(commands.Cog):
         tries = 0
 
         while not ctx.guild.me.voice and tries < 5:
-            await asyncio.sleep(tries)  # Wait till the player connects to discord.. REE..
+            # Wait till the player connects to discord.. REE..
+            await asyncio.sleep(tries)
             tries += 0.5
 
         return player
@@ -2784,7 +2892,8 @@ class Music(commands.Cog):
         if error:
             return await ctx.send(get_str(ctx, "music-lyrics-not-found"))
 
-        lyrics_paginator = Paginator(ctx=ctx, items=split_str_lines(data["lyrics"]), items_per_page=1, data=data)
+        lyrics_paginator = Paginator(ctx=ctx, items=split_str_lines(
+            data["lyrics"]), items_per_page=1, data=data)
         await lyrics_paginator.send_to_channel()
 
     @commands.command(aliases=['eq'])
@@ -3083,7 +3192,8 @@ class Music(commands.Cog):
         settings.autoplaylists[file_name]['name'] = file_name_original
         settings.autoplaylists[file_name]['created_by'] = str(ctx.author.id)
         settings.autoplaylists[file_name]['created_by_name'] = str(ctx.author)
-        settings.autoplaylists[file_name]['created_date'] = datetime.today().strftime("%d %b %Y")
+        settings.autoplaylists[file_name]['created_date'] = datetime.today().strftime(
+            "%d %b %Y")
         settings.autoplaylists[file_name]['private'] = True
         settings.autoplaylists[file_name]['shuffle'] = True
         settings.autoplaylists[file_name]['whitelist'] = []
@@ -3240,7 +3350,8 @@ class Music(commands.Cog):
 
         if perso:
             msg_name = get_str(ctx, "music-plclear-your-p-a")
-            msg_name = msg_name[0].upper() + msg_name[1:]  # as this is the first word
+            # as this is the first word
+            msg_name = msg_name[0].upper() + msg_name[1:]
         else:
             msg_name = file_name
 
@@ -3405,10 +3516,13 @@ class Music(commands.Cog):
                 if not title:
                     title = await self.get_title(ctx, query=url)
                 if not title:
-                    title = "`" + get_str(ctx, "music-plinfo-not-accessible").format("{}PLREMOVE".format(get_server_prefixes(ctx.bot, ctx.guild))) + "`"
+                    title = "`" + get_str(ctx, "music-plinfo-not-accessible").format(
+                        "{}PLREMOVE".format(get_server_prefixes(ctx.bot, ctx.guild))) + "`"
                     dead += 1
-                total += "``{}.`` **{}**\n".format(r, f"[{title.replace('[', '').replace(']', '').replace('*', '')[:70]}]({url})")
-                info = get_str(ctx, f"{'music-plinfo-perso-display' if is_perso and user_name else 'music-plinfo-display'}").format(f"**{user_name if is_perso and user_name else name}**", f"**{n}**")
+                total += "``{}.`` **{}**\n".format(
+                    r, f"[{title.replace('[', '').replace(']', '').replace('*', '')[:70]}]({url})")
+                info = get_str(ctx, f"{'music-plinfo-perso-display' if is_perso and user_name else 'music-plinfo-display'}").format(
+                    f"**{user_name if is_perso and user_name else name}**", f"**{n}**")
                 if (not title and (r % 5 == 0)) or r == n:
                     await load.edit(content=None, embed=discord.Embed(description=f"{info}\n\n{total}"))
 
@@ -3441,14 +3555,17 @@ class Music(commands.Cog):
                     title = await self.get_title(ctx, query=url)
 
                 if not title:
-                    title = "âš  `" + get_str(ctx, "music-plinfo-not-accessible").format("{}PLREMOVE".format(get_server_prefixes(ctx.bot, ctx.guild))) + "`"
+                    title = "âš  `" + get_str(ctx, "music-plinfo-not-accessible").format(
+                        "{}PLREMOVE".format(get_server_prefixes(ctx.bot, ctx.guild))) + "`"
                     dead += 1
-                total = "``{}.`` **{}**\n".format(r, f"[{title.replace('[', '').replace(']', '').replace('*', '')[:50]}]({url})")
+                total = "``{}.`` **{}**\n".format(
+                    r, f"[{title.replace('[', '').replace(']', '').replace('*', '')[:50]}]({url})")
                 banane.append(total)
             to_send = ""
             for ban in banane:
                 if not already_send:
-                    to_send = get_str(ctx, f"{'music-plinfo-perso-display' if is_perso and user_name else 'music-plinfo-display'}").format(f"**{user_name if is_perso and user_name else name}**", f"**{n}**") + "\n\n"
+                    to_send = get_str(ctx, f"{'music-plinfo-perso-display' if is_perso and user_name else 'music-plinfo-display'}").format(
+                        f"**{user_name if is_perso and user_name else name}**", f"**{n}**") + "\n\n"
                     already_send = True
                 if len(ban) + len(to_send) > 1950:
                     try:
@@ -3548,7 +3665,8 @@ class Music(commands.Cog):
 
             if perso:
                 username = perso.name
-                title = get_str(ctx, "music-plsettings-autopl").format(username)
+                title = get_str(
+                    ctx, "music-plsettings-autopl").format(username)
             else:
                 title = f"Autoplaylist : {autopl['name']}"
 
@@ -3567,12 +3685,17 @@ class Music(commands.Cog):
             if desc:
                 embed.description = desc
 
-            embed.add_field(name=get_str(ctx, "music-plsettings-songs"), value=len(autopl['songs']))
+            embed.add_field(name=get_str(
+                ctx, "music-plsettings-songs"), value=len(autopl['songs']))
             embed.add_field(name=get_str(ctx, "music-plsettings-created-by"), value=await self.bot.safe_fetch('user', int(autopl['created_by'])) or autopl['created_by_name'])
-            embed.add_field(name=get_str(ctx, "music-plsettings-creation-date"), value=autopl['created_date'])
-            embed.add_field(name="Shuffle", value=get_str(ctx, "music-plsettings-{}".format(['no', 'yes'][autopl['shuffle']])))
-            embed.add_field(name=get_str(ctx, "music-plsettings-private"), value=get_str(ctx, "music-plsettings-{}".format(['no', 'yes'][autopl['private']])))
-            embed.add_field(name="Upvote{}".format('s' if len(votes) != 1 else ''), value=len(votes))
+            embed.add_field(name=get_str(
+                ctx, "music-plsettings-creation-date"), value=autopl['created_date'])
+            embed.add_field(name="Shuffle", value=get_str(
+                ctx, "music-plsettings-{}".format(['no', 'yes'][autopl['shuffle']])))
+            embed.add_field(name=get_str(ctx, "music-plsettings-private"), value=get_str(
+                ctx, "music-plsettings-{}".format(['no', 'yes'][autopl['private']])))
+            embed.add_field(name="Upvote{}".format(
+                's' if len(votes) != 1 else ''), value=len(votes))
             embed.add_field(name='Whitelist', value=whitelisted)
             await ctx.send(embed=embed)
 
@@ -3612,7 +3735,8 @@ class Music(commands.Cog):
             perso = await self.is_perso(ctx.guild, name=name_lower)
             if perso:
                 username = perso.name
-                title = get_str(ctx, "music-plsettings-autopl").format(f"**{username}**") + "\n"
+                title = get_str(
+                    ctx, "music-plsettings-autopl").format(f"**{username}**") + "\n"
             else:
                 title = f"Autoplaylist : **{autopl['name']}**\n"
 
@@ -3651,9 +3775,11 @@ class Music(commands.Cog):
                 elif opt.split(' ')[0][0].lower() == "w":  # whitelist
                     if len(opt.split(' ')) < 2:  # need a lot of info
                         return await self.bot.send_cmd_help(ctx)
-                    if opt.split(' ')[1][0].lower() == "-":  # remove a member from whitelist
+                    # remove a member from whitelist
+                    if opt.split(' ')[1][0].lower() == "-":
                         for user_id in opt.split(' ')[1:]:
-                            user_id = ''.join([str(s) for s in user_id if s.isdigit()])
+                            user_id = ''.join([str(s)
+                                               for s in user_id if s.isdigit()])
                             if not user_id.isdigit():
                                 continue
                             user = await self.bot.safe_fetch('member', int(user_id), guild=ctx.guild)
@@ -3661,7 +3787,8 @@ class Music(commands.Cog):
                                 autopl['whitelist'].remove(str(user.id))
                     else:  # admit +
                         for user_id in opt.split(' ')[1:]:
-                            user_id = ''.join([str(s) for s in user_id if s.isdigit()])
+                            user_id = ''.join([str(s)
+                                               for s in user_id if s.isdigit()])
                             if not user_id.isdigit():
                                 continue
 
@@ -3842,7 +3969,7 @@ class Music(commands.Cog):
 
     @pl.command(name='find', aliases=['list', 'liste'])
     @commands.cooldown(rate=1, per=5.0, type=commands.BucketType.user)
-    async def pl_find(self, ctx, query:str = None):
+    async def pl_find(self, ctx, query: str = None):
         """
             {command_prefix}pl find (query)
             {command_prefix}pl find (user)
@@ -3853,7 +3980,7 @@ class Music(commands.Cog):
 
     @commands.command(aliases=['pllist', 'plist', 'plliste', 'pliste'])
     @commands.cooldown(rate=1, per=5.0, type=commands.BucketType.user)
-    async def plfind(self, ctx, query:str = None, page:int = 1):
+    async def plfind(self, ctx, query: str = None, page: int = 1):
         """
             {command_prefix}plfind (query) (page)
 
@@ -3897,22 +4024,26 @@ class Music(commands.Cog):
         if not matching:
             return await ctx.send(get_str(ctx, "no-result"))
 
-        newlist = sorted(matching, key=lambda x: len(x.get('upvote', [])), reverse=True)
+        newlist = sorted(matching, key=lambda x: len(
+            x.get('upvote', [])), reverse=True)
         embed = discord.Embed(colour=self.get_color(ctx.guild))
-        embed.description = "**{}**:\n\n".format(get_str(ctx ,"music-search-result"))
-        bottom = '{} {}{}'.format(len(matching), get_str(ctx ,"music-search-result", can_owo=False).lower(), 's' if len(matching) != 1 else '')
+        embed.description = "**{}**:\n\n".format(
+            get_str(ctx, "music-search-result"))
+        bottom = '{} {}{}'.format(len(matching), get_str(
+            ctx, "music-search-result", can_owo=False).lower(), 's' if len(matching) != 1 else '')
         embed.set_footer(text=bottom)
         page_val = max(1, page) * 10
         max_val = len(newlist)
         page = min(page_val, max_val)
 
-        for i, m in enumerate(newlist[page-10:page], start=max(1 + page - 10, 1)):
+        for i, m in enumerate(newlist[page - 10:page], start=max(1 + page - 10, 1)):
             id = int(m['created_by'])
             if m['is_personal']:
                 perso = await self.is_perso(ctx.guild, name=m['name'])
                 if perso:
                     name = perso
-                    autoplname = get_str(ctx, "music-plsettings-autopl").format(f'**{name}**')
+                    autoplname = get_str(
+                        ctx, "music-plsettings-autopl").format(f'**{name}**')
                 else:
                     user = await self.bot.safe_fetch('user', id) or id
                     if user:
@@ -3931,7 +4062,8 @@ class Music(commands.Cog):
 
             nbvote = len(m.get('upvote', []))
             if perso:
-                embed.description += f'`{i}.` ' + get_str(ctx, 'plfind-result-vote{}'.format('s' if nbvote != 1 else '')).format(autoplname, '', nbvote) + '\n'
+                embed.description += f'`{i}.` ' + get_str(ctx, 'plfind-result-vote{}'.format(
+                    's' if nbvote != 1 else '')).format(autoplname, '', nbvote) + '\n'
             else:
                 embed.description += f'`{i}.` ' + get_str(ctx, 'plfind-result-vote{}'.format('s' if nbvote != 1 else '')).format(
                     f'**{autoplname}**', get_str(ctx, "plfind-result-middle").format(name), nbvote) + '\n'
@@ -4058,21 +4190,24 @@ class Music(commands.Cog):
 
         add_current = False
 
-        if song_url and 'current_queue'.startswith(song_url.lower()) and len(song_url) > 3:  # IDK, maybe he wants to add c/cu/cur...
+        # IDK, maybe he wants to add c/cu/cur...
+        if song_url and 'current_queue'.startswith(song_url.lower()) and len(song_url) > 3:
             if player.queue:
                 add_current = True
-                results = {'playlistInfo': {}, 'loadType': 'PLAYLIST_LOADED', 'tracks': []}
+                results = {'playlistInfo': {},
+                           'loadType': 'PLAYLIST_LOADED', 'tracks': []}
                 if player.current:
-                    current = {'info' : {}}
+                    current = {'info': {}}
                     current['info']['title'] = player.current.title
                     current['info']['uri'] = player.current.uri
                     results['tracks'].append(current)
                 for track in player.queue:
-                    current = {'info' : {}}
+                    current = {'info': {}}
                     current['info']['title'] = track.title
                     current['info']['uri'] = track.uri
                     results['tracks'].append(current)
-                results['playlistInfo'] = {'selectedTrack': -1, 'name': 'Current Queue'}
+                results['playlistInfo'] = {
+                    'selectedTrack': -1, 'name': 'Current Queue'}
             else:
                 return await load.edit(content=get_str(ctx, "music-plinfo-empty-auto").format("`{}pladd`".format(get_server_prefixes(ctx.bot, ctx.guild))))
 
@@ -4123,14 +4258,17 @@ class Music(commands.Cog):
                         urls.remove(url)
                     else:
                         player.autoplaylist['songs'].append(url)
-                settings.autoplaylists[player.autoplaylist['name'].lower()] = player.autoplaylist
+                settings.autoplaylists[player.autoplaylist['name'].lower(
+                )] = player.autoplaylist
                 await SettingsDB.get_instance().set_glob_settings(settings)
                 added = len(urls)
                 not_added = len(results['tracks']) - added
                 if added and not not_added:
-                    content = get_str(ctx, "music-pladd-pl-added").format(added)
+                    content = get_str(
+                        ctx, "music-pladd-pl-added").format(added)
                 elif added and not_added:
-                    content = get_str(ctx, "music-pladd-pls-added").format(added, not_added)
+                    content = get_str(
+                        ctx, "music-pladd-pls-added").format(added, not_added)
                 else:
                     content = get_str(ctx, "music-pladd-all-already")
 
@@ -4142,13 +4280,15 @@ class Music(commands.Cog):
             else:  # it's just a track
                 title = results['tracks'][0]['info']['title']
                 start_time = re.findall('[&?](t|start|s)=(\d+)', song_url)
-                song_url = results['tracks'][0]['info']['uri'] + (f'?t={start_time[-1][-1]}' if start_time else '')
+                song_url = results['tracks'][0]['info']['uri'] + \
+                    (f'?t={start_time[-1][-1]}' if start_time else '')
 
         if any(s.split('?t=')[0] == song_url.split('?t=')[0] for s in player.autoplaylist['songs']):
             return await ctx.send(get_str(ctx, "music-pladd-already-present"), delete_after=30)
         else:
             player.autoplaylist['songs'].append(song_url)
-            settings.autoplaylists[player.autoplaylist['name'].lower()] = player.autoplaylist
+            settings.autoplaylists[player.autoplaylist['name'].lower(
+            )] = player.autoplaylist
             await SettingsDB.get_instance().set_glob_settings(settings)
             await ctx.send(get_str(ctx, "music-pladd-added").format(f"**{title}**"))
 
@@ -4210,7 +4350,7 @@ class Music(commands.Cog):
         elif not match_url(song_url):
             if song_url.isdigit():
                 if int(song_url) <= len(player.autoplaylist['songs']):
-                    return await ctx.invoke(self.plremove, song_url=player.autoplaylist['songs'][int(song_url)-1])
+                    return await ctx.invoke(self.plremove, song_url=player.autoplaylist['songs'][int(song_url) - 1])
             if self.is_spotify(song_url):
                 try:
                     data = await self.prepare_spotify(ctx, song_url, node=player.node)
@@ -4249,14 +4389,17 @@ class Music(commands.Cog):
                         urls.remove(url)
                     else:
                         player.autoplaylist['songs'].remove(url)
-                settings.autoplaylists[player.autoplaylist['name'].lower()] = player.autoplaylist
+                settings.autoplaylists[player.autoplaylist['name'].lower(
+                )] = player.autoplaylist
                 await SettingsDB.get_instance().set_glob_settings(settings)
                 removed = len(urls)
                 not_removed = len(results['tracks']) - removed
                 if removed and not not_removed:
-                    content = get_str(ctx, "music-plremove-pl-removed").format(removed)
+                    content = get_str(
+                        ctx, "music-plremove-pl-removed").format(removed)
                 elif removed and not_removed:
-                    content = get_str(ctx, "music-plremove-pls-removed").format(removed, not_removed)
+                    content = get_str(
+                        ctx, "music-plremove-pls-removed").format(removed, not_removed)
                 else:
                     content = get_str(ctx, "music-plremove-all-already")
 
@@ -4268,7 +4411,8 @@ class Music(commands.Cog):
             else:  # it's just a track
                 title = results['tracks'][0]['info']['title']
                 song_url = results['tracks'][0]['info']['uri']
-                occ = [s for s in player.autoplaylist['songs'] if s.split('?t=')[0] == song_url.split('?t=')[0]]
+                occ = [s for s in player.autoplaylist['songs']
+                       if s.split('?t=')[0] == song_url.split('?t=')[0]]
                 if occ:
                     song_url = occ[0]
 
@@ -4276,7 +4420,8 @@ class Music(commands.Cog):
             return await ctx.send(get_str(ctx, "music-plremove-not-found"), delete_after=30)
         else:
             player.autoplaylist['songs'].remove(song_url)
-            settings.autoplaylists[player.autoplaylist['name'].lower()] = player.autoplaylist
+            settings.autoplaylists[player.autoplaylist['name'].lower(
+            )] = player.autoplaylist
             await SettingsDB.get_instance().set_glob_settings(settings)
             await ctx.send(get_str(ctx, "music-plremove-removed").format(f"**{title}**"))
 
@@ -4324,7 +4469,8 @@ class Music(commands.Cog):
                 return await ctx.send(get_str(ctx, "music-not-my-channel").format(f"**{my_vc}**"), delete_after=30)
 
         if (not player.queue and not player.is_playing):
-            return await ctx.invoke(self.play_song, query=query)  # why playnow if queue is empty...
+            # why playnow if queue is empty...
+            return await ctx.invoke(self.play_song, query=query)
 
         if not await self.is_dj(ctx):
             raise commands.errors.CheckFailure
@@ -4354,7 +4500,8 @@ class Music(commands.Cog):
 
         if self.is_spotify(query):
             matchs = ['/album/', '/playlist/', ':album:', ':playlist:']
-            if any(match in query.lower() for match in matchs):  # hacky way to prevent playlist to be loaded in playnow
+            # hacky way to prevent playlist to be loaded in playnow
+            if any(match in query.lower() for match in matchs):
                 return await ctx.send(get_str(ctx, "music-promote-playlist"))
             try:
                 results = await self.prepare_spotify(ctx, query)
@@ -4468,7 +4615,8 @@ class Music(commands.Cog):
 
         def check(m):
             if m.author == ctx.author and m.channel == ctx.channel:
-                if m.content.lower().strip() in ["exit", "cancel", "c", "e"]:  # Valid if the user wants to abot
+                # Valid if the user wants to abot
+                if m.content.lower().strip() in ["exit", "cancel", "c", "e"]:
                     return True
                 if m.content.lower().startswith(get_server_prefixes(ctx.bot, ctx.guild)) or m.content.startswith(m.guild.me.mention):
                     return True
@@ -4477,7 +4625,8 @@ class Music(commands.Cog):
                 except ValueError:
                     return False  # If the sent message is not a number, don't accept it
 
-                if ind < 0 or ind >= len(tracks):  # If the index is not in range
+                # If the index is not in range
+                if ind < 0 or ind >= len(tracks):
                     return False
 
                 return True
@@ -4488,20 +4637,25 @@ class Music(commands.Cog):
         for e in tracks:
             max_value = len(str(len(tracks)))
             str_index = str(index)
-            dur = lavalink.utils.format_time(e['info']['length']).lstrip('0').lstrip(':')
+            dur = lavalink.utils.format_time(
+                e['info']['length']).lstrip('0').lstrip(':')
             if len(e["info"]['title']) > 40:
                 upper = 0
                 for m in str(e["info"]['title']):
                     if m.isupper():
                         upper += 1
                 if upper > 15:
-                    e["info"]['title'] = str(e["info"]['title'])[0] + str(e["info"]['title'])[1:].lower()
-            str_index = "".join([' ' for x in range(max_value - len(str_index))]) + str_index
-            new = "`{}.` **[{}]({}) [{}]**".format(str_index, e["info"]['title'].replace('[', '').replace(']', '').replace('*', '')[:lenght], e['info']['uri'], dur)
+                    e["info"]['title'] = str(e["info"]['title'])[
+                        0] + str(e["info"]['title'])[1:].lower()
+            str_index = "".join(
+                [' ' for x in range(max_value - len(str_index))]) + str_index
+            new = "`{}.` **[{}]({}) [{}]**".format(str_index, e["info"]['title'].replace(
+                '[', '').replace(']', '').replace('*', '')[:lenght], e['info']['uri'], dur)
             if len('\n'.join(results)) + len(new) < 1975:
                 results.append(new)
                 index += 1
-        embed = discord.Embed(color=self.get_color(ctx.guild), title=get_str(ctx, "music-supersearch-select"), description="\n".join(results))
+        embed = discord.Embed(color=self.get_color(ctx.guild), title=get_str(
+            ctx, "music-supersearch-select"), description="\n".join(results))
         result_message = await ctx.send(embed=embed)
 
         try:
@@ -4623,8 +4777,10 @@ class Music(commands.Cog):
                 return await ctx.invoke(self.youtube_download)
             url = url['uri']
             title = await self.get_title(ctx, query=url)
-        url = "https://mpgun.com/youtube-to-mp3.html?yid=" + url.split("?v=")[-1].split("/")[-1]
-        embed = discord.Embed(title=title, description="[Download]({})".format(url))
+        url = "https://mpgun.com/youtube-to-mp3.html?yid=" + \
+            url.split("?v=")[-1].split("/")[-1]
+        embed = discord.Embed(
+            title=title, description="[Download]({})".format(url))
 
         try:
             await ctx.send(embed=embed)
@@ -4835,7 +4991,7 @@ class Music(commands.Cog):
 
         if isinstance(settings.timer, int):
             if settings.timer:
-                value = round(settings.timer/60, 2)
+                value = round(settings.timer / 60, 2)
                 await ctx.send(get_str(ctx, "music-autoleave-now").format(f"`{settings.timer} {get_str(ctx, 'cmd-nextep-seconds')} ({value} {get_str(ctx, 'cmd-nextep-minutes') if value > 1 else get_str(ctx, 'cmd-nextep-minute')})`"))
             else:
                 await ctx.send(get_str(ctx, "music-autoleave-now-never"))
@@ -4871,9 +5027,11 @@ class Music(commands.Cog):
             if (await self.bot.server_is_claimed(ctx.guild.id)):
                 return await ctx.send(get_str(ctx, "music-autoleave-unreasonable-patron").format(f"`{max_val}`", "`{}autoleave never`".format(get_server_prefixes(ctx.bot, ctx.guild))), delete_after=20)
             elif await is_patron(self.bot, ctx.author.id):
-                e = discord.Embed(description=get_str(ctx, "music-autoleave-need-claim").format(f"`{get_server_prefixes(ctx.bot, ctx.guild)}claim`"))
+                e = discord.Embed(description=get_str(
+                    ctx, "music-autoleave-need-claim").format(f"`{get_server_prefixes(ctx.bot, ctx.guild)}claim`"))
             else:
-                e = discord.Embed(description=get_str(ctx, "music-autoleave-unreasonable").format(f"`{min_val}`", f"`{max_val}`") + "\n\n" + "**[Patreon](https://www.patreon.com/bePatron?u=7139372)**")
+                e = discord.Embed(description=get_str(ctx, "music-autoleave-unreasonable").format(
+                    f"`{min_val}`", f"`{max_val}`") + "\n\n" + "**[Patreon](https://www.patreon.com/bePatron?u=7139372)**")
             try:
                 await ctx.send(embed=e)
             except discord.Forbidden:
@@ -4924,9 +5082,11 @@ class Music(commands.Cog):
             await ctx.send(get_str(ctx, "music-autoleave-set").format(f"`{get_str(ctx, 'music-autoleave-never')}`"))
         else:
             if await is_patron(self.bot, ctx.author.id):
-                e = discord.Embed(description=get_str(ctx, "music-autoleave-need-claim").format(f"`{get_server_prefixes(ctx.bot, ctx.guild)}claim`"))
+                e = discord.Embed(description=get_str(
+                    ctx, "music-autoleave-need-claim").format(f"`{get_server_prefixes(ctx.bot, ctx.guild)}claim`"))
             else:
-                e = discord.Embed(description=get_str(ctx, "music-autoleave-unreasonable").format(f"`{min_val}`", f"`{max_val}`") + "\n\n" + "**[Patreon](https://www.patreon.com/bePatron?u=7139372)**")
+                e = discord.Embed(description=get_str(ctx, "music-autoleave-unreasonable").format(
+                    f"`{min_val}`", f"`{max_val}`") + "\n\n" + "**[Patreon](https://www.patreon.com/bePatron?u=7139372)**")
             try:
                 await ctx.send(embed=e)
             except discord.Forbidden:
@@ -4979,7 +5139,8 @@ class Music(commands.Cog):
             raise commands.errors.CheckFailure
 
         try:
-            channel = [c for c in ctx.guild.channels if (str(c.id) == new_channel or isinstance(new_channel, str) and c.name.lower() == new_channel.lower()) and isinstance(c, discord.TextChannel)][0]
+            channel = [c for c in ctx.guild.channels if (str(c.id) == new_channel or isinstance(
+                new_channel, str) and c.name.lower() == new_channel.lower()) and isinstance(c, discord.TextChannel)][0]
             new_channel = channel.id
         except IndexError:
             return await ctx.send(get_str(ctx, "music-npmsg-not-found").format(f"`{new_channel}`"))
@@ -5189,11 +5350,14 @@ class Music(commands.Cog):
         settings = await SettingsDB.get_instance().get_guild_settings(ctx.guild.id)
         desc = ''
         for m, k in enumerate(settings.autosongs.items(), start=1):
-            modified = (f' : **[{k[1]}]({k[1][:40]})**' if match_url(k[1]) else f' : `{k[1]}`') if k[1] else ''
-            desc += '`{}.` **{}**{}\n'.format(m, ctx.guild.get_channel(int(k[0])), modified)
+            modified = (f' : **[{k[1]}]({k[1][:40]})**' if match_url(k[1])
+                        else f' : `{k[1]}`') if k[1] else ''
+            desc += '`{}.` **{}**{}\n'.format(m,
+                                              ctx.guild.get_channel(int(k[0])), modified)
         if desc:
             embed = discord.Embed(description=desc[:1900])
-            embed.set_author(name='Autoconnect list', icon_url=ctx.guild.icon_url)
+            embed.set_author(name='Autoconnect list',
+                             icon_url=ctx.guild.icon_url)
             await ctx.send(embed=embed)
         else:
             await ctx.send(get_str(ctx, "music-autoconnect-list-empty").format("`{}autoconnect add`".format(get_server_prefixes(ctx.bot, ctx.guild))))
@@ -5247,12 +5411,14 @@ class Music(commands.Cog):
     @commands.Cog.listener()
     async def on_guild_update(self, before, after):
         if before.region != after.region:
-            log.debug("[Guild] \"%s\" changed regions: %s -> %s" % (after.name, before.region, after.region))
+            log.debug("[Guild] \"%s\" changed regions: %s -> %s" %
+                      (after.name, before.region, after.region))
 
     @commands.Cog.listener()
     async def on_guild_remove(self, guild):
         if hasattr(self.bot, 'lavalink') and guild.id in self.bot.lavalink.players.players:
-            log.debug(f"Removing player in removed guild ({guild.id}: {guild.name})")
+            log.debug(
+                f"Removing player in removed guild ({guild.id}: {guild.name})")
             player = await self.get_player(guild)
             await self.disconnect_player(player)
 
@@ -5262,7 +5428,8 @@ class Music(commands.Cog):
         if hasattr(self.bot, 'lavalink') and guild.id in self.bot.lavalink.players.players:
             if isinstance(channel, discord.VoiceChannel):
                 if guild.me in channel.members:
-                    log.debug(f"Removing player in removed channel ({guild.id}: {guild.name})")
+                    log.debug(
+                        f"Removing player in removed channel ({guild.id}: {guild.name})")
                     player = await self.get_player(guild)
                     await self.disconnect_player(player)
 
@@ -5270,7 +5437,8 @@ class Music(commands.Cog):
         """Joins and plays a song based on settings, and voice updates"""
         if member.bot or (member.voice and member.voice.mute):
             return
-        song_info = self.bot.autosongs_map[member.guild.id][str(after.channel.id)]
+        song_info = self.bot.autosongs_map[member.guild.id][str(
+            after.channel.id)]
         if not song_info:
             player = await self.get_player(member.guild, create=True)
             return await player.connect(after.channel.id)
@@ -5285,12 +5453,14 @@ class Music(commands.Cog):
                 await player.connect(after.channel.id)
                 tries = 0
                 while not player.is_connected and tries < 5:
-                    await asyncio.sleep(tries)  # Wait till the player connects to discord.. REE..
+                    # Wait till the player connects to discord.. REE..
+                    await asyncio.sleep(tries)
                     tries += 0.5
             else:
                 if int(player.channel_id) != after.channel.id:
                     await player.connect(after.channel.id)
-            player.autoplaylist = settings.autoplaylists[str(file_name.lower())]
+            player.autoplaylist = settings.autoplaylists[str(
+                file_name.lower())]
             player.authorplaylist = member
             player.queue.clear()
             await player.skip()
@@ -5347,7 +5517,8 @@ class Music(commands.Cog):
             return
 
         if member == member.guild.me and not after.channel:
-            log.warning(f"[Player] Just left voice for some reason. Disconnecting from {member.guild.id}/{member.guild.name}.")
+            log.warning(
+                f"[Player] Just left voice for some reason. Disconnecting from {member.guild.id}/{member.guild.name}.")
             await self.disconnect_player(player)
             return
 
@@ -5363,7 +5534,8 @@ class Music(commands.Cog):
                                 if after.channel and (sum(1 for m in after.channel.members if not (m.voice.deaf or m.bot or m.voice.self_deaf or m == m.guild.me))) and not (member.guild.me.voice and member.guild.me.voice.mute):
                                     await self.auto_join_play(member, after)
 
-        if player.connected_channel not in [after.channel, before.channel]:  # We don't care, right ?
+        # We don't care, right ?
+        if player.connected_channel not in [after.channel, before.channel]:
             return
 
         my_voice_channel = player.connected_channel
@@ -5375,7 +5547,8 @@ class Music(commands.Cog):
                 player.auto_paused = False
                 if player.paused:
                     await player.set_pause(False)
-                    log.debug("[Voice] The player is now resumed on {}".format(guild.name))
+                    log.debug(
+                        "[Voice] The player is now resumed on {}".format(guild.name))
                 if guild.id in self.timeout_tasks:
                     self.timeout_tasks[guild.id].cancel()
                     self.timeout_tasks.pop(guild.id)
@@ -5384,17 +5557,21 @@ class Music(commands.Cog):
                 player.auto_paused = True
                 if not player.paused and player.is_playing:
                     await player.set_pause(True)
-                    log.debug("[Voice] The player is now paused on {}".format(guild.name))
+                    log.debug(
+                        "[Voice] The player is now paused on {}".format(guild.name))
                 if player.timer_value is not False:
-                    task = asyncio.ensure_future(self.timeout_task(player, additional_time=10 if guild.me.voice and guild.me.voice.mute else 0))  # don't instant leave for ever the vc
+                    task = asyncio.ensure_future(self.timeout_task(
+                        player, additional_time=10 if guild.me.voice and guild.me.voice.mute else 0))  # don't instant leave for ever the vc
                     self.timeout_tasks[guild.id] = task
 
     async def timeout_task(self, player, additional_time):
         guild = self.bot.get_guild(int(player.guild_id))
-        await asyncio.sleep(min(1800, max(max(player.timer_value + additional_time, 0), 0)))  # if timer_value is at 0, don't instant leave the voice channel for ever if muted otherwise users can't unmute her
+        # if timer_value is at 0, don't instant leave the voice channel for ever if muted otherwise users can't unmute her
+        await asyncio.sleep(min(1800, max(max(player.timer_value + additional_time, 0), 0)))
         if player in dict(self.bot.lavalink.players).values():  # prevent from stupid issues
             # if not sum(1 for m in player.connected_channel.members if not (m.voice.deaf or m.bot or m.voice.self_deaf or m == guild.me)):  # the last one is only useful for self bots
-            log.debug(f"[Timer] I'm alone since about {player.timer_value} secs on {guild.id}/{guild.name}.")
+            log.debug(
+                f"[Timer] I'm alone since about {player.timer_value} secs on {guild.id}/{guild.name}.")
             await self.disconnect_message(player, guild)
             await self.disconnect_player(player)
 
@@ -5405,7 +5582,8 @@ class Music(commands.Cog):
         await asyncio.sleep(player.timer_value)
         if player in dict(self.bot.lavalink.players).values():  # prevent from stupid issues
             # if not player.is_playing and not player.queue:
-            log.debug(f"[Timer] I'm inactive since about {player.timer_value} secs on {guild.id}/{guild.name}.")
+            log.debug(
+                f"[Timer] I'm inactive since about {player.timer_value} secs on {guild.id}/{guild.name}.")
             await self.disconnect_message(player, guild)
             await self.disconnect_player(player)
 
@@ -5423,13 +5601,14 @@ class Music(commands.Cog):
             title = get_str(guild, "music-stop-success", bot=self.bot)
 
         embed = discord.Embed(colour=color, title=title)
-        requester = (player.current.requester if player.current else None) or (player.previous.requester if player.previous else None)
+        requester = (player.current.requester if player.current else None) or (
+            player.previous.requester if player.previous else None)
         if not requester or not await is_basicpatron(self.bot, requester):
             embed.description = "**[{}](https://www.patreon.com/bePatron?u=7139372)** {}\n{}".format(get_str(guild, "support-watora", bot=self.bot, can_owo=False),
-                get_str(guild, "support-watora-end", bot=self.bot), get_str(guild, "suggest-features", bot=self.bot).format(f"`{get_server_prefixes(self.bot, guild)}suggestion`"))
+                                                                                                     get_str(guild, "support-watora-end", bot=self.bot), get_str(guild, "suggest-features", bot=self.bot).format(f"`{get_server_prefixes(self.bot, guild)}suggestion`"))
         else:
             embed.description = "{} {}\n{}".format(get_str(guild, "thanks-support", bot=self.bot, can_owo=False),
-                "<:WatoraLove:553618991328002058>", get_str(guild, "manage-autoleave-time", bot=self.bot).format(f"`{get_server_prefixes(self.bot, guild)}autoleave`"))
+                                                   "<:WatoraLove:553618991328002058>", get_str(guild, "manage-autoleave-time", bot=self.bot).format(f"`{get_server_prefixes(self.bot, guild)}autoleave`"))
         try:
             await channel.send(embed=embed)
         except discord.Forbidden:
@@ -5437,6 +5616,7 @@ class Music(commands.Cog):
                 await channel.send(content=title)
             except discord.Forbidden:
                 pass
+
 
 def setup(bot):
     bot.add_cog(Music(bot))

@@ -28,8 +28,10 @@ def _prefix_callable(bot, msg):
 
     return commands.when_mentioned_or(*prefixes)(bot, msg)
 
+
 def start_bot(shard_count=None, shard_ids=None, send=None):
     Watora(shard_count=shard_count, shard_ids=shard_ids, send=send).run()
+
 
 class Watora(commands.AutoShardedBot):
 
@@ -93,7 +95,8 @@ class Watora(commands.AutoShardedBot):
         role = [r for r in ctx.guild.roles if r.name.lower() == name.lower()]
         if not role:
             try:
-                role = ctx.guild.get_role(int(name.replace('<@&', '').replace('>', '')))
+                role = ctx.guild.get_role(
+                    int(name.replace('<@&', '').replace('>', '')))
             except ValueError:
                 role = None
         else:
@@ -103,7 +106,8 @@ class Watora(commands.AutoShardedBot):
 
     async def safe_fetch(self, target, id, guild=None):
         if target not in ['member', 'user', 'guild', 'channel']:
-            raise Exception(f'{target} is not a supported target. Please use either channel, member, user or guild.')
+            raise Exception(
+                f'{target} is not a supported target. Please use either channel, member, user or guild.')
 
         result = None
 
@@ -188,7 +192,8 @@ class Watora(commands.AutoShardedBot):
                     cmd_prefix = prefix  # Get the used prefix
                     break
 
-            str_rest = ' '.join(message.content[len(cmd_prefix):].split(" ")[1:])
+            str_rest = ' '.join(
+                message.content[len(cmd_prefix):].split(" ")[1:])
 
         else:  # From Welcomer
             objects = {
@@ -317,17 +322,21 @@ class Watora(commands.AutoShardedBot):
             help_msg = get_str(ctx, f"cmd-{cname}-help")
             if ctx.channel.permissions_for(ctx.me).embed_links:
                 embed = discord.Embed(title=f'{prefix}{str(command)}')
-                help_msg = '\n'.join(command.help.split('\n\n')[1:]).format(help=help_msg)
+                help_msg = '\n'.join(command.help.split('\n\n')[
+                                     1:]).format(help=help_msg)
                 embed.description = help_msg
-                cmds = '\n'.join([f'`{cmd.strip()}`' for cmd in command.help.split('\n\n')[0].format(command_prefix=prefix).split('\n')])
+                cmds = '\n'.join([f'`{cmd.strip()}`' for cmd in command.help.split(
+                    '\n\n')[0].format(command_prefix=prefix).split('\n')])
                 embed.add_field(name='Usage', value=cmds, inline=False)
                 if not ctx.guild:
                     embed.color = 0x71368a
                 else:
                     embed.color = ctx.me.color
                 if command.aliases:
-                    aliases = '\n'.join([f'`{prefix}{(str(command.parent) + " ") if command.parent else ""}{a}`' for a in command.aliases])
-                    embed.add_field(name="Aliases", value=aliases, inline=False)
+                    aliases = '\n'.join(
+                        [f'`{prefix}{(str(command.parent) + " ") if command.parent else ""}{a}`' for a in command.aliases])
+                    embed.add_field(
+                        name="Aliases", value=aliases, inline=False)
                 return await ctx.send(embed=embed)
             else:
                 return await ctx.send("```%s```" % dedent(ctx.command.help.format(command_prefix=get_server_prefixes(ctx.bot, ctx.guild), help=help_msg)))
@@ -355,7 +364,8 @@ class Watora(commands.AutoShardedBot):
 
         elif isinstance(error, commands.errors.CommandOnCooldown):
             try:
-                scds = str(error).replace('You are on cooldown. Try again in', '')
+                scds = str(error).replace(
+                    'You are on cooldown. Try again in', '')
                 return await ctx.channel.send("```c\n{}{}```".format(get_str(ctx, "bot-cooldown"), scds), delete_after=10)
             except discord.HTTPException:
                 log.debug("Can't send cooldown message - Missing Permissions")
@@ -371,7 +381,8 @@ class Watora(commands.AutoShardedBot):
             try:
                 return await ctx.channel.send("```c\n{} ({}permsinfo)```".format(get_str(ctx, 'bot-not-enough-permissions'), get_server_prefixes(ctx.bot, ctx.guild)), delete_after=10)
             except discord.HTTPException:
-                log.debug("Can't send permissions failure message - Missing Permissions")
+                log.debug(
+                    "Can't send permissions failure message - Missing Permissions")
                 return
 
         elif isinstance(error, commands.CommandNotFound):
@@ -383,7 +394,8 @@ class Watora(commands.AutoShardedBot):
         else:
             if isinstance(error, commands.CommandInvokeError):
                 if isinstance(error.original, discord.errors.Forbidden):
-                    log.debug("discord.errors.Forbidden: FORBIDDEN (status code: 403): Missing Permissions")
+                    log.debug(
+                        "discord.errors.Forbidden: FORBIDDEN (status code: 403): Missing Permissions")
                     return
                 if isinstance(error.original, discord.errors.NotFound):
                     # log.info("discord.errors.NotFound: NotFound (status code: 404): Message not found")
@@ -395,8 +407,10 @@ class Watora(commands.AutoShardedBot):
                     log.debug("Command raised an exception: TimeoutError")
                     return
 
-            print('Ignoring exception in command {}:'.format(ctx.command), file=sys.stderr)
-            traceback.print_exception(type(error), error, error.__traceback__, file=sys.stderr)
+            print('Ignoring exception in command {}:'.format(
+                ctx.command), file=sys.stderr)
+            traceback.print_exception(
+                type(error), error, error.__traceback__, file=sys.stderr)
             log.error(f'Exception in command {ctx.command.name}: {error}')
 
     async def on_message(self, message):
@@ -436,14 +450,18 @@ class Watora(commands.AutoShardedBot):
 
         if self.get_command(message.content.strip()[len(cmd_prefix):].strip().split(' ')[0]):
             if message.author.id != owner_id and message.author.id in self.config.blacklisted:
-                log.debug(f"[User Blacklisted] {message.author.id}/{message_author} ({message_content.replace(cmd_prefix, globprefix, 1)[:50]})")
+                log.debug(
+                    f"[User Blacklisted] {message.author.id}/{message_author} ({message_content.replace(cmd_prefix, globprefix, 1)[:50]})")
 
             else:
-                log.info(f"[Command] {message.author.id}/{message_author} ({message_content.replace(cmd_prefix, globprefix, 1)[:100]})")
+                log.info(
+                    f"[Command] {message.author.id}/{message_author} ({message_content.replace(cmd_prefix, globprefix, 1)[:100]})")
                 await self.process_commands(message)
-                log.debug(f"[Processed Command] {message.author.id}/{message_author} ({message_content.replace(cmd_prefix, globprefix, 1)[:100]})")
+                log.debug(
+                    f"[Processed Command] {message.author.id}/{message_author} ({message_content.replace(cmd_prefix, globprefix, 1)[:100]})")
 
-        elif not isinstance(message.channel, discord.abc.PrivateChannel):  # check if custom command exists
+        # check if custom command exists
+        elif not isinstance(message.channel, discord.abc.PrivateChannel):
             if settings.customcommands:
                 await self.on_customcommand(message, settings, message_content, message_author, cmd_prefix)
 
@@ -452,11 +470,13 @@ class Watora(commands.AutoShardedBot):
             cmd = message.content.lower()[len(cmd_prefix):].split(" ")[0]
             rest = None
             if len(message.content.lower()[len(cmd_prefix):].strip().split(" ")) > 1:
-                rest = ' '.join(message.content[len(cmd_prefix):].split(" ")[1:])
+                rest = ' '.join(
+                    message.content[len(cmd_prefix):].split(" ")[1:])
             if cmd in settings.customcommands:
                 cmd = await self.format_cc(settings.customcommands[cmd], message)
                 if message.author.id != owner_id and message.author.id in self.config.blacklisted:
-                    log.debug(f"[User Blacklisted CustomCommand] {message.author.id}/{message_author} ({message_content})")
+                    log.debug(
+                        f"[User Blacklisted CustomCommand] {message.author.id}/{message_author} ({message_content})")
                     return
                 if ">>>" in cmd:
                     while ">>> " in cmd:
@@ -479,7 +499,8 @@ class Watora(commands.AutoShardedBot):
                             message.content = f"{cmd_prefix}{m}"
                             if len(m.split(' ')) < 2 and rest:
                                 message.content += f" {rest}"
-                            log.debug(f"[CustomCommandCallMultiple] {message.author.id}/{message_author} ({message.content[:50]})")
+                            log.debug(
+                                f"[CustomCommandCallMultiple] {message.author.id}/{message_author} ({message.content[:50]})")
                             await self.process_commands(message)
                         return
 
@@ -490,7 +511,8 @@ class Watora(commands.AutoShardedBot):
                         message.content = f"{cmd_prefix}{message.content}"
                         if len(message.content.split(' ')) < 2 and rest:
                             message.content += f" {rest}"
-                        log.debug(f"[CustomCommandCall] {message.author.id}/{message_author} ({message.content[:50]})")
+                        log.debug(
+                            f"[CustomCommandCall] {message.author.id}/{message_author} ({message.content[:50]})")
                         return await self.process_commands(message)
 
                 pic = get_image_from_url(cmd)
@@ -512,7 +534,8 @@ class Watora(commands.AutoShardedBot):
                     except discord.Forbidden:
                         pass
 
-                log.debug("[CustomCommand] {}/{} ({})".format(message.author.id, message_author, message_content))
+                log.debug("[CustomCommand] {}/{} ({})".format(message.author.id,
+                                                              message_author, message_content))
 
     async def on_message_check(self, message, settings, cmd_prefix):
         words = message.content[len(cmd_prefix):].split(' ')
@@ -561,9 +584,9 @@ class Watora(commands.AutoShardedBot):
         prefix_servers = SettingsDB.get_instance().guild_settings_collection.find(
             {
                 "$and": [
-                        {"prefix": {"$exists": True}},
-                        {"prefix": {"$ne": globprefix}}
-                        ]
+                    {"prefix": {"$exists": True}},
+                    {"prefix": {"$ne": globprefix}}
+                ]
             }
         )
 
@@ -574,9 +597,9 @@ class Watora(commands.AutoShardedBot):
         language_servers = SettingsDB.get_instance().guild_settings_collection.find(
             {
                 "$and": [
-                        {"language": {"$exists": True}},
-                        {"language": {"$ne": "english"}}
-                        ]
+                    {"language": {"$exists": True}},
+                    {"language": {"$ne": "english"}}
+                ]
             }
         )
 
@@ -587,9 +610,9 @@ class Watora(commands.AutoShardedBot):
         owo_servers = SettingsDB.get_instance().guild_settings_collection.find(
             {
                 "$and": [
-                        {"owo": {"$exists": True}},
-                        {"owo": {"$ne": False}}
-                        ]
+                    {"owo": {"$exists": True}},
+                    {"owo": {"$ne": False}}
+                ]
             }
         )
 
@@ -600,9 +623,9 @@ class Watora(commands.AutoShardedBot):
         autosongs_servers = SettingsDB.get_instance().guild_settings_collection.find(
             {
                 "$and": [
-                        {"autosongs": {"$exists": True}},
-                        {"autosongs": {"$ne": {}}}
-                        ]
+                    {"autosongs": {"$exists": True}},
+                    {"autosongs": {"$ne": {}}}
+                ]
             }
         )
 
@@ -622,7 +645,8 @@ class Watora(commands.AutoShardedBot):
                 self.load_extension("cogs." + extension)
             except Exception as e:
                 exc = '{}: {}'.format(type(e).__name__, e)
-                log.warning('Failed to load extension {}\n{}'.format(extension, exc))
+                log.warning(
+                    'Failed to load extension {}\n{}'.format(extension, exc))
 
         total_cogs = len(_list_cogs())
         servers = len(self.guilds)
@@ -631,7 +655,8 @@ class Watora(commands.AutoShardedBot):
         log.info("-----------------")
         log.info("{} ({})".format(str(self.user), str(self.user.id)))
         log.info("{} server{}".format(servers, "s" if servers > 1 else ""))
-        log.info("{} shard{}".format(self.shard_count, "s" if self.shard_count > 1 else ""))
+        log.info("{} shard{}".format(self.shard_count,
+                                     "s" if self.shard_count > 1 else ""))
         log.info("Prefix: {}".format(globprefix))
         log.info("Owner: {}".format(owner))
         log.info("{}/{} active cogs with {} commands".format(

@@ -1,9 +1,13 @@
 {
-    "TOKEN" : "YOUR_TOKEN_HERE",
-	"OWNER_ID" : "YOUR_ID_HERE",
-	"PREFIX" : "YOUR_PREFIX_HERE",
-	"DEF_VOL" : "100",
-	"DEF_TIMEOUT" : "180",
-  	"DEF_VOTE" : "50",
-	"VER" : "11.3"
+  "TOKEN": "YOUR_TOKEN_HERE",
+  "OWNER_ID": "YOUR_ID_HERE",
+  "PREFIX": "YOUR_PREFIX_HERE",
+  "DEF_VOL": "100",
+  "DEF_TIMEOUT": "180",
+  "DEF_VOTE": "50",
+  "VER": "1.0.0",
+  "LOVER_ROLE": 0,
+  "PATRON_ROLE": 0,
+  "BASIC_PATRON_ROLE": 0,
+  "VOTER_ROLE": 0
 }

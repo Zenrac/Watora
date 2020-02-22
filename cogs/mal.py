@@ -31,8 +31,10 @@ class Mal(commands.Cog):
         asyncio.ensure_future(self.session.close())
 
     def remove_html(self, arg):
-        arg = arg.replace("&quot;", "\"").replace("<br />", "").replace("[i]", "*").replace("[/i]", "*")
-        arg = arg.replace("&ldquo;", "\"").replace("&rdquo;", "\"").replace("&#039;", "'").replace("&mdash;", "—")
+        arg = arg.replace("&quot;", "\"").replace(
+            "<br />", "").replace("[i]", "*").replace("[/i]", "*")
+        arg = arg.replace("&ldquo;", "\"").replace(
+            "&rdquo;", "\"").replace("&#039;", "'").replace("&mdash;", "—")
         arg = arg.replace("&ndash;", "–")
         return arg
 
@@ -60,18 +62,24 @@ class Mal(commands.Cog):
         if synopsis:
             synopsis = self.remove_html(synopsis)
             if len(synopsis) > 300:
-                em.description = " ".join(synopsis.split(" ")[0:40]) + "[ Read more»](%s)" % selection.url
-        em.set_author(name=selection.title, url=selection.url, icon_url='https://i.imgur.com/vEy5Zaq.png')
+                em.description = " ".join(synopsis.split(
+                    " ")[0:40]) + "[ Read more»](%s)" % selection.url
+        em.set_author(name=selection.title, url=selection.url,
+                      icon_url='https://i.imgur.com/vEy5Zaq.png')
         if selection.title_english:
             if selection.title_english.lower() not in selection.title.lower():
-                em.add_field(name=get_str(ctx, "cmd-anime-english-title"), value=selection.title_english, inline=False)
+                em.add_field(name=get_str(ctx, "cmd-anime-english-title"),
+                             value=selection.title_english, inline=False)
         try:
-            em.add_field(name="{}".format(get_str(ctx, "cmd-anime-episodes") if int(selection.episodes) > 1 else get_str(ctx, "cmd-anime-episode")), value=selection.episodes)
+            em.add_field(name="{}".format(get_str(ctx, "cmd-anime-episodes") if int(selection.episodes)
+                                          > 1 else get_str(ctx, "cmd-anime-episode")), value=selection.episodes)
         except TypeError:
             pass
         em.add_field(name=get_str(ctx, "cmd-anime-type"), value=selection.type)
-        em.add_field(name=get_str(ctx, "cmd-anime-ranked"), value=("#" + str(selection.rank)) if selection.rank else 'N/A')
-        em.add_field(name=get_str(ctx, "cmd-anime-popularity"), value=("#" + str(selection.popularity)) if selection.popularity else 'N/A')
+        em.add_field(name=get_str(ctx, "cmd-anime-ranked"),
+                     value=("#" + str(selection.rank)) if selection.rank else 'N/A')
+        em.add_field(name=get_str(ctx, "cmd-anime-popularity"), value=("#" +
+                                                                       str(selection.popularity)) if selection.popularity else 'N/A')
         score = round((selection.score or 0), 2)
         if score == 0:
             score = "N/A"
@@ -85,7 +93,8 @@ class Mal(commands.Cog):
             b = getattr(aired, 'to').split('T')[0]
         else:
             b = '?'
-        aired = get_str(ctx, "cmd-anime-aired-from", can_owo=False) + " " + a + " " + get_str(ctx, "cmd-anime-to", can_owo=False) + " " + b
+        aired = get_str(ctx, "cmd-anime-aired-from", can_owo=False) + " " + \
+            a + " " + get_str(ctx, "cmd-anime-to", can_owo=False) + " " + b
         em.set_footer(text=aired)
         try:
             await fetch.delete()
@@ -105,7 +114,8 @@ class Mal(commands.Cog):
         {help}
         """
         await ctx.trigger_typing()
-        days = ('monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday')
+        days = ('monday', 'tuesday', 'wednesday',
+                'thursday', 'friday', 'saturday', 'sunday')
         embed = discord.Embed()
         if not day or day.lower() not in days:
             day = days[datetime.now().day % 7]
@@ -151,7 +161,8 @@ class Mal(commands.Cog):
         embed.add_field(name='Episodes Watched', value=stats.episodes_watched)
         embed.add_field(name='Days Watched', value=stats.days_watched)
 
-        embed.set_author(name=result.username, url=result.url, icon_url='https://i.imgur.com/vEy5Zaq.png')
+        embed.set_author(name=result.username, url=result.url,
+                         icon_url='https://i.imgur.com/vEy5Zaq.png')
         embed.set_thumbnail(url=result.image_url)
         await ctx.send(embed=embed)
 
@@ -179,21 +190,28 @@ class Mal(commands.Cog):
         if synopsis:
             synopsis = self.remove_html(synopsis)
             if len(synopsis) > 300:
-                em.description = " ".join(synopsis.split(" ")[0:40]) + "[ Read more»](%s)" % selection.url
-        em.set_author(name=selection.title, url=selection.url, icon_url='https://i.imgur.com/vEy5Zaq.png')
+                em.description = " ".join(synopsis.split(
+                    " ")[0:40]) + "[ Read more»](%s)" % selection.url
+        em.set_author(name=selection.title, url=selection.url,
+                      icon_url='https://i.imgur.com/vEy5Zaq.png')
         if selection.title_english:
             if selection.title_english.lower() not in selection.title.lower():
-                em.add_field(name=get_str(ctx, "cmd-anime-english-title"), value=selection.title_english, inline=False)
+                em.add_field(name=get_str(ctx, "cmd-anime-english-title"),
+                             value=selection.title_english, inline=False)
         try:
-            em.add_field(name="{}".format(get_str(ctx, "cmd-manga-chapters") if int(selection.chapters) > 1 else get_str(ctx, "cmd-manga-chapter")), value=selection.chapters)
+            em.add_field(name="{}".format(get_str(ctx, "cmd-manga-chapters") if int(selection.chapters)
+                                          > 1 else get_str(ctx, "cmd-manga-chapter")), value=selection.chapters)
         except TypeError:
             pass
         try:
-            em.add_field(name="{}".format(get_str(ctx, "cmd-manga-volumes") if selection.chapters > 1 else get_str(ctx, "cmd-manga-volume")), value=selection.volumes)
+            em.add_field(name="{}".format(get_str(ctx, "cmd-manga-volumes") if selection.chapters >
+                                          1 else get_str(ctx, "cmd-manga-volume")), value=selection.volumes)
         except TypeError:
             pass
-        em.add_field(name=get_str(ctx, "cmd-anime-ranked"), value=("#" + str(selection.rank)) if selection.rank else 'N/A')
-        em.add_field(name=get_str(ctx, "cmd-anime-popularity"), value=("#" + str(selection.popularity)) if selection.popularity else 'N/A')
+        em.add_field(name=get_str(ctx, "cmd-anime-ranked"),
+                     value=("#" + str(selection.rank)) if selection.rank else 'N/A')
+        em.add_field(name=get_str(ctx, "cmd-anime-popularity"), value=("#" +
+                                                                       str(selection.popularity)) if selection.popularity else 'N/A')
         score = round((selection.score or 0), 2)
         if score == 0:
             score = "N/A"
@@ -208,7 +226,9 @@ class Mal(commands.Cog):
                 b = getattr(published, 'to').split('T')[0]
             else:
                 b = '?'
-            published = get_str(ctx, "cmd-manga-published-from", can_owo=False) + " " + a + " " + get_str(ctx, "cmd-anime-to", can_owo=False) + " " + b
+            published = get_str(ctx, "cmd-manga-published-from", can_owo=False) + \
+                " " + a + " " + \
+                get_str(ctx, "cmd-anime-to", can_owo=False) + " " + b
             em.set_footer(text=published)
         try:
             await fetch.delete()
@@ -240,10 +260,12 @@ class Mal(commands.Cog):
 
         em = discord.Embed(colour=0x0066CC)
         try:
-            em.add_field(name='Anime', value=selection.animeography[0].name, inline=False)
+            em.add_field(
+                name='Anime', value=selection.animeography[0].name, inline=False)
         except (IndexError, AttributeError):
             try:
-                em.add_field(name='Manga', value=selection.mangaography[0].name, inline=False)
+                em.add_field(
+                    name='Manga', value=selection.mangaography[0].name, inline=False)
             except (IndexError, AttributeError):
                 pass
         try:
@@ -259,7 +281,8 @@ class Mal(commands.Cog):
         em.add_field(name=get_str(ctx, "cmd-char-seiyuu"), value=va)
 
         try:
-            em.add_field(name="{}".format(get_str(ctx, "cmd-char-favorites") if selection.member_favorites > 1 else get_str(ctx, "cmd-char-favorite")), value=selection.member_favorites, inline=False)
+            em.add_field(name="{}".format(get_str(ctx, "cmd-char-favorites") if selection.member_favorites >
+                                          1 else get_str(ctx, "cmd-char-favorite")), value=selection.member_favorites, inline=False)
         except (IndexError, AttributeError):
             pass
         em.set_image(url=selection.image_url)
@@ -300,18 +323,22 @@ class Mal(commands.Cog):
                 b = getattr(aired, 'to').split('T')[0]
             else:
                 b = '?'
-            aired = get_str(ctx, "cmd-anime-aired") + f" : **{a}** " + get_str(ctx, "cmd-anime-to") + f" **{b}**"
+            aired = get_str(ctx, "cmd-anime-aired") + \
+                f" : **{a}** " + get_str(ctx, "cmd-anime-to") + f" **{b}**"
             remaining = get_str(ctx, "cmd-nextep-not-airing") + f"\n{aired}"
         else:
             try:
                 remaining = await self.get_remaining_time(anime, ctx)
             except ValueError:
                 remaining = '?'
-        embed = discord.Embed(title=get_str(ctx, "cmd-nextep"), description=remaining, color=0x0066CC)
-        embed.set_author(name='{}'.format(anime.title), url=anime.url, icon_url='https://i.imgur.com/vEy5Zaq.png')
+        embed = discord.Embed(title=get_str(
+            ctx, "cmd-nextep"), description=remaining, color=0x0066CC)
+        embed.set_author(name='{}'.format(anime.title), url=anime.url,
+                         icon_url='https://i.imgur.com/vEy5Zaq.png')
         embed.set_thumbnail(url=anime.image_url)
 
-        embed.set_footer(text=get_str(ctx, "cmd-anime-aired", can_owo=False) + " : " + (anime.broadcast or '?'))
+        embed.set_footer(text=get_str(ctx, "cmd-anime-aired",
+                                      can_owo=False) + " : " + (anime.broadcast or '?'))
         try:
             await search.delete()
         except discord.HTTPException:
@@ -346,11 +373,14 @@ class Mal(commands.Cog):
             mal_id = mal_id['results'][0]['mal_id']
         except (JikanException, KeyError, IndexError):
             if 'manga' in type:
-                google_key = self.bot.tokens['MANGA']  # This is a custom search including only myanimelist/manga website
+                # This is a custom search including only myanimelist/manga website
+                google_key = self.bot.tokens['MANGA']
             elif 'character' in type:
-                google_key = self.bot.tokens['CHARACTER']  # This is a custom search key including only myanimelist/character website
+                # This is a custom search key including only myanimelist/character website
+                google_key = self.bot.tokens['CHARACTER']
             else:
-                google_key = self.bot.tokens['ANIME']  # This is a custom search key including only myanimelist/anime website
+                # This is a custom search key including only myanimelist/anime website
+                google_key = self.bot.tokens['ANIME']
 
             try:
                 search_url = "https://www.googleapis.com/customsearch/v1/{}?q=site:myanimelist.net {} {} ".format('siterestrict' if scd else '', type, query) + "&start=" + '1' + "&key=" + \
@@ -393,17 +423,21 @@ class Mal(commands.Cog):
         air_date = await self.get_next_weekday(jp_time.strftime('%Y-%m-%d'), day)
         time_now = jp_time.replace(tzinfo=None)
         try:
-            show_airs = datetime.strptime('{} - {}'.format(air_date, hour), '%Y-%m-%d - %H:%M')
+            show_airs = datetime.strptime(
+                '{} - {}'.format(air_date, hour), '%Y-%m-%d - %H:%M')
         except ValueError:
-            show_airs = datetime.strptime('{} - {}'.format(air_date, hour), '%Y-%m-%d - %H')
+            show_airs = datetime.strptime(
+                '{} - {}'.format(air_date, hour), '%Y-%m-%d - %H')
         remaining = show_airs - time_now
         if remaining.days < 0:
             return '6 {} {} {} {} {} {}.'.format(get_str(ctx, "cmd-nextep-days"),
-                                                 remaining.seconds // 3600, get_str(ctx, "cmd-nextep-hour") if (remaining.seconds // 3600) < 2 else get_str(ctx, "cmd-nextep-hours"),
+                                                 remaining.seconds // 3600, get_str(ctx, "cmd-nextep-hour") if (
+                                                     remaining.seconds // 3600) < 2 else get_str(ctx, "cmd-nextep-hours"),
                                                  get_str(ctx, "cmd-nextep-and"), (remaining.seconds // 60) % 60, get_str(ctx, "cmd-nextep-minute") if (remaining.seconds // 3600) < 2 else get_str(ctx, "cmd-nextep-minutes"))
         else:
             return '{} {} {} {} {} {} {}.'.format(remaining.days, get_str(ctx, "cmd-nextep-day") if remaining.days < 2 else get_str(ctx, "cmd-nextep-days"),
-                                                  remaining.seconds // 3600, get_str(ctx, "cmd-nextep-hour") if (remaining.seconds // 3600) < 2 else get_str(ctx, "cmd-nextep-hours"),
+                                                  remaining.seconds // 3600, get_str(ctx, "cmd-nextep-hour") if (
+                                                      remaining.seconds // 3600) < 2 else get_str(ctx, "cmd-nextep-hours"),
                                                   get_str(ctx, "cmd-nextep-and"), (remaining.seconds // 60) % 60, get_str(ctx, "cmd-nextep-minute") if (remaining.seconds // 60) % 60 < 2 else get_str(ctx, "cmd-nextep-minutes"))
 
     def partition(self, lst, n):

@@ -48,7 +48,8 @@ class Spotify:
         self.token = None
 
     def _make_token_auth(self, client_id, client_secret):
-        auth_header = base64.b64encode((client_id + ':' + client_secret).encode('ascii'))
+        auth_header = base64.b64encode(
+            (client_id + ':' + client_secret).encode('ascii'))
         return {'Authorization': 'Basic %s' % auth_header.decode('ascii')}
 
     async def get_track(self, uri):
@@ -97,7 +98,8 @@ class Spotify:
 
         token = await self.request_token()
         if not token:
-            raise SpotifyError('Requested a token from Spotify, did not end up getting one')
+            raise SpotifyError(
+                'Requested a token from Spotify, did not end up getting one')
         token['expires_at'] = int(time.time()) + token['expires_in']
         self.token = token
         log.debug('Created a new access token: {0}'.format(token))

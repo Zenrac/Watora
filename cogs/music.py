@@ -4584,11 +4584,10 @@ class Music(commands.Cog):
         settings = await SettingsDB.get_instance().get_glob_settings()
         default_source = settings.source
         try:
-            service = list(services.keys())[list(services.values()).index(default_source)]
+            service = list(services.keys())[list(
+                services.values()).index(default_source)]
         except (IndexError, KeyError):
             service = 'youtube'
-
-        print(service)
 
         if leftover_args[0] in services and leftover_args[0] != original_leftover_args:
             service = leftover_args.pop(0)

@@ -1,9 +1,9 @@
 <a href="https://www.patreon.com/bePatron?u=7139372"><img alt="Become a Watora's Patron" src="https://c5.patreon.com/external/logo/become_a_patron_button.png" height="35px"></a><br>
 # Watora
-Here's the official repository of Watora, the discord music bot. 
+Here's the official repository of Watora, the discord music bot.
 
 ## Requirements: <br>
-- [Python3+ with pip](https://www.python.org/downloads/)<br>
+- [Python3.6+ with pip](https://www.python.org/downloads/)<br>
 - [mongodb](https://www.mongodb.com/download-center/community) <br>
 - [Java](https://www.java.com/fr/download/) <br>
 

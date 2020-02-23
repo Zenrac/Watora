@@ -11,8 +11,8 @@ Here's the official repository of Watora, the discord music bot.
 ```
 git clone https://github.com/Zenrac/Watora
 cd Watora
-pip install -r requirements.txt
 ```
+Install or update all dependencies with `update.bat` on Windows, or `update.sh` on Linux.<br>
 
 ## Get Started
 Fill your credentials and tokens in config/tokens.json and settings.json, you can use the examples as a base.<br>

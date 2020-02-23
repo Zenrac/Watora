@@ -1,8 +1,8 @@
 """
 The MIT License
 
-Copyright (c) 2015-2018 Just-Some-Bots (https://github.com/Just-Some-Bots)
-Copyright (c) 2016-2018 Zenrac (https://github.com/Zenrac)
+Copyright (c) 2015-2020 Just-Some-Bots (https://github.com/Just-Some-Bots)
+Copyright (c) 2017-2020 Zenrac - Watora (https://github.com/Zenrac/Watora)
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal

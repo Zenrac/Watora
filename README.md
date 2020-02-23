@@ -21,7 +21,8 @@ First, start a mongo server in a terminal.
 mongod
 ```
 Start Watora with `run.bat` on Windows, or `run.sh` on Linux.<br>
-Make sure that you have a running a [Lavalink server](https://github.com/Frederikam/Lavalink) to use music features.
+Make sure that you have a running a [Lavalink server](https://github.com/Frederikam/Lavalink) to use music features.<br>
+Also, you may have to delete the `cogs/web.py` cog has it will not be useful in any point for a local bot.
 
 ## License
 

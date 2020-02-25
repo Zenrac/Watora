@@ -537,7 +537,7 @@ class Music(commands.Cog):
         asia = self.bot.tokens['NODE_ASIA']
 
         resume_config = {
-            'resume_key': 'RandomKey311200123',
+            'resume_key': self.bot.tokens["LAVALINK_RESUME_KEY"],
             'resume_timeout': 600
         }
 
@@ -547,6 +547,8 @@ class Music(commands.Cog):
         self.bot.lavalink.add_node(
             region='us', host=us['HOST'], password=us['PASSWORD'], name='America', port=2333, **resume_config)
 
+        await self.prepare_custom_nodes()
+
         self.bot.add_listener(
             self.bot.lavalink.voice_update_handler, 'on_socket_response')
 
@@ -554,6 +556,16 @@ class Music(commands.Cog):
 
         # self.prepare_lavalink_logger(level_console=logging.INFO, level_file=logging.WARNING)
         log.info("Lavalink is ready.")
+
+    async def prepare_custom_nodes(self):
+        settings = await SettingsDB.get_instance().get_glob_settings()
+        for name, val in settings.custom_hosts.items():
+            resume_config = {
+                'resume_key': name,
+                'resume_timeout': 600
+            }
+            self.bot.lavalink.add_node(
+                region=None, host=val['host'], password=val['password'], name=name, port=val['port'], is_perso=True, **resume_config)
 
     async def track_hook(self, event):
         if isinstance(event, lavalink.events.TrackStartEvent):
@@ -612,6 +624,10 @@ class Music(commands.Cog):
             if requester:
                 embed.set_author(
                     name=requester.name, icon_url=requester.avatar_url or requester.default_avatar_url, url=event.track.uri)
+
+            if event.player.node.is_perso:
+                name = await self.bot.safe_fetch('user', event.player.node.name) or event.player.node.name
+                embed.set_footer(text=f"Hosted by {name}")
 
             asyncio.ensure_future(self.send_new_np_msg(
                 event.player, channel, new_embed=embed))
@@ -766,7 +782,7 @@ class Music(commands.Cog):
                     log.debug(
                         f'Found result from youtube-api : {songs} for query: {query}')
                     try:
-                        results = await self.bot.lavalink.get_tracks(songs[0]['uri'])
+                        results = await self.bot.lavalink.get_tracks(songs[0]['uri'], node=node)
                     except asyncio.TimeoutError:
                         results = {'playlistInfo': {},
                                    'loadType': 'NO_MATCHES', 'tracks': []}
@@ -780,7 +796,7 @@ class Music(commands.Cog):
             if "&list" in query.lower() and "&index" in query.lower():
                 query = query.split('&')[0]
             try:
-                results = await self.bot.lavalink.get_tracks(query)
+                results = await self.bot.lavalink.get_tracks(query, node=node)
             except asyncio.TimeoutError:
                 results = {'playlistInfo': {},
                            'loadType': 'NO_MATCHES', 'tracks': []}
@@ -1390,7 +1406,7 @@ class Music(commands.Cog):
             except discord.Forbidden:
                 pass
 
-    async def get_player(self, guild, create=False):
+    async def get_player(self, guild, create: bool = False, user_id: int = None):
         """Gets the player if the bot is connected, or create it if needed"""
         player = self.bot.lavalink.players.get(guild.id)
         if player and not player.is_connected:
@@ -1405,9 +1421,10 @@ class Music(commands.Cog):
                 raise NoVoiceChannel(
                     get_str(guild, "not-connected", bot=self.bot))
         if not player:
+            node = self.bot.lavalink.node_manager.get_node_by_name(str(user_id))
             if create:
                 player = self.bot.lavalink.players.create(
-                    guild_id=guild.id, endpoint=str(guild.region))
+                    guild_id=guild.id, endpoint=str(guild.region), node=node)
                 log.debug(f'[Player] Creating {guild.id}/{guild.name}')
             else:
                 raise NoVoiceChannel(
@@ -1976,7 +1993,10 @@ class Music(commands.Cog):
                 if 'mix' in results.get('exception', {}).get('message'):
                     # Skip YouTube mixes
                     return await ctx.invoke(self.play_song, query=query.split('&list')[0])
-                await ctx.send(get_str(ctx, "music-load-failed").format("`{}search`".format(get_server_prefixes(ctx.bot, ctx.guild))))
+                if 'yout' in query:
+                    await ctx.send('You have to host your own server in order to play YouTube videos. Please setup one with `{}hostconfig`.'.format(get_server_prefixes(ctx.bot, ctx.guild)))
+                else:
+                    await ctx.send(get_str(ctx, "music-load-failed").format("`{}search`".format(get_server_prefixes(ctx.bot, ctx.guild))))
             elif results['loadType'] == "NO_MATCHES":
                 await ctx.send(get_str(ctx, "music-no-result").format("`{}search`".format(get_server_prefixes(ctx.bot, ctx.guild))))
             return
@@ -2376,6 +2396,9 @@ class Music(commands.Cog):
         settings = await SettingsDB.get_instance().get_guild_settings(ctx.guild.id)
         if not settings.channel:
             player.channel = ctx.channel.id
+        if player.node.is_perso:
+            name = await self.bot.safe_fetch('user', player.node.name) or player.node.name
+            embed.set_footer(text=f"Hosted by {name}")
         await self.send_new_np_msg(player, ctx.channel, new_embed=embed, message=ctx.message, force_send=True)
 
     @commands.cooldown(rate=1, per=1.5, type=commands.BucketType.user)
@@ -2807,7 +2830,7 @@ class Music(commands.Cog):
         if not channel.permissions_for(ctx.me).speak:
             raise NoVoiceChannel(get_str(ctx, "need-speak-permission"))
 
-        player = await self.get_player(ctx.guild, True)
+        player = await self.get_player(ctx.guild, True, ctx.author.id)
 
         if not ctx.guild.me.voice:
             await self.connect_player(ctx, player, channel.id)

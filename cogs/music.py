@@ -28,7 +28,7 @@ from utils.db import SettingsDB
 from utils.youtube_api import YoutubeAPI
 from utils.spotify import SpotifyError, Spotify
 from utils.chat_formatting import Paginator, Equalizer, Lazyer, split_str_lines
-from utils.watora import log, owner_id, is_alone, get_server_prefixes, get_image_from_url, is_basicpatron, is_admin, is_patron, is_voter, is_lover, sweet_bar, get_str, format_mentions, def_v, def_time, def_vote, match_url, time_rx, illegal_char, NoVoiceChannel, Jikan
+from utils.watora import log, owner_id, is_alone, get_server_prefixes, get_image_from_url, is_basicpatron, is_admin, is_patron, is_voter, is_lover, sweet_bar, get_str, format_mentions, def_v, def_time, def_vote, match_local, match_url, time_rx, illegal_char, NoVoiceChannel, Jikan
 
 
 class BlindTestSong:
@@ -759,7 +759,6 @@ class Music(commands.Cog):
 
     async def prepare_url(self, query, node=None, source='ytsearch'):
         """Prepares the url if it's an url or not etc... Ensures dict."""
-        log.debug('[Prepare] Preparing url for {}'.format(query))
         settings = await SettingsDB.get_instance().get_glob_settings()
         default_source = settings.source
 
@@ -774,7 +773,10 @@ class Music(commands.Cog):
             if query.lower() == 'monstercat':
                 return await self.prepare_url(query=self.list_radiolist['Monstercat'], node=node)
             query = self.remove_optional_parameter(query)
-            new = f'{source}:{query}'
+            if match_local(query):
+                new = query.replace('/', '\\') # local file
+            else:
+                new = f'{source}:{query}'
             results = await self.bot.lavalink.get_tracks(query=new, node=node)
             if not results or not isinstance(results, dict) or not results['tracks']:
                 songs = await self.youtube_api.youtube_search(query)
@@ -801,11 +803,8 @@ class Music(commands.Cog):
                 results = {'playlistInfo': {},
                            'loadType': 'NO_MATCHES', 'tracks': []}
         if isinstance(results, dict):
-            log.debug('[Prepare] Prepared url for {}'.format(query))
             return results
 
-        log.debug(
-            '[Prepare] Prepared url for {} without any result.'.format(query))
         return {'playlistInfo': {}, 'loadType': 'NO_MATCHES', 'tracks': []}
 
     async def prepare_spotify(self, ctx, query, node=None, infinite_loop=False, max_tracks: int = 100):
@@ -1478,6 +1477,9 @@ class Music(commands.Cog):
         elif 'monstercat' in track['info']['uri'].lower() and 'twitch' in track['info']['uri'].lower():
             if embed is not None:
                 embed.color = int("FF015B", 16)
+        if not match_url(track['info']['uri']):
+            track['info']['title'] = track['info']['uri']
+            track['info']['uri'] = ""
         if embed is not None:
             return track, embed
         return track
@@ -1994,7 +1996,11 @@ class Music(commands.Cog):
                     # Skip YouTube mixes
                     return await ctx.invoke(self.play_song, query=query.split('&list')[0])
                 if 'yout' in query:
-                    await ctx.send('You have to host your own server in order to play YouTube videos. Please setup one with `{}hostconfig`.'.format(get_server_prefixes(ctx.bot, ctx.guild)))
+                    settings = await SettingsDB.get_instance().get_glob_settings()
+                    if str(ctx.author.id) not in settings.custom_hosts.keys():
+                        await ctx.send('You have to host your own server in order to play YouTube videos. Please setup one with `{}hostconfig`.'.format(get_server_prefixes(ctx.bot, ctx.guild)))
+                    else:
+                        await ctx.send('Either your credentials aren\'t valid anymore or your server isn\'t running. You can use `{}hostconfig` to edit your configuration.'.format(get_server_prefixes(ctx.bot, ctx.guild)))
                 else:
                     await ctx.send(get_str(ctx, "music-load-failed").format("`{}search`".format(get_server_prefixes(ctx.bot, ctx.guild))))
             elif results['loadType'] == "NO_MATCHES":
@@ -4630,7 +4636,7 @@ class Music(commands.Cog):
 
         await ctx.trigger_typing()
         try:
-            results = await self.bot.lavalink.get_tracks(search_query)
+            results = await self.bot.lavalink.get_tracks(search_query, node=player.node)
         except asyncio.TimeoutError:
             results = None
 

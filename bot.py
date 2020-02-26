@@ -668,10 +668,6 @@ class Watora(commands.AutoShardedBot):
             self.pipe.send(1)
             self.pipe.close()
 
-        for name in ['launcher', 'lavalink', 'listenmoe']:
-            logger = logging.getLogger(name)
-            logger.disabled = not logger.disabled
-
         self.init_ok = True
 
     async def on_shard_ready(self, shard_id):

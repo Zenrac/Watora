@@ -5421,6 +5421,7 @@ class Music(commands.Cog):
             {command_prefix}hostconfig set [ip] [password] [port]
             {command_prefix}hostconfig remove
             {command_prefix}hostconfig now
+            {command_prefix}hostconfig switch
 
             Allows to manage your credentials for your server to host yourself your music.
             Go to Watora's discord for more information.

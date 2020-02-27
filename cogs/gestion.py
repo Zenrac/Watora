@@ -90,6 +90,9 @@ class Gestion(commands.Cog):
         self.session = aiohttp.ClientSession(loop=self.bot.loop)
         self.load_languages()
 
+    def cog_unload(self):
+        asyncio.ensure_future(self.session.close())
+
     def load_languages(self):
         """Reloads languages in i18n, raise a ValueError when it fails"""
         self.languages = []
@@ -1519,56 +1522,6 @@ class Gestion(commands.Cog):
             settings.bound = cid
             await SettingsDB.get_instance().set_guild_settings(settings)
             await ctx.send(get_str(ctx, "music-bind-enabling"))
-
-    @commands.command(aliases=["confighost"])
-    @commands.cooldown(rate=1, per=15, type=commands.BucketType.user)
-    async def hostconfig(self, ctx, ip: str, port: int, password: str):
-        """
-            {command_prefix}hostconfig [ip] [port] [password]
-
-        {help}
-        """
-        try:
-            await ctx.message.delete()
-        except discord.HTTPException:
-            pass
-
-        headers = {
-            'Authorization': password,
-            'Num-Shards': str(self.bot.shard_count),
-            'User-Id': str(self.bot.user.id)
-        }
-
-        msg = await ctx.send('Connecting...')
-
-        try:
-            ws = await self.session.ws_connect('ws://{}:{}'.format(ip, port), headers=headers)
-        except (aiohttp.ClientError, asyncio.TimeoutError):
-            return await msg.edit(content='Failed to connect to this server, please check if you credentials are correct!')
-
-        await ws.close()
-
-        await msg.edit(content="Successfully connected to the server!")
-
-        settings = await SettingsDB.get_instance().get_glob_settings()
-        settings.custom_hosts[str(ctx.author.id)] = {
-            'host': ip,
-            'port': port,
-            'password': password
-        }
-        await SettingsDB.get_instance().set_glob_settings(settings)
-
-        resume_config = {
-            'resume_key': str(ctx.author.id),
-            'resume_timeout': 600
-        }
-
-        node = self.bot.lavalink.node_manager.get_node_by_name(str(ctx.author.id))
-        if node:
-            await self.bot.lavalink.node_manager.destroy_node(node)
-
-        self.bot.lavalink.add_node(
-            region=None, host=ip, password=password, name=f'{ctx.author.id}', port=2333, is_perso=True, **resume_config)
 
     @commands.command()
     @commands.is_owner()

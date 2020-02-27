@@ -1998,9 +1998,9 @@ class Music(commands.Cog):
                 if 'yout' in query:
                     settings = await SettingsDB.get_instance().get_glob_settings()
                     if str(ctx.author.id) not in settings.custom_hosts.keys():
-                        await ctx.send('You have to host your own server in order to play YouTube videos. Please setup one with `{}hostconfig`.'.format(get_server_prefixes(ctx.bot, ctx.guild)))
+                        await ctx.send('You have to host your own server in order to play YouTube videos. Please setup one with `{}hostconfig` in DMs.'.format(get_server_prefixes(ctx.bot, ctx.guild)))
                     else:
-                        await ctx.send('Either your credentials aren\'t valid anymore or your server isn\'t running. You can use `{}hostconfig` to edit your configuration.'.format(get_server_prefixes(ctx.bot, ctx.guild)))
+                        await ctx.send('Either your credentials aren\'t valid anymore or your server isn\'t running. You can use `{}hostconfig` to edit your configuration in DMs.'.format(get_server_prefixes(ctx.bot, ctx.guild)))
                 else:
                     await ctx.send(get_str(ctx, "music-load-failed").format("`{}search`".format(get_server_prefixes(ctx.bot, ctx.guild))))
             elif results['loadType'] == "NO_MATCHES":
@@ -5411,6 +5411,144 @@ class Music(commands.Cog):
         self.bot.autosongs_map.pop(ctx.guild.id, None)
         await SettingsDB.get_instance().set_guild_settings(settings)
         await ctx.send(":ballot_box_with_check:")
+
+    @commands.group(aliases=["confighost", "hg", "gh"], invoke_without_command=True)
+    @commands.cooldown(rate=1, per=15, type=commands.BucketType.user)
+    async def hostconfig(self, ctx, ip: str, password: str = "youshallnotpass", port: int = 2333):
+        """
+            {command_prefix}hostconfig set [ip]
+            {command_prefix}hostconfig set [ip] [password]
+            {command_prefix}hostconfig set [ip] [password] [port]
+            {command_prefix}hostconfig remove
+            {command_prefix}hostconfig now
+
+            Allows to manage your credentials for your server to host yourself your music.
+            Go to Watora's discord for more information.
+        """
+        if not ctx.invoked_subcommand:
+            return await ctx.invoke(self.hostconfig_set, ip=ip, password=password, port=port)
+
+    @hostconfig.command(name="set", aliases=["+", "add"])
+    async def hostconfig_set(self, ctx, ip: str, password: str = "youshallnotpass", port: int = 2333):
+        """
+            {command_prefix}hostconfig set [ip]
+            {command_prefix}hostconfig set [ip] [password]
+            {command_prefix}hostconfig set [ip] [password] [port]
+
+        Allows to set your server credentials.
+        Default password is youshallnotpass (more than recommended to change it).
+        Default port is 2333.
+        """
+        if ctx.guild and ip:
+            try:
+                await ctx.message.delete()
+                await ctx.send('Please use this command in DMs for your privacy!')
+            except discord.HTTPException:
+                pass
+
+        headers = {
+            'Authorization': password,
+            'Num-Shards': str(self.bot.shard_count),
+            'User-Id': str(self.bot.user.id)
+        }
+
+        msg = await ctx.send('Connecting...')
+
+        try:
+            ws = await self.session.ws_connect('ws://{}:{}'.format(ip, port), headers=headers)
+        except (aiohttp.ClientError, asyncio.TimeoutError):
+            return await msg.edit(content='Failed to connect to this server, please ensure that your credentials are correct! Also make sure that your server is running, and your firewall is not blocking the connection. You can also check if your port is opened correctly. For futher assistance, you can join Watora\'s discord.')
+
+        await ws.close()
+
+        await msg.edit(content="Successfully connected to the server!")
+
+        settings = await SettingsDB.get_instance().get_glob_settings()
+        settings.custom_hosts[str(ctx.author.id)] = {
+            'host': ip,
+            'port': port,
+            'password': password
+        }
+        await SettingsDB.get_instance().set_glob_settings(settings)
+
+        resume_config = {
+            'resume_key': str(ctx.author.id),
+            'resume_timeout': 600
+        }
+
+        node = self.bot.lavalink.node_manager.get_node_by_name(str(ctx.author.id))
+        if node:
+            await self.bot.lavalink.node_manager.destroy_node(node)
+
+        self.bot.lavalink.add_node(
+            region=None, host=ip, password=password, name=f'{ctx.author.id}', port=2333, is_perso=True, **resume_config)
+
+    @hostconfig.command(name="delete", aliases=["remove", "-"])
+    async def hostconfig_delete(self, ctx):
+        """
+            {command_prefix}hostconfig delete
+
+        Removes your configuration.
+        """
+        settings = await SettingsDB.get_instance().get_glob_settings()
+        if str(ctx.author.id) in settings.custom_hosts.keys():
+            del settings.custom_hosts[str(ctx.author.id)]
+        await SettingsDB.get_instance().set_glob_settings(settings)
+        await ctx.send("☑️")
+
+    @hostconfig.command(name="now", aliases=["current", "atm"])
+    async def hostconfig_now(self, ctx):
+        """
+            {command_prefix}hostconfig delete
+
+        Shows your configuration.
+        """
+        settings = await SettingsDB.get_instance().get_glob_settings()
+        if str(ctx.author.id) not in settings.custom_hosts.keys():
+            return await ctx.send('No config currently registered!')
+        if ctx.guild:
+            await ctx.send('Please check your DMs!')
+        info = settings.custom_hosts[str(ctx.author.id)]
+        embed = discord.Embed(description="Your server configuration")
+        embed.add_field(name='IP', value=info['host'], inline=False)
+        embed.add_field(name='Password', value=info['password'], inline=False)
+        embed.add_field(name='Port', value=info['port'], inline=False)
+        node = self.bot.lavalink.node_manager.get_node_by_name(str(ctx.author.id))
+        text = "Server is currently " + ("connected" if node else "disconnected")
+        embed.set_footer(text=text)
+        await ctx.author.send(embed=embed)
+
+    @hostconfig.command(name="switch", aliases=["move", "change"])
+    async def hostconfig_switch(self, ctx):
+        """
+            {command_prefix}hostconfig switch
+
+        Switch current player to your node, or to another node.
+        """
+        settings = await SettingsDB.get_instance().get_glob_settings()
+        if str(ctx.author.id) not in settings.custom_hosts.keys():
+            return await ctx.send('No config currently registered!')
+        info = settings.custom_hosts[str(ctx.author.id)]
+        node = self.bot.lavalink.node_manager.get_node_by_name(str(ctx.author.id))
+        if not node:
+            return await ctx.send("Your node doesn't seem to be connected!")
+        if ctx.guild.id not in self.bot.lavalink.players.players:
+            return await ctx.send(get_str(ctx, "not-connected"), delete_after=20)
+        player = await self.get_player(ctx.guild)
+        if not await self.is_dj(ctx) and not player.node == node:
+            raise commands.errors.CheckFailure
+        is_user = True
+        if player.node == node:
+            await ctx.send('This player is already on your node! Moving it to another node...')
+            node = self.bot.lavalink.node_manager.find_ideal_node(str(ctx.guild.id))
+            is_user = False
+            if not node:
+                return await ctx.send('No other node available!')
+        await ctx.send('Moving...')
+        await player.change_node(node)
+        if is_user:
+            return await ctx.send(f'Moved to {ctx.author} node.')
+        return await ctx.send(f'Left {ctx.author} node.')
 
     @commands.is_owner()
     @commands.command()

@@ -28,7 +28,7 @@ from utils.db import SettingsDB
 from utils.youtube_api import YoutubeAPI
 from utils.spotify import SpotifyError, Spotify
 from utils.chat_formatting import Paginator, Equalizer, Lazyer, split_str_lines
-from utils.watora import log, owner_id, is_alone, get_server_prefixes, get_image_from_url, is_basicpatron, is_admin, is_patron, is_voter, is_lover, sweet_bar, get_str, format_mentions, def_v, def_time, def_vote, match_url, time_rx, illegal_char, NoVoiceChannel, Jikan
+from utils.watora import log, owner_id, is_alone, get_server_prefixes, get_image_from_url, is_basicpatron, is_admin, is_patron, is_voter, is_lover, sweet_bar, get_str, format_mentions, def_v, def_time, def_vote, match_local, match_url, time_rx, illegal_char, NoVoiceChannel, Jikan
 
 
 class BlindTestSong:
@@ -537,7 +537,7 @@ class Music(commands.Cog):
         asia = self.bot.tokens['NODE_ASIA']
 
         resume_config = {
-            'resume_key': 'RandomKey311200123',
+            'resume_key': self.bot.tokens["LAVALINK_RESUME_KEY"] + str(sum(self.bot.shards.keys())),
             'resume_timeout': 600
         }
 
@@ -547,6 +547,8 @@ class Music(commands.Cog):
         self.bot.lavalink.add_node(
             region='us', host=us['HOST'], password=us['PASSWORD'], name='America', port=2333, **resume_config)
 
+        await self.prepare_custom_nodes()
+
         self.bot.add_listener(
             self.bot.lavalink.voice_update_handler, 'on_socket_response')
 
@@ -554,6 +556,16 @@ class Music(commands.Cog):
 
         # self.prepare_lavalink_logger(level_console=logging.INFO, level_file=logging.WARNING)
         log.info("Lavalink is ready.")
+
+    async def prepare_custom_nodes(self):
+        settings = await SettingsDB.get_instance().get_glob_settings()
+        for name, val in settings.custom_hosts.items():
+            resume_config = {
+                'resume_key': name + str(sum(self.bot.shards.keys())),
+                'resume_timeout': 600
+            }
+            self.bot.lavalink.add_node(
+                region=None, host=val['host'], password=val['password'], name=name, port=val['port'], is_perso=True, **resume_config)
 
     async def track_hook(self, event):
         if isinstance(event, lavalink.events.TrackStartEvent):
@@ -612,6 +624,10 @@ class Music(commands.Cog):
             if requester:
                 embed.set_author(
                     name=requester.name, icon_url=requester.avatar_url or requester.default_avatar_url, url=event.track.uri)
+
+            if event.player.node.is_perso:
+                name = await self.bot.safe_fetch('user', event.player.node.name) or event.player.node.name
+                embed.set_footer(text=f"Hosted by {name}")
 
             asyncio.ensure_future(self.send_new_np_msg(
                 event.player, channel, new_embed=embed))
@@ -743,7 +759,6 @@ class Music(commands.Cog):
 
     async def prepare_url(self, query, node=None, source='ytsearch'):
         """Prepares the url if it's an url or not etc... Ensures dict."""
-        log.debug('[Prepare] Preparing url for {}'.format(query))
         settings = await SettingsDB.get_instance().get_glob_settings()
         default_source = settings.source
 
@@ -758,7 +773,10 @@ class Music(commands.Cog):
             if query.lower() == 'monstercat':
                 return await self.prepare_url(query=self.list_radiolist['Monstercat'], node=node)
             query = self.remove_optional_parameter(query)
-            new = f'{source}:{query}'
+            if match_local(query):
+                new = query.replace('/', '\\') # local file
+            else:
+                new = f'{source}:{query}'
             results = await self.bot.lavalink.get_tracks(query=new, node=node)
             if not results or not isinstance(results, dict) or not results['tracks']:
                 songs = await self.youtube_api.youtube_search(query)
@@ -766,7 +784,7 @@ class Music(commands.Cog):
                     log.debug(
                         f'Found result from youtube-api : {songs} for query: {query}')
                     try:
-                        results = await self.bot.lavalink.get_tracks(songs[0]['uri'])
+                        results = await self.bot.lavalink.get_tracks(songs[0]['uri'], node=node)
                     except asyncio.TimeoutError:
                         results = {'playlistInfo': {},
                                    'loadType': 'NO_MATCHES', 'tracks': []}
@@ -780,16 +798,13 @@ class Music(commands.Cog):
             if "&list" in query.lower() and "&index" in query.lower():
                 query = query.split('&')[0]
             try:
-                results = await self.bot.lavalink.get_tracks(query)
+                results = await self.bot.lavalink.get_tracks(query, node=node)
             except asyncio.TimeoutError:
                 results = {'playlistInfo': {},
                            'loadType': 'NO_MATCHES', 'tracks': []}
         if isinstance(results, dict):
-            log.debug('[Prepare] Prepared url for {}'.format(query))
             return results
 
-        log.debug(
-            '[Prepare] Prepared url for {} without any result.'.format(query))
         return {'playlistInfo': {}, 'loadType': 'NO_MATCHES', 'tracks': []}
 
     async def prepare_spotify(self, ctx, query, node=None, infinite_loop=False, max_tracks: int = 100):
@@ -1390,7 +1405,7 @@ class Music(commands.Cog):
             except discord.Forbidden:
                 pass
 
-    async def get_player(self, guild, create=False):
+    async def get_player(self, guild, create: bool = False, user_id: int = None):
         """Gets the player if the bot is connected, or create it if needed"""
         player = self.bot.lavalink.players.get(guild.id)
         if player and not player.is_connected:
@@ -1405,9 +1420,10 @@ class Music(commands.Cog):
                 raise NoVoiceChannel(
                     get_str(guild, "not-connected", bot=self.bot))
         if not player:
+            node = self.bot.lavalink.node_manager.get_node_by_name(str(user_id))
             if create:
                 player = self.bot.lavalink.players.create(
-                    guild_id=guild.id, endpoint=str(guild.region))
+                    guild_id=guild.id, endpoint=str(guild.region), node=node)
                 log.debug(f'[Player] Creating {guild.id}/{guild.name}')
             else:
                 raise NoVoiceChannel(
@@ -1461,6 +1477,9 @@ class Music(commands.Cog):
         elif 'monstercat' in track['info']['uri'].lower() and 'twitch' in track['info']['uri'].lower():
             if embed is not None:
                 embed.color = int("FF015B", 16)
+        if not match_url(track['info']['uri']):
+            track['info']['title'] = track['info']['uri']
+            track['info']['uri'] = ""
         if embed is not None:
             return track, embed
         return track
@@ -1976,7 +1995,14 @@ class Music(commands.Cog):
                 if 'mix' in results.get('exception', {}).get('message'):
                     # Skip YouTube mixes
                     return await ctx.invoke(self.play_song, query=query.split('&list')[0])
-                await ctx.send(get_str(ctx, "music-load-failed").format("`{}search`".format(get_server_prefixes(ctx.bot, ctx.guild))))
+                if 'yout' in query:
+                    settings = await SettingsDB.get_instance().get_glob_settings()
+                    if str(ctx.author.id) not in settings.custom_hosts.keys():
+                        await ctx.send('You have to host your own server in order to play YouTube videos. Please setup one with `{}hostconfig` in DMs.'.format(get_server_prefixes(ctx.bot, ctx.guild)))
+                    else:
+                        await ctx.send('Either your credentials aren\'t valid anymore or your server isn\'t running. You can use `{}hostconfig` to edit your configuration in DMs.'.format(get_server_prefixes(ctx.bot, ctx.guild)))
+                else:
+                    await ctx.send(get_str(ctx, "music-load-failed").format("`{}search`".format(get_server_prefixes(ctx.bot, ctx.guild))))
             elif results['loadType'] == "NO_MATCHES":
                 await ctx.send(get_str(ctx, "music-no-result").format("`{}search`".format(get_server_prefixes(ctx.bot, ctx.guild))))
             return
@@ -2376,6 +2402,9 @@ class Music(commands.Cog):
         settings = await SettingsDB.get_instance().get_guild_settings(ctx.guild.id)
         if not settings.channel:
             player.channel = ctx.channel.id
+        if player.node.is_perso:
+            name = await self.bot.safe_fetch('user', player.node.name) or player.node.name
+            embed.set_footer(text=f"Hosted by {name}")
         await self.send_new_np_msg(player, ctx.channel, new_embed=embed, message=ctx.message, force_send=True)
 
     @commands.cooldown(rate=1, per=1.5, type=commands.BucketType.user)
@@ -2807,7 +2836,7 @@ class Music(commands.Cog):
         if not channel.permissions_for(ctx.me).speak:
             raise NoVoiceChannel(get_str(ctx, "need-speak-permission"))
 
-        player = await self.get_player(ctx.guild, True)
+        player = await self.get_player(ctx.guild, True, ctx.author.id)
 
         if not ctx.guild.me.voice:
             await self.connect_player(ctx, player, channel.id)
@@ -4607,7 +4636,7 @@ class Music(commands.Cog):
 
         await ctx.trigger_typing()
         try:
-            results = await self.bot.lavalink.get_tracks(search_query)
+            results = await self.bot.lavalink.get_tracks(search_query, node=player.node)
         except asyncio.TimeoutError:
             results = None
 
@@ -5382,6 +5411,147 @@ class Music(commands.Cog):
         self.bot.autosongs_map.pop(ctx.guild.id, None)
         await SettingsDB.get_instance().set_guild_settings(settings)
         await ctx.send(":ballot_box_with_check:")
+
+    @commands.group(aliases=["confighost", "hg", "gh"], invoke_without_command=True)
+    async def hostconfig(self, ctx, ip: str, password: str = "youshallnotpass", port: int = 2333):
+        """
+            {command_prefix}hostconfig set [ip]
+            {command_prefix}hostconfig set [ip] [password]
+            {command_prefix}hostconfig set [ip] [password] [port]
+            {command_prefix}hostconfig remove
+            {command_prefix}hostconfig now
+            {command_prefix}hostconfig switch
+
+            Allows to manage your credentials for your server to host yourself your music.
+            Go to Watora's discord for more information.
+        """
+        if not ctx.invoked_subcommand:
+            return await ctx.invoke(self.hostconfig_set, ip=ip, password=password, port=port)
+
+    @hostconfig.command(name="set", aliases=["+", "add"])
+    @commands.cooldown(rate=1, per=15, type=commands.BucketType.user)
+    async def hostconfig_set(self, ctx, ip: str, password: str = "youshallnotpass", port: int = 2333):
+        """
+            {command_prefix}hostconfig set [ip]
+            {command_prefix}hostconfig set [ip] [password]
+            {command_prefix}hostconfig set [ip] [password] [port]
+
+        Allows to set your server credentials.
+        Default password is youshallnotpass (more than recommended to change it).
+        Default port is 2333.
+        """
+        if ctx.guild and ip:
+            try:
+                await ctx.message.delete()
+                await ctx.send('Please use this command in DMs for your privacy!')
+            except discord.HTTPException:
+                pass
+
+        headers = {
+            'Authorization': password,
+            'Num-Shards': str(self.bot.shard_count),
+            'User-Id': str(self.bot.user.id)
+        }
+
+        msg = await ctx.send('Connecting...')
+
+        try:
+            ws = await self.session.ws_connect('ws://{}:{}'.format(ip, port), headers=headers)
+        except (aiohttp.ClientError, asyncio.TimeoutError):
+            return await msg.edit(content='Failed to connect to this server, please ensure that your credentials are correct! Also make sure that your server is running, and your firewall is not blocking the connection. You can also check if your port is opened correctly. For futher assistance, you can join Watora\'s discord.')
+
+        await ws.close()
+
+        await msg.edit(content="Successfully connected to the server!")
+
+        settings = await SettingsDB.get_instance().get_glob_settings()
+        settings.custom_hosts[str(ctx.author.id)] = {
+            'host': ip,
+            'port': port,
+            'password': password
+        }
+        await SettingsDB.get_instance().set_glob_settings(settings)
+
+        resume_config = {
+            'resume_key': str(ctx.author.id) + str(sum(self.bot.shards.keys())),
+            'resume_timeout': 600
+        }
+
+        node = self.bot.lavalink.node_manager.get_node_by_name(str(ctx.author.id), True)
+        if node:
+            await self.bot.lavalink.node_manager.destroy_node(node)
+
+        self.bot.lavalink.add_node(
+            region=None, host=ip, password=password, name=f'{ctx.author.id}', port=port, is_perso=True, **resume_config)
+
+    @hostconfig.command(name="delete", aliases=["remove", "-"])
+    @commands.cooldown(rate=1, per=3, type=commands.BucketType.guild)
+    async def hostconfig_delete(self, ctx):
+        """
+            {command_prefix}hostconfig delete
+
+        Removes your configuration.
+        """
+        settings = await SettingsDB.get_instance().get_glob_settings()
+        if str(ctx.author.id) in settings.custom_hosts.keys():
+            del settings.custom_hosts[str(ctx.author.id)]
+        await SettingsDB.get_instance().set_glob_settings(settings)
+        await ctx.send("☑️")
+
+    @hostconfig.command(name="now", aliases=["current", "atm"])
+    async def hostconfig_now(self, ctx):
+        """
+            {command_prefix}hostconfig delete
+
+        Shows your configuration.
+        """
+        settings = await SettingsDB.get_instance().get_glob_settings()
+        if str(ctx.author.id) not in settings.custom_hosts.keys():
+            return await ctx.send('No config currently registered!')
+        if ctx.guild:
+            await ctx.send('Please check your DMs!')
+        info = settings.custom_hosts[str(ctx.author.id)]
+        embed = discord.Embed(description="Your server configuration")
+        embed.add_field(name='IP', value=info['host'], inline=False)
+        embed.add_field(name='Password', value=info['password'], inline=False)
+        embed.add_field(name='Port', value=info['port'], inline=False)
+        node = self.bot.lavalink.node_manager.get_node_by_name(str(ctx.author.id))
+        text = "Server is currently " + ("connected" if node else "disconnected")
+        embed.set_footer(text=text)
+        await ctx.author.send(embed=embed)
+
+    @hostconfig.command(name="switch", aliases=["move", "change"])
+    @commands.cooldown(rate=1, per=15, type=commands.BucketType.guild)
+    async def hostconfig_switch(self, ctx):
+        """
+            {command_prefix}hostconfig switch
+
+        Switch current player to your node, or to another node.
+        """
+        settings = await SettingsDB.get_instance().get_glob_settings()
+        if str(ctx.author.id) not in settings.custom_hosts.keys():
+            return await ctx.send('No config currently registered!')
+        info = settings.custom_hosts[str(ctx.author.id)]
+        node = self.bot.lavalink.node_manager.get_node_by_name(str(ctx.author.id))
+        if not node:
+            return await ctx.send("Your node doesn't seem to be connected!")
+        if ctx.guild.id not in self.bot.lavalink.players.players:
+            return await ctx.send(get_str(ctx, "not-connected"), delete_after=20)
+        player = await self.get_player(ctx.guild)
+        if not await self.is_dj(ctx) and not player.node == node:
+            raise commands.errors.CheckFailure
+        is_user = True
+        if player.node == node:
+            await ctx.send('This player is already on your node! Moving it to another node...')
+            node = self.bot.lavalink.node_manager.find_ideal_node(str(ctx.guild.id))
+            is_user = False
+            if not node:
+                return await ctx.send('No other node available!')
+        await ctx.send('Moving...')
+        await player.change_node(node)
+        if is_user:
+            return await ctx.send(f'Moved to {ctx.author} node.')
+        return await ctx.send(f'Left {ctx.author} node.')
 
     @commands.is_owner()
     @commands.command()

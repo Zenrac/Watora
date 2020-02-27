@@ -43,7 +43,8 @@ class Watora(commands.AutoShardedBot):
             shard_ids=shard_ids,
             shard_count=shard_count,
             status=discord.Status.idle,
-            fetch_offline_members=False
+            fetch_offline_members=False,
+            max_messages=None
         )
 
         self.pipe = send
@@ -666,10 +667,6 @@ class Watora(commands.AutoShardedBot):
         if self.pipe and not self.pipe.closed:
             self.pipe.send(1)
             self.pipe.close()
-
-        for name in ['launcher', 'lavalink', 'listenmoe']:
-            logger = logging.getLogger(name)
-            logger.disabled = not logger.disabled
 
         self.init_ok = True
 

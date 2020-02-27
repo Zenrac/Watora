@@ -1,4 +1,5 @@
 import os
+import aiohttp
 import inspect
 import discord
 import asyncio
@@ -86,7 +87,11 @@ class Gestion(commands.Cog):
 
     def __init__(self, bot):
         self.bot = bot
+        self.session = aiohttp.ClientSession(loop=self.bot.loop)
         self.load_languages()
+
+    def cog_unload(self):
+        asyncio.ensure_future(self.session.close())
 
     def load_languages(self):
         """Reloads languages in i18n, raise a ValueError when it fails"""

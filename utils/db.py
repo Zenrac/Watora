@@ -49,6 +49,7 @@ class GlobSettings(Settings):
         self.animes = kwargs.get("animes", {})
         self.cachedanimes = kwargs.get("cachedanimes", {})
         self.server_count = kwargs.get("server_count", {})
+        self.custom_hosts = kwargs.get("custom_hosts", {})
         self.source = kwargs.get("source", 'ytsearch')
 
 

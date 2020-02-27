@@ -33,6 +33,7 @@ if 150 < def_v < 0:
 
 # Regex
 url_rx = re.compile('https?:\/\/(?:www\.)?.+')  # noqa: W605
+local_rx = re.compile('.*\.[a-zA-Z0-9]+$')
 illegal_rx = re.compile("[///:*?\"<>|@]")
 time_rx = re.compile('[0-9]+')
 
@@ -150,6 +151,11 @@ def url_is_image(url):
 def match_url(url):
     """Checks if query match an url."""
     return url_rx.match(url)
+
+
+def match_local(query):
+    """Checks if query match a local file."""
+    return local_rx.match(query) and len(query.split(' ')) == 1 and ('/' in query or '\\' in query)
 
 
 def bytes2human(n):

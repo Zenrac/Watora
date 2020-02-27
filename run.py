@@ -427,7 +427,7 @@ def main():
 
     print()
     log.info("All done.")
-    os._exit(0)
+    bugger_off()
 
 
 if __name__ == '__main__':

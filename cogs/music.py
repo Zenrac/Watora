@@ -537,7 +537,7 @@ class Music(commands.Cog):
         asia = self.bot.tokens['NODE_ASIA']
 
         resume_config = {
-            'resume_key': self.bot.tokens["LAVALINK_RESUME_KEY"],
+            'resume_key': self.bot.tokens["LAVALINK_RESUME_KEY"] + str(sum(self.bot.shards.keys())),
             'resume_timeout': 600
         }
 
@@ -561,7 +561,7 @@ class Music(commands.Cog):
         settings = await SettingsDB.get_instance().get_glob_settings()
         for name, val in settings.custom_hosts.items():
             resume_config = {
-                'resume_key': name,
+                'resume_key': name + str(sum(self.bot.shards.keys())),
                 'resume_timeout': 600
             }
             self.bot.lavalink.add_node(
@@ -5473,7 +5473,7 @@ class Music(commands.Cog):
         await SettingsDB.get_instance().set_glob_settings(settings)
 
         resume_config = {
-            'resume_key': str(ctx.author.id),
+            'resume_key': str(ctx.author.id) + str(sum(self.bot.shards.keys())),
             'resume_timeout': 600
         }
 
@@ -5482,7 +5482,7 @@ class Music(commands.Cog):
             await self.bot.lavalink.node_manager.destroy_node(node)
 
         self.bot.lavalink.add_node(
-            region=None, host=ip, password=password, name=f'{ctx.author.id}', port=2333, is_perso=True, **resume_config)
+            region=None, host=ip, password=password, name=f'{ctx.author.id}', port=port, is_perso=True, **resume_config)
 
     @hostconfig.command(name="delete", aliases=["remove", "-"])
     @commands.cooldown(rate=1, per=3, type=commands.BucketType.guild)

@@ -5413,7 +5413,6 @@ class Music(commands.Cog):
         await ctx.send(":ballot_box_with_check:")
 
     @commands.group(aliases=["confighost", "hg", "gh"], invoke_without_command=True)
-    @commands.cooldown(rate=1, per=15, type=commands.BucketType.user)
     async def hostconfig(self, ctx, ip: str, password: str = "youshallnotpass", port: int = 2333):
         """
             {command_prefix}hostconfig set [ip]
@@ -5430,6 +5429,7 @@ class Music(commands.Cog):
             return await ctx.invoke(self.hostconfig_set, ip=ip, password=password, port=port)
 
     @hostconfig.command(name="set", aliases=["+", "add"])
+    @commands.cooldown(rate=1, per=15, type=commands.BucketType.user)
     async def hostconfig_set(self, ctx, ip: str, password: str = "youshallnotpass", port: int = 2333):
         """
             {command_prefix}hostconfig set [ip]
@@ -5477,7 +5477,7 @@ class Music(commands.Cog):
             'resume_timeout': 600
         }
 
-        node = self.bot.lavalink.node_manager.get_node_by_name(str(ctx.author.id))
+        node = self.bot.lavalink.node_manager.get_node_by_name(str(ctx.author.id), True)
         if node:
             await self.bot.lavalink.node_manager.destroy_node(node)
 
@@ -5485,6 +5485,7 @@ class Music(commands.Cog):
             region=None, host=ip, password=password, name=f'{ctx.author.id}', port=2333, is_perso=True, **resume_config)
 
     @hostconfig.command(name="delete", aliases=["remove", "-"])
+    @commands.cooldown(rate=1, per=3, type=commands.BucketType.guild)
     async def hostconfig_delete(self, ctx):
         """
             {command_prefix}hostconfig delete
@@ -5520,6 +5521,7 @@ class Music(commands.Cog):
         await ctx.author.send(embed=embed)
 
     @hostconfig.command(name="switch", aliases=["move", "change"])
+    @commands.cooldown(rate=1, per=15, type=commands.BucketType.guild)
     async def hostconfig_switch(self, ctx):
         """
             {command_prefix}hostconfig switch

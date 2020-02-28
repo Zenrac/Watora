@@ -678,6 +678,14 @@ class Useful(commands.Cog):
             data.add_field(
                 name="Patreon Server", value="Claimed by {}. Since {}".format(user, claimed[1]))
 
+        settings = await SettingsDB.get_instance().get_guild_settings(ctx.guild.id)
+
+        if settings.defaultnode:
+            member = ctx.guild.get_member(int(settings.defaultnode))
+            if member:
+                # TODO: Translations
+                data.add_field(name='Default music node', value=f"Hosted by {member}", inline=False)
+
         if guild.icon_url:
             data.set_author(name=guild.name, url=guild.icon_url)
             data.set_thumbnail(url=guild.icon_url)
@@ -1850,6 +1858,12 @@ class Useful(commands.Cog):
         for i, name in enumerate(names):
             msg.append(struct.format(
                 get_str(ctx, f"cmd-settings-{name}"), values[i]))
+
+        if settings.defaultnode:
+            member = ctx.guild.get_member(int(settings.defaultnode))
+            if member:
+                # TODO: Translations and move it
+                msg.append(struct.format("Default music node", f'Hosted by {member}'))
         embed.add_field(name=get_str(ctx, "cmd-settings-player"),
                         value='\n'.join(msg), inline=False)
 

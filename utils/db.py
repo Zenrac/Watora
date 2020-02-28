@@ -23,6 +23,7 @@ class GuildSettings(Settings):
         self.lazy = kwargs.get("lazy", False)
         self.channel = kwargs.get("channel", None)
         self.bound = kwargs.get("bound", None)
+        self.defaultnode = kwargs.get("defaultnode", None)
         self.customcommands = kwargs.get("customcommands", {})
         self.points = kwargs.get("points", {})
         self.welcomes = kwargs.get("welcomes", {})

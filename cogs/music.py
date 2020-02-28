@@ -752,6 +752,8 @@ class Music(commands.Cog):
 
     async def cog_check(self, ctx):
         """A check which applies to all commands in Music"""
+        if 'hostconfig' in str(ctx.command):  # TODO: Remove this after moving commands to an other cog
+            return True
         if isinstance(ctx.channel, discord.abc.PrivateChannel) and not ctx.author.id == owner_id:
             await ctx.send('```py\n{}\n```'.format(get_str(ctx, "music-not-in-dm")))
             raise commands.errors.CommandNotFound  # because it avoid a checkfailure message
@@ -1420,7 +1422,13 @@ class Music(commands.Cog):
                 raise NoVoiceChannel(
                     get_str(guild, "not-connected", bot=self.bot))
         if not player:
+            settings = await SettingsDB.get_instance().get_guild_settings(guild.id)
+
+            if settings.defaultnode and guild.get_member(int(settings.defaultnode)):
+                user_id = settings.defaultnode
+
             node = self.bot.lavalink.node_manager.get_node_by_name(str(user_id))
+
             if create:
                 player = self.bot.lavalink.players.create(
                     guild_id=guild.id, endpoint=str(guild.region), node=node)
@@ -1532,7 +1540,7 @@ class Music(commands.Cog):
 
         return f"LISTEN.moe {'K-POP' if kpop else 'J-POP'}"
 
-    async def is_dj(self, ctx):
+    async def is_dj(self, ctx):  # TODO: Remove it from this cog
         """Checks if a user is DJ or not"""
         if ctx.guild:
             if is_alone(ctx.author):
@@ -1997,7 +2005,7 @@ class Music(commands.Cog):
                     return await ctx.invoke(self.play_song, query=query.split('&list')[0])
                 if 'yout' in query:
                     settings = await SettingsDB.get_instance().get_glob_settings()
-                    if str(ctx.author.id) not in settings.custom_hosts.keys():
+                    if str(ctx.author.id) not in settings.custom_hosts.keys():  # TODO: Translations
                         await ctx.send('You have to host your own server in order to play YouTube videos. Please setup one with `{}hostconfig` in DMs.'.format(get_server_prefixes(ctx.bot, ctx.guild)))
                     else:
                         await ctx.send('Either your credentials aren\'t valid anymore or your server isn\'t running. You can use `{}hostconfig` to edit your configuration in DMs.'.format(get_server_prefixes(ctx.bot, ctx.guild)))
@@ -5421,11 +5429,12 @@ class Music(commands.Cog):
             {command_prefix}hostconfig remove
             {command_prefix}hostconfig now
             {command_prefix}hostconfig switch
+            {command_prefix}hostconfig link
 
             Allows to manage your credentials for your server to host yourself your music.
             Go to Watora's discord for more information.
         """
-        if not ctx.invoked_subcommand:
+        if not ctx.invoked_subcommand:  # TODO: Move all those commands to another node
             return await ctx.invoke(self.hostconfig_set, ip=ip, password=password, port=port)
 
     @hostconfig.command(name="set", aliases=["+", "add"])
@@ -5507,7 +5516,7 @@ class Music(commands.Cog):
         """
         settings = await SettingsDB.get_instance().get_glob_settings()
         if str(ctx.author.id) not in settings.custom_hosts.keys():
-            return await ctx.send('No config currently registered!')
+            return await ctx.send('No config currently registered! Use `{}hostconfig set` to set one.'.format(get_server_prefixes(self.bot, ctx.guild)))
         if ctx.guild:
             await ctx.send('Please check your DMs!')
         info = settings.custom_hosts[str(ctx.author.id)]
@@ -5519,6 +5528,27 @@ class Music(commands.Cog):
         text = "Server is currently " + ("connected" if node else "disconnected")
         embed.set_footer(text=text)
         await ctx.author.send(embed=embed)
+
+    @checks.has_permissions(manage_guild=True)
+    @hostconfig.command(name="link", aliases=["connect", "setserver"])
+    async def hostconfig_link(self, ctx):
+        """
+            {command_prefix}hostconfig link
+
+        Links your configuration.
+        """
+        settings = await SettingsDB.get_instance().get_guild_settings(ctx.guild.id)
+        if settings.defaultnode == str(ctx.author.id):
+            settings.defaultnode = None
+            await SettingsDB.get_instance().set_guild_settings(settings)
+            return await ctx.send("Your node is not linked to this server anymore.")
+        settings_glob = await SettingsDB.get_instance().get_glob_settings()
+        if str(ctx.author.id) not in settings_glob.custom_hosts.keys():
+            return await ctx.send('No config currently registered!')
+        settings.defaultnode = str(ctx.author.id)
+        await SettingsDB.get_instance().set_guild_settings(settings)
+        await ctx.send("Your node is now linked to this server.")
+
 
     @hostconfig.command(name="switch", aliases=["move", "change"])
     @commands.cooldown(rate=1, per=15, type=commands.BucketType.guild)

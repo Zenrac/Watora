@@ -5434,8 +5434,8 @@ class Music(commands.Cog):
             {command_prefix}hostconfig switch
             {command_prefix}hostconfig link
 
-            Allows to manage your credentials for your server to host yourself your music.
-            Go to Watora's discord for more information.
+            Allows to manage your credentials for your node to host yourself your music.
+            Documentation available here: https://docs.watora.xyz/features/self-hosting
         """
         if not ctx.invoked_subcommand:  # TODO: Move all those commands to another node
             return await ctx.invoke(self.hostconfig_set, ip=ip, password=password, port=port)
@@ -5448,7 +5448,7 @@ class Music(commands.Cog):
             {command_prefix}hostconfig set [ip] [password]
             {command_prefix}hostconfig set [ip] [password] [port]
 
-        Allows to set your server credentials.
+        Allows to set your node credentials.
         Default password is youshallnotpass (more than recommended to change it).
         Default port is 2333.
         """
@@ -5456,7 +5456,7 @@ class Music(commands.Cog):
             try:
                 await ctx.message.delete()
                 # TODO: Translations
-                await ctx.send('Please use this command in DMs for your privacy!')
+                await ctx.send('Please use this command in DMs for your privacy!')  # TODO: Translations
             except discord.HTTPException:
                 pass
 
@@ -5471,12 +5471,12 @@ class Music(commands.Cog):
         try:
             ws = await self.session.ws_connect('ws://{}:{}'.format(ip, port), headers=headers)
         except (aiohttp.ClientError, asyncio.TimeoutError):
-            return await msg.edit(content='Failed to connect to this server, please ensure that your credentials are correct! Also make sure that your server is running, and your firewall is not blocking the connection. You can also check if your port is opened correctly. For futher assistance, you can join Watora\'s discord.')
+            return await msg.edit(content='Failed to connect to this server, please ensure that your credentials are correct! Also make sure that your server is running, and your firewall is not blocking the connection. You can also check if your port is opened correctly. For futher assistance, you can join Watora\'s discord.')  # TODO: Translations
 
         await ws.close()
 
         # TODO: Translations
-        await msg.edit(content="Successfully connected to the server!")
+        await msg.edit(content="Successfully connected to the server!")  # TODO: Translations
 
         settings = await SettingsDB.get_instance().get_glob_settings()
         settings.custom_hosts[str(ctx.author.id)] = {
@@ -5505,7 +5505,7 @@ class Music(commands.Cog):
         """
             {command_prefix}hostconfig delete
 
-        Removes your configuration.
+        Removes your node configuration.
         """
         settings = await SettingsDB.get_instance().get_glob_settings()
         if str(ctx.author.id) in settings.custom_hosts.keys():
@@ -5516,23 +5516,23 @@ class Music(commands.Cog):
     @hostconfig.command(name="now", aliases=["current", "atm"])
     async def hostconfig_now(self, ctx):
         """
-            {command_prefix}hostconfig delete
+            {command_prefix}hostconfig now
 
-        Shows your configuration.
+        Shows your node configuration.
         """
         settings = await SettingsDB.get_instance().get_glob_settings()
         if str(ctx.author.id) not in settings.custom_hosts.keys():
-            return await ctx.send('No config currently registered! Use `{}hostconfig set` to set one.'.format(get_server_prefixes(self.bot, ctx.guild)))
+            return await ctx.send('No config currently registered! Use `{}hostconfig set` to set one.'.format(get_server_prefixes(self.bot, ctx.guild)))  # TODO: Translations
         info = settings.custom_hosts[str(ctx.author.id)]
         # TODO: Translations
-        embed = discord.Embed(description="Your server configuration")
+        embed = discord.Embed(description="Your server configuration")  # TODO: Translations
         embed.add_field(name='IP', value=info['host'], inline=False)
         embed.add_field(name='Password', value=info['password'], inline=False)
         embed.add_field(name='Port', value=info['port'], inline=False)
         node = self.bot.lavalink.node_manager.get_node_by_name(
             str(ctx.author.id))
         text = "Server is currently " + \
-            ("connected" if node else "disconnected")
+            ("connected" if node else "disconnected")  # TODO: Translations
         embed.set_footer(text=text)
         try:
             await ctx.author.send(embed=embed)
@@ -5547,20 +5547,21 @@ class Music(commands.Cog):
         """
             {command_prefix}hostconfig link
 
-        Links your configuration.
+        Links your configuration to this server.
+        Your node will be used by default when people of this guild
+        are trying to listen to music.
         """
         settings = await SettingsDB.get_instance().get_guild_settings(ctx.guild.id)
         if settings.defaultnode == str(ctx.author.id):
             settings.defaultnode = None
             await SettingsDB.get_instance().set_guild_settings(settings)
-            return await ctx.send("Your node is not linked to this server anymore.")
+            return await ctx.send("Your node is not linked to this server anymore.")  # TODO: Translations
         settings_glob = await SettingsDB.get_instance().get_glob_settings()
         if str(ctx.author.id) not in settings_glob.custom_hosts.keys():
-            # TODO: Translations
-            return await ctx.send('No config currently registered!')
+            return await ctx.send('No config currently registered!')  # TODO: Translations
         settings.defaultnode = str(ctx.author.id)
         await SettingsDB.get_instance().set_guild_settings(settings)
-        await ctx.send("Your node is now linked to this server.")
+        await ctx.send("Your node is now linked to this server.")  # TODO: Translations
 
     @hostconfig.command(name="switch", aliases=["move", "change"])
     @commands.cooldown(rate=1, per=15, type=commands.BucketType.guild)
@@ -5568,16 +5569,16 @@ class Music(commands.Cog):
         """
             {command_prefix}hostconfig switch
 
-        Switch current player to your node, or to another node.
+        Switch current player to your node, or make it leaves your node.
         """
         settings = await SettingsDB.get_instance().get_glob_settings()
         if str(ctx.author.id) not in settings.custom_hosts.keys():
-            return await ctx.send('No config currently registered!')
+            return await ctx.send('No config currently registered!')  # TODO: Translations
         info = settings.custom_hosts[str(ctx.author.id)]
         node = self.bot.lavalink.node_manager.get_node_by_name(
             str(ctx.author.id))
         if not node:
-            return await ctx.send("Your node doesn't seem to be connected!")
+            return await ctx.send("Your node doesn't seem to be connected!")  # TODO: Translations
         if ctx.guild.id not in self.bot.lavalink.players.players:
             return await ctx.send(get_str(ctx, "not-connected"), delete_after=20)
         player = await self.get_player(ctx.guild)
@@ -5585,18 +5586,17 @@ class Music(commands.Cog):
             raise commands.errors.CheckFailure
         is_user = True
         if player.node == node:
-            await ctx.send('This player is already on your node! Moving it to another node...')
+            await ctx.send('This player is already on your node! Moving it to another node...')  # TODO: Translations
             node = self.bot.lavalink.node_manager.find_ideal_node(
                 str(ctx.guild.id))
             is_user = False
             if not node:
-                # TODO: Translations
-                return await ctx.send('No other node available!')
-        await ctx.send('Moving...')
+                return await ctx.send('No other node available!')  # TODO: Translations
+        await ctx.send('Moving...')  # TODO: Translations
         await player.change_node(node)
         if is_user:
-            return await ctx.send(f'Moved to {ctx.author} node.')
-        return await ctx.send(f'Left {ctx.author} node.')
+            return await ctx.send(f'Moved to {ctx.author} node.')  # TODO: Translations
+        return await ctx.send(f'Left {ctx.author} node.')  # TODO: Translations
 
     @commands.is_owner()
     @commands.command()

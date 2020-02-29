@@ -5647,7 +5647,7 @@ class Music(commands.Cog):
         song_info = self.bot.autosongs_map[member.guild.id][str(
             after.channel.id)]
         if not song_info:
-            player = await self.get_player(member.guild, create=True)
+            player = await self.get_player(member.guild, True, member.id)
             return await player.connect(after.channel.id)
         song_info = random.choice(song_info.split('|')).strip()
         if 'autoplaylist:' in song_info:
@@ -5655,7 +5655,7 @@ class Music(commands.Cog):
             file_name = song_info.replace('autoplaylist:', '').strip()
             if str(file_name.lower()) not in settings.autoplaylists:
                 return
-            player = await self.get_player(member.guild, create=True)
+            player = await self.get_player(member.guild, True, member.id)
             if not player.is_connected:
                 await player.connect(after.channel.id)
                 tries = 0
@@ -5679,7 +5679,7 @@ class Music(commands.Cog):
                 if not song_info:
                     return
 
-            player = await self.get_player(member.guild, create=True)
+            player = await self.get_player(member.guild, True, member.id)
 
             results = await self.prepare_url(query=song_info, node=player.node)
 

@@ -5499,7 +5499,7 @@ class Music(commands.Cog):
         self.bot.lavalink.add_node(
             region=None, host=ip, password=password, name=f'{ctx.author.id}', port=port, is_perso=True, **resume_config)
 
-    @hostconfig.command(name="delete", aliases=["remove", "-"])
+    @hostconfig.command(name="delete", aliases=["remove", "-", "off", "stop", "leave"])
     @commands.cooldown(rate=1, per=3, type=commands.BucketType.guild)
     async def hostconfig_delete(self, ctx):
         """
@@ -5511,6 +5511,10 @@ class Music(commands.Cog):
         if str(ctx.author.id) in settings.custom_hosts.keys():
             del settings.custom_hosts[str(ctx.author.id)]
         await SettingsDB.get_instance().set_glob_settings(settings)
+        node = self.bot.lavalink.node_manager.get_node_by_name(
+            str(ctx.author.id), True)
+        if node:
+            await self.bot.lavalink.node_manager.destroy_node(node)
         await ctx.send("☑️")
 
     @hostconfig.command(name="now", aliases=["current", "atm"])

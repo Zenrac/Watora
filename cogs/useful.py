@@ -684,7 +684,8 @@ class Useful(commands.Cog):
             member = ctx.guild.get_member(int(settings.defaultnode))
             if member:
                 # TODO: Translations
-                data.add_field(name='Default music node', value=f"Hosted by {member}", inline=False)
+                data.add_field(name='Default music node',
+                               value=f"Hosted by {member}", inline=False)
 
         if guild.icon_url:
             data.set_author(name=guild.name, url=guild.icon_url)
@@ -1004,7 +1005,8 @@ class Useful(commands.Cog):
         settings.donation['bar'] = bar
         await SettingsDB.get_instance().set_glob_settings(settings)
         try:
-            await self.bot.cogs['Update'].message_status(bypass=True)  # try to update status
+            # try to update status
+            await self.bot.cogs['Update'].message_status(bypass=True)
         except KeyError:
             pass
         await ctx.send(":ok_hand:")
@@ -1867,7 +1869,8 @@ class Useful(commands.Cog):
             member = ctx.guild.get_member(int(settings.defaultnode))
             if member:
                 # TODO: Translations and move it
-                msg.append(struct.format("Default music node", f'Hosted by {member}'))
+                msg.append(struct.format(
+                    "Default music node", f'Hosted by {member}'))
         embed.add_field(name=get_str(ctx, "cmd-settings-player"),
                         value='\n'.join(msg), inline=False)
 

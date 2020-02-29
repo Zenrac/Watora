@@ -776,7 +776,7 @@ class Music(commands.Cog):
                 return await self.prepare_url(query=self.list_radiolist['Monstercat'], node=node)
             query = self.remove_optional_parameter(query)
             if match_local(query):
-                new = query.replace('/', '\\') # local file
+                new = query.replace('/', '\\')  # local file
             else:
                 new = f'{source}:{query}'
             results = await self.bot.lavalink.get_tracks(query=new, node=node)
@@ -1429,7 +1429,8 @@ class Music(commands.Cog):
             if settings.defaultnode and guild.get_member(int(settings.defaultnode)):
                 user_id = settings.defaultnode
 
-            node = self.bot.lavalink.node_manager.get_node_by_name(str(user_id))
+            node = self.bot.lavalink.node_manager.get_node_by_name(
+                str(user_id))
 
             if create:
                 player = self.bot.lavalink.players.create(
@@ -5454,6 +5455,7 @@ class Music(commands.Cog):
         if ctx.guild and ip:
             try:
                 await ctx.message.delete()
+                # TODO: Translations
                 await ctx.send('Please use this command in DMs for your privacy!')
             except discord.HTTPException:
                 pass
@@ -5464,7 +5466,7 @@ class Music(commands.Cog):
             'User-Id': str(self.bot.user.id)
         }
 
-        msg = await ctx.send('Connecting...')
+        msg = await ctx.send('Connecting...')  # TODO: Translations
 
         try:
             ws = await self.session.ws_connect('ws://{}:{}'.format(ip, port), headers=headers)
@@ -5473,6 +5475,7 @@ class Music(commands.Cog):
 
         await ws.close()
 
+        # TODO: Translations
         await msg.edit(content="Successfully connected to the server!")
 
         settings = await SettingsDB.get_instance().get_glob_settings()
@@ -5488,7 +5491,8 @@ class Music(commands.Cog):
             'resume_timeout': 600
         }
 
-        node = self.bot.lavalink.node_manager.get_node_by_name(str(ctx.author.id), True)
+        node = self.bot.lavalink.node_manager.get_node_by_name(
+            str(ctx.author.id), True)
         if node:
             await self.bot.lavalink.node_manager.destroy_node(node)
 
@@ -5519,17 +5523,23 @@ class Music(commands.Cog):
         settings = await SettingsDB.get_instance().get_glob_settings()
         if str(ctx.author.id) not in settings.custom_hosts.keys():
             return await ctx.send('No config currently registered! Use `{}hostconfig set` to set one.'.format(get_server_prefixes(self.bot, ctx.guild)))
-        if ctx.guild:
-            await ctx.send('Please check your DMs!')
         info = settings.custom_hosts[str(ctx.author.id)]
+        # TODO: Translations
         embed = discord.Embed(description="Your server configuration")
         embed.add_field(name='IP', value=info['host'], inline=False)
         embed.add_field(name='Password', value=info['password'], inline=False)
         embed.add_field(name='Port', value=info['port'], inline=False)
-        node = self.bot.lavalink.node_manager.get_node_by_name(str(ctx.author.id))
-        text = "Server is currently " + ("connected" if node else "disconnected")
+        node = self.bot.lavalink.node_manager.get_node_by_name(
+            str(ctx.author.id))
+        text = "Server is currently " + \
+            ("connected" if node else "disconnected")
         embed.set_footer(text=text)
-        await ctx.author.send(embed=embed)
+        try:
+            await ctx.author.send(embed=embed)
+        except discord.HTTPException:
+            return await ctx.send(get_str(ctx, "cant-send-pm"))
+        if ctx.guild:
+            await ctx.send(get_str(ctx, "message-send-to-mp"))
 
     @checks.has_permissions(manage_guild=True)
     @hostconfig.command(name="link", aliases=["connect", "setserver"])
@@ -5546,11 +5556,11 @@ class Music(commands.Cog):
             return await ctx.send("Your node is not linked to this server anymore.")
         settings_glob = await SettingsDB.get_instance().get_glob_settings()
         if str(ctx.author.id) not in settings_glob.custom_hosts.keys():
+            # TODO: Translations
             return await ctx.send('No config currently registered!')
         settings.defaultnode = str(ctx.author.id)
         await SettingsDB.get_instance().set_guild_settings(settings)
         await ctx.send("Your node is now linked to this server.")
-
 
     @hostconfig.command(name="switch", aliases=["move", "change"])
     @commands.cooldown(rate=1, per=15, type=commands.BucketType.guild)
@@ -5564,7 +5574,8 @@ class Music(commands.Cog):
         if str(ctx.author.id) not in settings.custom_hosts.keys():
             return await ctx.send('No config currently registered!')
         info = settings.custom_hosts[str(ctx.author.id)]
-        node = self.bot.lavalink.node_manager.get_node_by_name(str(ctx.author.id))
+        node = self.bot.lavalink.node_manager.get_node_by_name(
+            str(ctx.author.id))
         if not node:
             return await ctx.send("Your node doesn't seem to be connected!")
         if ctx.guild.id not in self.bot.lavalink.players.players:
@@ -5575,9 +5586,11 @@ class Music(commands.Cog):
         is_user = True
         if player.node == node:
             await ctx.send('This player is already on your node! Moving it to another node...')
-            node = self.bot.lavalink.node_manager.find_ideal_node(str(ctx.guild.id))
+            node = self.bot.lavalink.node_manager.find_ideal_node(
+                str(ctx.guild.id))
             is_user = False
             if not node:
+                # TODO: Translations
                 return await ctx.send('No other node available!')
         await ctx.send('Moving...')
         await player.change_node(node)

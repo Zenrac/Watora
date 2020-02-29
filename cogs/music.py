@@ -5422,7 +5422,7 @@ class Music(commands.Cog):
         await SettingsDB.get_instance().set_guild_settings(settings)
         await ctx.send(":ballot_box_with_check:")
 
-    @commands.group(aliases=["confighost", "hg", "gh"], invoke_without_command=True)
+    @commands.group(aliases=["confighost", "ch", "hc", "hg", "gh"], invoke_without_command=True)
     async def hostconfig(self, ctx, ip: str, password: str = "youshallnotpass", port: int = 2333):
         """
             {command_prefix}hostconfig set [ip]

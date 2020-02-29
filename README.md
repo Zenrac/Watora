@@ -16,13 +16,12 @@ cd Watora
 Install or update all dependencies with `update.bat` on Windows, or `update.sh` on Linux.<br>
 
 ## Get Started
-Fill your credentials and tokens in `config/tokens.json` and `settings.json`, you can use the examples as a base.<br>
-
+- Fill your credentials and tokens in `config/tokens.json` and `settings.json`, you can use the examples as a base.<br>
 - Start a mongo server in a terminal with `mongod`.<br>
-- Start Watora with `run.bat` on Windows, or `run.sh` on Linux.<br>
 - Make sure that you have at least one [Lavalink server](https://github.com/Frederikam/Lavalink) running to use music features.<br>
 - [Watora Translations](https://github.com/Zenrac/watora-translations) are supposed to go into `config/i18n/`<br>
-- Also, you may have to delete the `cogs/web.py` cog has it will not be useful in any point for a local bot.<br>
+- You may have to delete the `cogs/web.py` cog has it will not be useful in any point for a local bot.<br>
+- Start Watora with `run.bat` on Windows, or `run.sh` on Linux.<br>
 
 ## License
 

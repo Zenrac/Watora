@@ -764,7 +764,7 @@ class Music(commands.Cog):
         settings = await SettingsDB.get_instance().get_glob_settings()
         default_source = settings.source
 
-        if source == 'ytsearch' and source != default_source:
+        if source == 'ytsearch' and (not node or not node.is_perso):
             source = default_source
 
         if not match_url(query):
@@ -965,7 +965,9 @@ class Music(commands.Cog):
                         player.autoplaylist['songs'].remove(song_url)
                     except ValueError:
                         pass
-                    if error_count < 5:  # if 5 fails in a row.. stop trying.
+                    if 'removed' in results.get('exception', {}).get('message', '').lower():
+                        return await self.autoplaylist_loop(player)
+                    if error_count < 3:  # if 3 fails in a row.. stop trying.
                         return await self.autoplaylist_loop(player, error_count=error_count + 1)
         return False
 

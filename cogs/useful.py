@@ -1004,7 +1004,7 @@ class Useful(commands.Cog):
         settings.donation['bar'] = bar
         await SettingsDB.get_instance().set_glob_settings(settings)
         try:
-            self.bot.cogs['Update'].message_status()  # try to update status
+            self.bot.cogs['Update'].message_status(bypass=True)  # try to update status
         except KeyError:
             pass
         await ctx.send(":ok_hand:")

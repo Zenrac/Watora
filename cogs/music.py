@@ -560,12 +560,22 @@ class Music(commands.Cog):
     async def prepare_custom_nodes(self):
         settings = await SettingsDB.get_instance().get_glob_settings()
         for name, val in settings.custom_hosts.items():
+            await self.add_custom_node(name, val)
+
+    async def add_custom_node(self, name, info=None):
+        node = self.bot.lavalink.node_manager.get_node_by_name(name, True)
+        if not node:
+            if not info:
+                settings = await SettingsDB.get_instance().get_glob_settings()
+                info = settings.custom_hosts.get(name, False)
+                if not info:
+                    return
             resume_config = {
                 'resume_key': name + str(sum(self.bot.shards.keys())),
                 'resume_timeout': 600
             }
             self.bot.lavalink.add_node(
-                region=None, host=val['host'], password=val['password'], name=name, port=val['port'], is_perso=True, **resume_config)
+                region=None, host=info['host'], password=info['password'], name=name, port=info['port'], is_perso=True, **resume_config)
 
     async def track_hook(self, event):
         if isinstance(event, lavalink.events.TrackStartEvent):
@@ -1424,15 +1434,19 @@ class Music(commands.Cog):
                 raise NoVoiceChannel(
                     get_str(guild, "not-connected", bot=self.bot))
         if not player:
-            settings = await SettingsDB.get_instance().get_guild_settings(guild.id)
-
-            if settings.defaultnode and guild.get_member(int(settings.defaultnode)):
-                user_id = settings.defaultnode
-
-            node = self.bot.lavalink.node_manager.get_node_by_name(
-                str(user_id))
-
             if create:
+                settings = await SettingsDB.get_instance().get_guild_settings(guild.id)
+
+                if settings.defaultnode and guild.get_member(int(settings.defaultnode)):
+                    user_id = settings.defaultnode
+
+                node = self.bot.lavalink.node_manager.get_node_by_name(
+                    str(user_id))
+
+                if not node:
+                    await self.add_custom_node(str(user_id))
+                    node = self.bot.lavalink.node_manager.get_node_by_name(
+                        str(user_id))
                 player = self.bot.lavalink.players.create(
                     guild_id=guild.id, endpoint=str(guild.region), node=node)
                 log.debug(f'[Player] Creating {guild.id}/{guild.name}')
@@ -5456,7 +5470,8 @@ class Music(commands.Cog):
             try:
                 await ctx.message.delete()
                 # TODO: Translations
-                await ctx.send('Please use this command in DMs for your privacy!')  # TODO: Translations
+                # TODO: Translations
+                await ctx.send('Please use this command in DMs for your privacy!')
             except discord.HTTPException:
                 pass
 
@@ -5476,7 +5491,8 @@ class Music(commands.Cog):
         await ws.close()
 
         # TODO: Translations
-        await msg.edit(content="Successfully connected to the server!")  # TODO: Translations
+        # TODO: Translations
+        await msg.edit(content="Successfully connected to the server!")
 
         settings = await SettingsDB.get_instance().get_glob_settings()
         settings.custom_hosts[str(ctx.author.id)] = {
@@ -5526,10 +5542,12 @@ class Music(commands.Cog):
         """
         settings = await SettingsDB.get_instance().get_glob_settings()
         if str(ctx.author.id) not in settings.custom_hosts.keys():
-            return await ctx.send('No config currently registered! Use `{}hostconfig set` to set one.'.format(get_server_prefixes(self.bot, ctx.guild)))  # TODO: Translations
+            # TODO: Translations
+            return await ctx.send('No config currently registered! Use `{}hostconfig set` to set one.'.format(get_server_prefixes(self.bot, ctx.guild)))
         info = settings.custom_hosts[str(ctx.author.id)]
         # TODO: Translations
-        embed = discord.Embed(description="Your server configuration")  # TODO: Translations
+        # TODO: Translations
+        embed = discord.Embed(description="Your server configuration")
         embed.add_field(name='IP', value=info['host'], inline=False)
         embed.add_field(name='Password', value=info['password'], inline=False)
         embed.add_field(name='Port', value=info['port'], inline=False)
@@ -5559,13 +5577,16 @@ class Music(commands.Cog):
         if settings.defaultnode == str(ctx.author.id):
             settings.defaultnode = None
             await SettingsDB.get_instance().set_guild_settings(settings)
-            return await ctx.send("Your node is not linked to this server anymore.")  # TODO: Translations
+            # TODO: Translations
+            return await ctx.send("Your node is not linked to this server anymore.")
         settings_glob = await SettingsDB.get_instance().get_glob_settings()
         if str(ctx.author.id) not in settings_glob.custom_hosts.keys():
-            return await ctx.send('No config currently registered!')  # TODO: Translations
+            # TODO: Translations
+            return await ctx.send('No config currently registered!')
         settings.defaultnode = str(ctx.author.id)
         await SettingsDB.get_instance().set_guild_settings(settings)
-        await ctx.send("Your node is now linked to this server.")  # TODO: Translations
+        # TODO: Translations
+        await ctx.send("Your node is now linked to this server.")
 
     @hostconfig.command(name="switch", aliases=["move", "change"])
     @commands.cooldown(rate=1, per=15, type=commands.BucketType.guild)
@@ -5577,12 +5598,14 @@ class Music(commands.Cog):
         """
         settings = await SettingsDB.get_instance().get_glob_settings()
         if str(ctx.author.id) not in settings.custom_hosts.keys():
-            return await ctx.send('No config currently registered!')  # TODO: Translations
+            # TODO: Translations
+            return await ctx.send('No config currently registered!')
         info = settings.custom_hosts[str(ctx.author.id)]
         node = self.bot.lavalink.node_manager.get_node_by_name(
             str(ctx.author.id))
         if not node:
-            return await ctx.send("Your node doesn't seem to be connected!")  # TODO: Translations
+            # TODO: Translations
+            return await ctx.send("Your node doesn't seem to be connected!")
         if ctx.guild.id not in self.bot.lavalink.players.players:
             return await ctx.send(get_str(ctx, "not-connected"), delete_after=20)
         player = await self.get_player(ctx.guild)
@@ -5590,16 +5613,19 @@ class Music(commands.Cog):
             raise commands.errors.CheckFailure
         is_user = True
         if player.node == node:
-            await ctx.send('This player is already on your node! Moving it to another node...')  # TODO: Translations
+            # TODO: Translations
+            await ctx.send('This player is already on your node! Moving it to another node...')
             node = self.bot.lavalink.node_manager.find_ideal_node(
                 str(ctx.guild.id))
             is_user = False
             if not node:
-                return await ctx.send('No other node available!')  # TODO: Translations
+                # TODO: Translations
+                return await ctx.send('No other node available!')
         await ctx.send('Moving...')  # TODO: Translations
         await player.change_node(node)
         if is_user:
-            return await ctx.send(f'Moved to {ctx.author} node.')  # TODO: Translations
+            # TODO: Translations
+            return await ctx.send(f'Moved to {ctx.author} node.')
         return await ctx.send(f'Left {ctx.author} node.')  # TODO: Translations
 
     @commands.is_owner()

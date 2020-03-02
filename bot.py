@@ -74,9 +74,10 @@ class Watora(commands.AutoShardedBot):
     def guild_count(self):
         return sum(self.config.server_count.values())
 
-    async def server_is_claimed(self, guild_id):
+    async def server_is_claimed(self, guild_id, settings=None):
         """Checks if a server is claimed or not"""
-        settings = await SettingsDB.get_instance().get_glob_settings()
+        if not settings:
+            settings = await SettingsDB.get_instance().get_glob_settings()
         for k, m in settings.claim.items():
             if str(guild_id) in m.keys():
                 fetched_member = await is_patron(self, int(k), fetch=True)

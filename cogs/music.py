@@ -293,8 +293,6 @@ class CustomPlayer(lavalink.DefaultPlayer):
 
     async def init_with_db(self, guild_id):
         settings = await SettingsDB.get_instance().get_guild_settings(int(guild_id))
-
-        # await asyncio.sleep(1)  # not sure if useful.. But it prevents to send data too fast?
         await self.set_volume(settings.volume)
 
         if settings.timer != def_time:
@@ -547,8 +545,6 @@ class Music(commands.Cog):
         self.bot.lavalink.add_node(
             region='us', host=us['HOST'], password=us['PASSWORD'], name='America', port=2333, **resume_config)
 
-        await self.prepare_custom_nodes()
-
         self.bot.add_listener(
             self.bot.lavalink.voice_update_handler, 'on_socket_response')
 
@@ -556,11 +552,6 @@ class Music(commands.Cog):
 
         # self.prepare_lavalink_logger(level_console=logging.INFO, level_file=logging.WARNING)
         log.info("Lavalink is ready.")
-
-    async def prepare_custom_nodes(self):
-        settings = await SettingsDB.get_instance().get_glob_settings()
-        for name, val in settings.custom_hosts.items():
-            await self.add_custom_node(name, val)
 
     async def add_custom_node(self, name, info=None):
         node = self.bot.lavalink.node_manager.get_node_by_name(name, True)
@@ -1436,13 +1427,12 @@ class Music(commands.Cog):
         if not player:
             if create:
                 settings = await SettingsDB.get_instance().get_guild_settings(guild.id)
+                # claimed_server = await self.bot.server_is_claimed(guild.id)
 
                 if settings.defaultnode and guild.get_member(int(settings.defaultnode)):
                     user_id = settings.defaultnode
-
                 node = self.bot.lavalink.node_manager.get_node_by_name(
                     str(user_id))
-
                 if not node:
                     await self.add_custom_node(str(user_id))
                     node = self.bot.lavalink.node_manager.get_node_by_name(

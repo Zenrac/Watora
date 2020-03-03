@@ -190,7 +190,7 @@ class BlindTest:
     async def send_final_embed(self):
         e = discord.Embed(description=get_str(
             self.guild, "cmd-blindtest-enjoyed", bot=self.bot))
-        e.description += "\n\n**[{}](https://www.patreon.com/bePatron?u=7139372)** {}".format(
+        e.description += "\n\n**[{}](https://www.patreon.com/watora)** {}".format(
             get_str(self.guild, "support-watora", bot=self.bot), get_str(self.guild, "support-watora-end", bot=self.bot))
         e.description += '\n' + get_str(self.guild, "suggest-features", bot=self.bot).format(
             f"`{get_server_prefixes(self.bot, self.guild)}suggestion`")
@@ -390,6 +390,7 @@ class Music(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         self.temp = None
+        self.test = None
         self.timeout_tasks = {}
         self.inact_tasks = {}
         self._cd = commands.CooldownMapping.from_cooldown(
@@ -533,17 +534,24 @@ class Music(commands.Cog):
         eu = self.bot.tokens['NODE_EU']
         us = self.bot.tokens['NODE_US']
         asia = self.bot.tokens['NODE_ASIA']
+        premium = self.bot.tokens['NODE_PREMIUM']
 
         resume_config = {
             'resume_key': self.bot.tokens["LAVALINK_RESUME_KEY"] + str(sum(self.bot.shards.keys())),
             'resume_timeout': 600
         }
 
+        # Main Nodes
+
         # self.bot.lavalink.add_node(region='asia', host=asia['HOST'], password=asia['PASSWORD'], name='Asia', **resume_config)
-        self.bot.lavalink.add_node(
-            region='eu', host=eu['HOST'], password=eu['PASSWORD'], name='Europe', port=2333, **resume_config)
+        # self.bot.lavalink.add_node(
+        #     region='eu', host=eu['HOST'], password=eu['PASSWORD'], name='Europe', port=2333, **resume_config)
         self.bot.lavalink.add_node(
             region='us', host=us['HOST'], password=us['PASSWORD'], name='America', port=2333, **resume_config)
+
+        # Premium Nodes
+        self.bot.lavalink.add_node(
+            region='us', host=premium['HOST'], password=premium['PASSWORD'], name='Premium', port=2333, is_perso=True, **resume_config)
 
         self.bot.add_listener(
             self.bot.lavalink.voice_update_handler, 'on_socket_response')
@@ -553,20 +561,43 @@ class Music(commands.Cog):
         # self.prepare_lavalink_logger(level_console=logging.INFO, level_file=logging.WARNING)
         log.info("Lavalink is ready.")
 
-    async def add_custom_node(self, name, info=None):
+    async def ensure_node_connection(self, ip, port, password):
+        headers = {
+            'Authorization': password,
+            'Num-Shards': str(self.bot.shard_count),
+            'User-Id': str(self.bot.user.id)
+        }
+
+        try:
+            ws = await asyncio.wait_for(self.session.ws_connect('ws://{}:{}'.format(str(ip), str(port)), headers=headers), timeout=2)
+        except (aiohttp.ClientError, asyncio.TimeoutError):
+            return False
+
+        await ws.close()
+        return True
+
+    async def add_custom_node(self, name, info=None, settings=None):
         node = self.bot.lavalink.node_manager.get_node_by_name(name, True)
         if not node:
             if not info:
-                settings = await SettingsDB.get_instance().get_glob_settings()
+                if not settings:
+                    settings = await SettingsDB.get_instance().get_glob_settings()
                 info = settings.custom_hosts.get(name, False)
                 if not info:
                     return
+
+            if not await self.ensure_node_connection(info['host'], info['port'], info['password']):
+                return False
+
             resume_config = {
                 'resume_key': name + str(sum(self.bot.shards.keys())),
                 'resume_timeout': 600
             }
+
             self.bot.lavalink.add_node(
                 region=None, host=info['host'], password=info['password'], name=name, port=info['port'], is_perso=True, **resume_config)
+
+        return True
 
     async def track_hook(self, event):
         if isinstance(event, lavalink.events.TrackStartEvent):
@@ -628,6 +659,7 @@ class Music(commands.Cog):
 
             if event.player.node.is_perso:
                 name = await self.bot.safe_fetch('user', event.player.node.name) or event.player.node.name
+                # TODO: Translations
                 embed.set_footer(text=f"Hosted by {name}")
 
             asyncio.ensure_future(self.send_new_np_msg(
@@ -1330,6 +1362,10 @@ class Music(commands.Cog):
         if thumb:
             embed.set_image(url=thumb)
 
+        if player.node.is_perso:
+            name = await self.bot.safe_fetch('user', player.node.name) or player.node.name
+            embed.set_footer(text=f"Hosted by {name}")
+
         async for entry in channel.history(limit=3):
             if not entry or not player.npmsg:  # idk
                 continue
@@ -1426,17 +1462,24 @@ class Music(commands.Cog):
                     get_str(guild, "not-connected", bot=self.bot))
         if not player:
             if create:
+                node = None
                 settings = await SettingsDB.get_instance().get_guild_settings(guild.id)
-                # claimed_server = await self.bot.server_is_claimed(guild.id)
-
                 if settings.defaultnode and guild.get_member(int(settings.defaultnode)):
-                    user_id = settings.defaultnode
-                node = self.bot.lavalink.node_manager.get_node_by_name(
-                    str(user_id))
-                if not node:
-                    await self.add_custom_node(str(user_id))
                     node = self.bot.lavalink.node_manager.get_node_by_name(
-                        str(user_id))
+                        str(settings.defaultnode))
+                if not node:
+                    # Allows to do 1 call for both server_is_claimed and add_custom_node
+                    glob_settings = await SettingsDB.get_instance().get_glob_settings()
+                    if await self.bot.server_is_claimed(guild.id, glob_settings):
+                        node = self.bot.lavalink.node_manager.get_node_by_name(
+                            'Premium')
+                    if not node:
+                        node = self.bot.lavalink.node_manager.get_node_by_name(
+                            user_id)
+                        if not node:
+                            if await self.add_custom_node(str(user_id), settings=glob_settings):
+                                node = self.bot.lavalink.node_manager.get_node_by_name(
+                                    str(user_id), True)
                 player = self.bot.lavalink.players.create(
                     guild_id=guild.id, endpoint=str(guild.region), node=node)
                 log.debug(f'[Player] Creating {guild.id}/{guild.name}')
@@ -1670,7 +1713,7 @@ class Music(commands.Cog):
                             ctx, "music-autoleave-need-claim").format(f"`{get_server_prefixes(ctx.bot, ctx.guild)}claim`"))
                     else:
                         e = discord.Embed(description=get_str(ctx, "cmd-blindtest-mal-same-time").format(
-                            f"`{max_mal}`") + "\n\n" + "**[Patreon](https://www.patreon.com/bePatron?u=7139372)**")
+                            f"`{max_mal}`") + "\n\n" + "**[Patreon](https://www.patreon.com/watora)**")
                     try:
                         return await ctx.send(embed=e)
                     except discord.Forbidden:
@@ -2012,8 +2055,15 @@ class Music(commands.Cog):
                     return await ctx.invoke(self.play_song, query=query.split('&list')[0])
                 if 'yout' in query:
                     settings = await SettingsDB.get_instance().get_glob_settings()
+                    claimed_server = await self.bot.server_is_claimed(ctx.guild.id, settings)
+
+                    if not claimed_server and await is_patron(self.bot, ctx.author.id):
+                        return await ctx.send(embed=discord.Embed(description=get_str(
+                            ctx, "music-autoleave-need-claim").format(f"`{get_server_prefixes(ctx.bot, ctx.guild)}claim`")))
                     if str(ctx.author.id) not in settings.custom_hosts.keys():  # TODO: Translations
-                        await ctx.send('You have to host your own server in order to play YouTube videos. Please setup one with `{}hostconfig` in DMs.'.format(get_server_prefixes(ctx.bot, ctx.guild)))
+                        embed = discord.Embed(title="YouTube videos are disabled!",
+                                              description="In order to play YouTube videos either [**become a Patron**](https://www.patreon.com/watora).\nOtherwise, you have to host your own server.\nPlease setup one with `{}hostconfig` in DMs".format(get_server_prefixes(ctx.bot, ctx.guild)))
+                        return await ctx.send(embed=embed)
                     else:
                         await ctx.send('Either your credentials aren\'t valid anymore or your server isn\'t running. You can use `{}hostconfig` to edit your configuration in DMs.'.format(get_server_prefixes(ctx.bot, ctx.guild)))
                 else:
@@ -2419,6 +2469,7 @@ class Music(commands.Cog):
             player.channel = ctx.channel.id
         if player.node.is_perso:
             name = await self.bot.safe_fetch('user', player.node.name) or player.node.name
+            # TODO: Translations
             embed.set_footer(text=f"Hosted by {name}")
         await self.send_new_np_msg(player, ctx.channel, new_embed=embed, message=ctx.message, force_send=True)
 
@@ -2605,11 +2656,11 @@ class Music(commands.Cog):
                 return await ctx.send("OMG IT'S OVER NINE THOUSAND !!!")
             if 100 <= new_volume <= 1000:
                 e = discord.Embed(description=get_str(ctx, "music-volume-higher-than-100") + "\n\n" +
-                                  "**[Patreon](https://www.patreon.com/bePatron?u=7139372)**\n**[Vote (volume up to 150)](https://discordbots.org/bot/220644154177355777)**")
+                                  "**[Patreon](https://www.patreon.com/watora)**\n**[Vote (volume up to 150)](https://discordbots.org/bot/220644154177355777)**")
                 try:
                     await ctx.send(embed=e)
                 except discord.Forbidden:
-                    await ctx.send(content=get_str(ctx, "music-volume-higher-than-100") + "\n<https://www.patreon.com/bePatron?u=7139372>\nVolume up to 150 : <https://discordbots.org/bot/220644154177355777>")
+                    await ctx.send(content=get_str(ctx, "music-volume-higher-than-100") + "\n<https://www.patreon.com/watora>\nVolume up to 150 : <https://discordbots.org/bot/220644154177355777>")
 
             elif relative:
                 await ctx.send(get_str(ctx, "music-volume-unreasonable-volume-relative").format(old_volume, vol_change, old_volume + vol_change, 0 - old_volume, max_volume - old_volume), delete_after=20)
@@ -5082,7 +5133,7 @@ class Music(commands.Cog):
                     ctx, "music-autoleave-need-claim").format(f"`{get_server_prefixes(ctx.bot, ctx.guild)}claim`"))
             else:
                 e = discord.Embed(description=get_str(ctx, "music-autoleave-unreasonable").format(
-                    f"`{min_val}`", f"`{max_val}`") + "\n\n" + "**[Patreon](https://www.patreon.com/bePatron?u=7139372)**")
+                    f"`{min_val}`", f"`{max_val}`") + "\n\n" + "**[Patreon](https://www.patreon.com/watora)**")
             try:
                 await ctx.send(embed=e)
             except discord.Forbidden:
@@ -5137,7 +5188,7 @@ class Music(commands.Cog):
                     ctx, "music-autoleave-need-claim").format(f"`{get_server_prefixes(ctx.bot, ctx.guild)}claim`"))
             else:
                 e = discord.Embed(description=get_str(ctx, "music-autoleave-unreasonable").format(
-                    f"`{min_val}`", f"`{max_val}`") + "\n\n" + "**[Patreon](https://www.patreon.com/bePatron?u=7139372)**")
+                    f"`{min_val}`", f"`{max_val}`") + "\n\n" + "**[Patreon](https://www.patreon.com/watora)**")
             try:
                 await ctx.send(embed=e)
             except discord.Forbidden:
@@ -5439,7 +5490,7 @@ class Music(commands.Cog):
             {command_prefix}hostconfig link
 
             Allows to manage your credentials for your node to host yourself your music.
-            Documentation available here: https://docs.watora.xyz/features/self-hosting
+            Please read the documentation [**here**](https://docs.watora.xyz/features/self-hosting).
         """
         if not ctx.invoked_subcommand:  # TODO: Move all those commands to another node
             return await ctx.invoke(self.hostconfig_set, ip=ip, password=password, port=port)
@@ -5460,27 +5511,18 @@ class Music(commands.Cog):
             try:
                 await ctx.message.delete()
                 # TODO: Translations
-                # TODO: Translations
                 await ctx.send('Please use this command in DMs for your privacy!')
             except discord.HTTPException:
                 pass
 
-        headers = {
-            'Authorization': password,
-            'Num-Shards': str(self.bot.shard_count),
-            'User-Id': str(self.bot.user.id)
-        }
+        # TODO: Translations
+        msg = await ctx.send('Connecting...')
 
-        msg = await ctx.send('Connecting...')  # TODO: Translations
-
-        try:
-            ws = await self.session.ws_connect('ws://{}:{}'.format(ip, port), headers=headers)
-        except (aiohttp.ClientError, asyncio.TimeoutError):
+        if not await self.ensure_node_connection(ip, port, password):
             return await msg.edit(content='Failed to connect to this server, please ensure that your credentials are correct! Also make sure that your server is running, and your firewall is not blocking the connection. You can also check if your port is opened correctly. For futher assistance, you can join Watora\'s discord.')  # TODO: Translations
 
         await ws.close()
 
-        # TODO: Translations
         # TODO: Translations
         await msg.edit(content="Successfully connected to the server!")
 
@@ -5536,15 +5578,15 @@ class Music(commands.Cog):
             return await ctx.send('No config currently registered! Use `{}hostconfig set` to set one.'.format(get_server_prefixes(self.bot, ctx.guild)))
         info = settings.custom_hosts[str(ctx.author.id)]
         # TODO: Translations
-        # TODO: Translations
         embed = discord.Embed(description="Your server configuration")
         embed.add_field(name='IP', value=info['host'], inline=False)
         embed.add_field(name='Password', value=info['password'], inline=False)
         embed.add_field(name='Port', value=info['port'], inline=False)
         node = self.bot.lavalink.node_manager.get_node_by_name(
             str(ctx.author.id))
+        # TODO: Translations
         text = "Server is currently " + \
-            ("connected" if node else "disconnected")  # TODO: Translations
+            ("connected" if node else "disconnected")
         embed.set_footer(text=text)
         try:
             await ctx.author.send(embed=embed)
@@ -5605,14 +5647,20 @@ class Music(commands.Cog):
         if player.node == node:
             # TODO: Translations
             await ctx.send('This player is already on your node! Moving it to another node...')
+
             node = self.bot.lavalink.node_manager.find_ideal_node(
                 str(ctx.guild.id))
+            if await self.bot.server_is_claimed(ctx.guild.id, settings):
+                node = self.bot.lavalink.node_manager.get_node_by_name(
+                    str("Premium")) or node
             is_user = False
             if not node:
                 # TODO: Translations
                 return await ctx.send('No other node available!')
-        await ctx.send('Moving...')  # TODO: Translations
+        else:
+            await ctx.send('Moving...')  # TODO: Translations
         await player.change_node(node)
+        await self.reload_np_msg(player)
         if is_user:
             # TODO: Translations
             return await ctx.send(f'Moved to {ctx.author} node.')
@@ -5846,8 +5894,8 @@ class Music(commands.Cog):
         requester = (player.current.requester if player.current else None) or (
             player.previous.requester if player.previous else None)
         if not requester or not await is_basicpatron(self.bot, requester):
-            embed.description = "**[{}](https://www.patreon.com/bePatron?u=7139372)** {}\n{}".format(get_str(guild, "support-watora", bot=self.bot, can_owo=False),
-                                                                                                     get_str(guild, "support-watora-end", bot=self.bot), get_str(guild, "suggest-features", bot=self.bot).format(f"`{get_server_prefixes(self.bot, guild)}suggestion`"))
+            embed.description = "**[{}](https://www.patreon.com/watora)** {}\n{}".format(get_str(guild, "support-watora", bot=self.bot, can_owo=False),
+                                                                                         get_str(guild, "support-watora-end", bot=self.bot), get_str(guild, "suggest-features", bot=self.bot).format(f"`{get_server_prefixes(self.bot, guild)}suggestion`"))
         else:
             embed.description = "{} {}\n{}".format(get_str(guild, "thanks-support", bot=self.bot, can_owo=False),
                                                    "<:WatoraLove:553618991328002058>", get_str(guild, "manage-autoleave-time", bot=self.bot).format(f"`{get_server_prefixes(self.bot, guild)}autoleave`"))

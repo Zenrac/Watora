@@ -541,7 +541,10 @@ class Watora(commands.AutoShardedBot):
 
     async def on_message_check(self, message, settings, cmd_prefix):
         words = message.content[len(cmd_prefix):].split(' ')
-        cmd = self.get_command(' '.join(words[:2]))
+        try:
+            cmd = self.get_command(' '.join(words[:2]))
+        except IndexError:
+            cmd = None
         if not cmd:
             cmd = self.get_command(words[0])
         if cmd:
@@ -668,6 +671,11 @@ class Watora(commands.AutoShardedBot):
         if self.pipe and not self.pipe.closed:
             self.pipe.send(1)
             self.pipe.close()
+
+        # Disable all loggers
+        for name in ['launcher', 'lavalink', 'listenmoe']:
+            logger = logging.getLogger(name)
+            logger.disabled = not logger.disabled
 
         self.init_ok = True
 

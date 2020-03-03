@@ -53,6 +53,8 @@ class Update(commands.Cog):
         asyncio.ensure_future(self.session.close())
 
     async def message_status(self, bypass=False, update=True, force_update=False):
+        await self.bot.wait_until_ready()
+
         if ((time() - self.status_timer) < 10) and not bypass:
             return
 

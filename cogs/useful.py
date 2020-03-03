@@ -276,7 +276,7 @@ class Useful(commands.Cog):
         else:
             embed = discord.Embed()
             embed.set_author(name=get_str(ctx, "cmd-help-title"),
-                             url="https://watora.xyz/Commands", icon_url=self.bot.user.avatar_url)
+                             url="https://docs.watora.xyz/commands/music", icon_url=self.bot.user.avatar_url)
             if not ctx.guild:
                 embed.color = 0x71368a
             else:
@@ -339,11 +339,11 @@ class Useful(commands.Cog):
         embed.add_field(name="Autoplaylists",
                         value=len(settings.autoplaylists))
         embed.add_field(name="Donation",
-                        value="[Donate](http://watora.xyz/Donate/)")
+                        value="[PayPal](https://www.paypal.me/watora)\n[Patreon](https://www.patreon.com/watora)")
         embed.add_field(
-            name="Website", value="[Watora.xyz](https://watora.xyz/)")
+            name="Info", value="[Website](https://watora.xyz/)\n[FAQ](https://docs.watora.xyz/faq)")
         embed.add_field(
-            name="My Server", value="[Invitation](https://discordapp.com/invite/ArJgTpM)")
+            name="Social", value="[Discord](https://discordapp.com/invite/ArJgTpM)\n[Twitter](https://twitter.com/watorabot)")
         try:
             await ctx.send(embed=embed)
         except discord.Forbidden:
@@ -855,7 +855,7 @@ class Useful(commands.Cog):
         settings = None
         if text:
             if not await is_basicpatron(self.bot, ctx.author):
-                return await ctx.send(embed=discord.Embed(description="Sorry, you have to be Patron to set a custom message!\n\n**[Patreon](https://www.patreon.com/bePatron?u=7139372)**"))
+                return await ctx.send(embed=discord.Embed(description="Sorry, you have to be Patron to set a custom message!\n\n**[Patreon](https://www.patreon.com/watora)**"))
 
             settings = await SettingsDB.get_instance().get_glob_settings()
 
@@ -1522,26 +1522,30 @@ class Useful(commands.Cog):
         if guild_id:
             guild = await self.bot.safe_fetch('guild', guild_id)
             if not guild:
+                # TODO: Translations
                 return await ctx.send("I didn't find this guild. Ensure your ID or use the command on the guild without specifying an ID.")
         else:
             guild = ctx.guild
         if not await is_patron(self.bot, ctx.author):
+            # TODO: Translations
             return await ctx.send("You need to be at least Super Patron on my server to claim a server!")
         settings = await SettingsDB.get_instance().get_glob_settings()
         claimed = await self.bot.server_is_claimed(guild.id)
 
         if claimed:
             if int(claimed[0]) == ctx.author.id:
-                claimer = 'yourself'
-            else:
-                claimer = await self.bot.safe_fetch('member', int(claimed[0]), guild=guild) or claimed[0]
-            return await ctx.send(f"This server is already claimed by {claimer}.")
+                # TODO: Translations
+                return await ctx.send(f"This server is already claimed by yourself. Use `{get_server_prefixes(ctx.bot, guild)}unclaim` if you want to unclaim it!")
+            claimer = await self.bot.safe_fetch('member', int(claimed[0]), guild=guild) or claimed[0]
+            # TODO: Translations
+            await ctx.send(f"This server is already claimed by {claimer}.")
 
         for k, m in settings.claim.items():
             if str(guild.id) in m:
                 if not await is_patron(self.bot, int(k)):
                     settings.claim[k].pop(str(guild.id))
 
+        # TODO: Translations
         confirm_message = await ctx.send("Are you sure you want to claim **{}** (id: {}), you'll not be able to unclaim it before 7 days! Type `yes` or `no`.".format(guild.name, guild.id))
 
         def check(m):
@@ -1563,6 +1567,7 @@ class Useful(commands.Cog):
             return
 
         if not response_message.content.lower().startswith('y'):
+            # TODO: Translations
             return await ctx.send("Claim cancelled.")
 
         if str(ctx.author.id) not in settings.claim:
@@ -1575,12 +1580,14 @@ class Useful(commands.Cog):
             if ctx.author.id == owner_id:
                 max_claim = 9e40
             if len(settings.claim[str(ctx.author.id)]) >= max_claim:
+                # TODO: Translations
                 return await ctx.send("You reached your max claim server count ({}).\n"
                                       "You can unclaim one of your claimed server by issuing `{}unclaim (guild_id)`\n"
                                       "To see your current claimed server, use the command `{}claimlist`".format(max_claim, get_server_prefixes(ctx.bot, guild), get_server_prefixes(ctx.bot, guild)))
             settings.claim[str(ctx.author.id)][str(guild.id)
                                                ] = datetime.today().strftime("%d %b %Y")
 
+        # TODO: Translations
         await ctx.send('Server successfully claimed !')
         await SettingsDB.get_instance().set_glob_settings(settings)
 
@@ -1598,6 +1605,7 @@ class Useful(commands.Cog):
             # param is type int just to ensure that it can be converted to int easily thanks to discord.py
             guild_id = str(guild_id)
         if not await is_patron(self.bot, ctx.author):
+            # TODO: Translations
             return await ctx.send("You need to be at least Super Patron on my server to claim/unclaim a server!")
         settings = await SettingsDB.get_instance().get_glob_settings()
         if str(ctx.author.id) in settings.claim:
@@ -1606,10 +1614,13 @@ class Useful(commands.Cog):
                 datetime_date = datetime.strptime(claimed_since, '%d %b %Y')
                 since_claimed = (ctx.message.created_at - datetime_date).days
                 if (since_claimed < 7) and ctx.author.id != owner_id:
-                    return await ctx.send("Sorry you're in cooldown! You'll be able to unclaim this server in {} days!".format(7 - since_claimed))
+                    # TODO: Translations
+                    return await ctx.send("Sorry you're in cooldown! You'll be able to unclaim this server in `{}` days!".format(7 - since_claimed))
                 settings.claim[str(ctx.author.id)].pop(guild_id)
+                # TODO: Translations
                 await ctx.send('Server successfully unclaimed !')
                 return await SettingsDB.get_instance().set_glob_settings(settings)
+        # TODO: Translations
         await ctx.send('This server is not in your claimed servers...')
 
     @commands.command(aliases=['redeemlist'])
@@ -1623,9 +1634,11 @@ class Useful(commands.Cog):
         if not member:
             member = ctx.author
         if not await is_patron(self.bot, member):
+            # TODO: Translations
             return await ctx.send("You need to be at least Super Patron on my server to claim/unclaim a server!")
         settings = await SettingsDB.get_instance().get_glob_settings()
         if (str(member.id) not in settings.claim) or not settings.claim[str(member.id)]:
+            # TODO: Translations
             return await ctx.send("You don't have any claimed server. Start to add some by using `{}claim`".format(get_server_prefixes(ctx.bot, ctx.guild)))
         desc = ''
         for i, m in enumerate(settings.claim[str(member.id)].items(), start=1):
@@ -1640,7 +1653,8 @@ class Useful(commands.Cog):
         if member.id == owner_id:
             max_claim = 9e40
         embed.set_footer(
-            text=f"Claim {len(settings.claim[str(member.id)])}/{max_claim}")
+            # TODO: Translations
+            text=f"Used claim {len(settings.claim[str(member.id)])}/{max_claim}")
         await ctx.send(embed=embed)
 
     @commands.guild_only()

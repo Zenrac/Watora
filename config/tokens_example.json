@@ -41,5 +41,10 @@
   "NODE_ASIA": {
     "HOST": "",
     "PASSWORD": ""
+  },
+
+  "NODE_PREMIUM": {
+    "HOST": "",
+    "PASSWORD": ""
   }
 }

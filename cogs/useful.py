@@ -1026,9 +1026,11 @@ class Useful(commands.Cog):
             else:
                 e.color = ctx.me.color
             e.set_thumbnail(url=self.bot.user.avatar_url)
-            e.add_field(name='{}:'.format(get_str(ctx, "cmd-invitation-add-me")), value='[{}]({})'.format(get_str(ctx, "cmd-invitation"),
-                                                                                                          f"https://discordapp.com/oauth2/authorize?client_id={self.bot.user.id}&scope=bot&response_type=code&redirect_uri=https%3A%2F%2Fwatora.xyz%2Fen%2FThank-you"),
-                        inline=False)
+            url = f"https://discordapp.com/api/oauth2/authorize?client_id={self.bot.user.id}&scope=bot"
+            if self.bot.user.id == 220644154177355777:
+                url += "&redirect_uri=https%3A%2F%2Fwatora.xyz%2F%3Finvited%3Dyes"  # redirect uri
+            e.add_field(name='{}:'.format(get_str(ctx, "cmd-invitation-add-me")),
+                        value='[{}]({})'.format(get_str(ctx, "cmd-invitation"), url), inline=False)
             e.add_field(name='{}:'.format(get_str(ctx, "cmd-invitation-my-server")),
                         value='[World of Watora]({})'.format("https://discord.gg/ArJgTpM"))
             await ctx.send(embed=e)

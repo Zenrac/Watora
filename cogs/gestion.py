@@ -18,7 +18,7 @@ cmds = {}
 cmds['music'] = ["join", "np", "play", "queue", "search", "skip", "forceskip", "replay", "previous", "relatedsong", "replaynow", "previousnow", "stop", "pl", "radio",
                  "repeat", "pause", "volume", "playnow", "playnext", "clear", "promote", "shuffle", "remove", "moveto", "lyrics", "bassboost", "equalizer", "blindtest", "blindtestscore"]
 cmds['fun'] = ["8ball", "minesweeper", "ily", "roll", "flip", "me", "customcommand", "choice",
-               "ascii", "meme", "picture", "osu", "marry", "divorce", "anime", "manga", "char", "nextep"]
+               "ascii", "meme", "picture", "osu", "marry", "divorce", "anime", "manga", "char", "nextep"]  # TODO: Add mal command with a translation
 cmds['useful'] = ["don", "info", "poll", "stats", "credits", "changelog", "permsinfo", "version", "infoshard", "avatar",
                   "userinfo", "serverinfo", "roleinfo", "getrole", "ping", "invitation", "suggestion", "bug", "feedback", "clan", "joinclan"]
 cmds['moderation'] = ["kick", "ban", "hackban",

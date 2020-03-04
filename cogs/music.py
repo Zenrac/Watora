@@ -145,6 +145,7 @@ class BlindTest:
         self.timeout = 120
         self.percentage = '100,0,0'
         self.wait = 5
+        self.source = 'ytsearch'
 
     @property
     def is_running(self):
@@ -390,7 +391,6 @@ class Music(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         self.temp = None
-        self.test = None
         self.timeout_tasks = {}
         self.inact_tasks = {}
         self._cd = commands.CooldownMapping.from_cooldown(
@@ -1473,7 +1473,7 @@ class Music(commands.Cog):
                     if await self.bot.server_is_claimed(guild.id, glob_settings):
                         node = self.bot.lavalink.node_manager.get_node_by_name(
                             'Premium')
-                    if not node:
+                    if not node and str(user_id) in glob_settings.custom_hosts.keys():
                         node = self.bot.lavalink.node_manager.get_node_by_name(
                             user_id)
                         if not node:
@@ -1743,6 +1743,8 @@ class Music(commands.Cog):
 
         if source.lower().startswith('s'):
             player.blindtest.source = 'scsearch'
+        else:
+            player.blindtest.source = 'ytsearch'  # TODO: Remove this later
 
         player.blindtest.severity = int(severity)
         player.blindtest.timeout = int(timeout)
@@ -1822,8 +1824,10 @@ class Music(commands.Cog):
                 ctx.command.reset_cooldown(ctx)
                 return await ctx.send(get_str(ctx, "music-join-no-channel"))
             except lavalink.NodeException:
+                ctx.command.reset_cooldown(ctx)
                 return await ctx.send(get_str(ctx, "music-nodes-unavailable"))
             if not player:
+                ctx.command.reset_cooldown(ctx)
                 return
         else:
             player = await self.get_player(ctx.guild)
@@ -5520,8 +5524,6 @@ class Music(commands.Cog):
 
         if not await self.ensure_node_connection(ip, port, password):
             return await msg.edit(content='Failed to connect to this server, please ensure that your credentials are correct! Also make sure that your server is running, and your firewall is not blocking the connection. You can also check if your port is opened correctly. For futher assistance, you can join Watora\'s discord.')  # TODO: Translations
-
-        await ws.close()
 
         # TODO: Translations
         await msg.edit(content="Successfully connected to the server!")

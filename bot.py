@@ -43,7 +43,8 @@ class Watora(commands.AutoShardedBot):
             shard_ids=shard_ids,
             shard_count=shard_count,
             status=discord.Status.idle,
-            fetch_offline_members=False
+            fetch_offline_members=False,
+            max_messages=None
         )
 
         self.pipe = send

@@ -47,12 +47,12 @@ class Update(commands.Cog):
         self.session = aiohttp.ClientSession(
             loop=self.bot.loop, timeout=timeout)
         asyncio.ensure_future(self.message_status(
-            bypass=True, force_update=False))
+            bypass=True))
 
     def cog_unload(self):
         asyncio.ensure_future(self.session.close())
 
-    async def message_status(self, bypass=False, update=True, force_update=False):
+    async def message_status(self, bypass=False, update=True):
         await self.bot.wait_until_ready()
 
         if ((time() - self.status_timer) < 10) and not bypass:
@@ -89,19 +89,15 @@ class Update(commands.Cog):
                     title = "%shelp | %s guilds" % (globprefix, guild_count)
 
             streamer = "https://www.twitch.tv/monstercat"
-            # game = discord.Activity(type=discord.ActivityType.watching, url=streamer, name=title)
             game = discord.Streaming(url=streamer, name=title)
             await self.bot.change_presence(activity=game, status=None, afk=False)
-
-        if force_update:
-            await self.update(bypass=True)
 
     async def update(self, bypass=False):
 
         guild_count = self.bot.guild_count
         shard_count = self.bot.shard_count
 
-        if not (((time() - self.timer) < 120) and not bypass):  # max 1 per 120 sec
+        if self.bot.is_main_process and ((time() - self.timer) > 60) or bypass):  # max 1 per 60 sec
             self.timer = time()
 
             payload = json.dumps({

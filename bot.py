@@ -43,8 +43,7 @@ class Watora(commands.AutoShardedBot):
             shard_ids=shard_ids,
             shard_count=shard_count,
             status=discord.Status.idle,
-            fetch_offline_members=False,
-            max_messages=None
+            fetch_offline_members=False
         )
 
         self.pipe = send
@@ -73,6 +72,10 @@ class Watora(commands.AutoShardedBot):
     @property
     def guild_count(self):
         return sum(self.config.server_count.values())
+
+    @property
+    def is_main_process(self):
+        return 0 in self.shards
 
     async def server_is_claimed(self, guild_id, settings=None):
         """Checks if a server is claimed or not"""
@@ -640,7 +643,7 @@ class Watora(commands.AutoShardedBot):
         # Multiprocessing guild count
         self.owner_id = owner_id
         self.config = await SettingsDB.get_instance().get_glob_settings()
-        if 0 in self.shards and self.shard_count != len(self.config.server_count):
+        if self.is_main_process and self.shard_count != len(self.config.server_count):
             self.config.server_count = {}
             await SettingsDB.get_instance().set_glob_settings(self.config)
 

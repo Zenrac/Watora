@@ -36,15 +36,20 @@ def start_bot(shard_count=None, shard_ids=None, send=None):
 class Watora(commands.AutoShardedBot):
 
     def __init__(self, shard_count=None, shard_ids=None, send=None):
+        title = "%shelp | patreon.com/watora" % globprefix
+        streamer = "https://www.twitch.tv/monstercat"
+        game = discord.Streaming(url=streamer, name=title)
+
         super().__init__(
             command_prefix=_prefix_callable,
             case_insensitive=True,
             description='',
             shard_ids=shard_ids,
             shard_count=shard_count,
-            status=discord.Status.idle,
+            activity=game,
             fetch_offline_members=False,
-            max_messages=None
+            max_messages=None,
+            heartbeat_timeout=300
         )
 
         self.pipe = send

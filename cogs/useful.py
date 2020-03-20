@@ -538,7 +538,11 @@ class Useful(commands.Cog):
 
         joined_at = user.joined_at
         since_created = (ctx.message.created_at - user.created_at).days
-        since_joined = (ctx.message.created_at - joined_at).days
+        try:
+            since_joined = (ctx.message.created_at - joined_at).days
+        except TypeError:
+            since_joined = 0
+
         user_joined = joined_at.strftime("%d %b %Y %H:%M")
         user_created = user.created_at.strftime("%d %b %Y %H:%M")
         try:

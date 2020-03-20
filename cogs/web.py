@@ -97,7 +97,7 @@ class Update(commands.Cog):
         guild_count = self.bot.guild_count
         shard_count = self.bot.shard_count
 
-        if self.bot.is_main_process and ((time() - self.timer) > 60) or bypass):  # max 1 per 60 sec
+        if self.bot.is_main_process and ((time() - self.timer) > 60) or bypass:  # max 1 per 60 sec
             self.timer = time()
 
             payload = json.dumps({

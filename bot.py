@@ -48,8 +48,7 @@ class Watora(commands.AutoShardedBot):
             shard_count=shard_count,
             activity=game,
             fetch_offline_members=False,
-            max_messages=None,
-            heartbeat_timeout=300
+            max_messages=None
         )
 
         self.pipe = send

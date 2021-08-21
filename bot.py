@@ -39,6 +39,7 @@ class Watora(commands.AutoShardedBot):
         title = "%shelp | patreon.com/watora" % globprefix
         streamer = "https://www.twitch.tv/monstercat"
         game = discord.Streaming(url=streamer, name=title)
+        intents = discord.Intents.default()
 
         super().__init__(
             command_prefix=_prefix_callable,
@@ -47,8 +48,8 @@ class Watora(commands.AutoShardedBot):
             shard_ids=shard_ids,
             shard_count=shard_count,
             activity=game,
-            fetch_offline_members=False,
-            max_messages=None
+            max_messages=None,
+            intents=intents
         )
 
         self.pipe = send
@@ -413,7 +414,7 @@ class Watora(commands.AutoShardedBot):
                 if isinstance(error.original, aiohttp.ClientError):
                     log.debug("Command raised an exception: ClientError")
                     return
-                if isinstance(error.original, asyncio.futures.TimeoutError):
+                if isinstance(error.original, asyncio.TimeoutError):
                     log.debug("Command raised an exception: TimeoutError")
                     return
 
@@ -681,9 +682,9 @@ class Watora(commands.AutoShardedBot):
             self.pipe.close()
 
         # Disable all loggers
-        for name in ['launcher', 'lavalink', 'listenmoe']:
-            logger = logging.getLogger(name)
-            logger.disabled = not logger.disabled
+        # for name in ['launcher', 'lavalink', 'listenmoe']:
+        #    logger = logging.getLogger(name)
+        #    logger.disabled = not logger.disabled
 
         self.init_ok = True
 
@@ -691,4 +692,4 @@ class Watora(commands.AutoShardedBot):
         log.info(f"Shard {shard_id} is ready")
 
     def run(self):
-        super().run(token, reconnect=True, bot=True)
+        super().run(token, reconnect=True)

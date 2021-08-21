@@ -384,7 +384,7 @@ class Lazyer:
                         pass
                     break
 
-                if user not in self.player.connected_channel.members:
+                if user.id not in self.player.connected_channel.voice_states:
                     try:
                         await self.player.npmsg.remove_reaction(reaction.emoji, user)
                     except discord.HTTPException:

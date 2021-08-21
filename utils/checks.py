@@ -123,8 +123,8 @@ def is_in_guilds(*guild_ids):
 def is_alone(author):
     if not author.guild.me.voice or not author.voice:
         return False
-    num_voice = sum(1 for m in author.voice.channel.members if not (
-        m.voice.deaf or m.bot or m.voice.self_deaf))
+    num_voice = sum(1 for m in author.voice.channel.voice_states.values() if not (
+        m.deaf or m.self_deaf)) - 1
     if num_voice == 1 and author.guild.me.voice.channel == author.voice.channel:
         return True
     return False

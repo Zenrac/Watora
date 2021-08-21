@@ -1557,7 +1557,7 @@ class Gestion(commands.Cog):
             **__Here's some useful links :__**\n\n\
             My [**Patreon**](https://patreon.com/watora)\n\
             My [**Support Server**](https://discord.gg/ArJgTpM)\n\
-            My [**Website**](https://watora.xyz)\n\
+            My [**Website**](https://watorabot.github.io/)\n\
             My [**GitHub**](https://github.com/Zenrac/watora-translations)"
         e.set_footer(text=f"You're my {self.bot.guild_count}th guild!")
         e.description = msg

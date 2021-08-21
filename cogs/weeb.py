@@ -9,8 +9,6 @@ from urllib.parse import quote
 from discord.ext import commands
 from utils.watora import is_lover, get_str, is_basicpatron, get_image_from_url
 from weebapi import Client as weebclient
-from arcadia.errors import Forbidden
-from arcadia import Client as arcadiaclient
 from cogs.gestion import cmd_list, cmd_meme
 
 memer = "https://dankmemer.services/api"
@@ -32,12 +30,9 @@ class Weeb(commands.Cog):
             'authorization': f'Bearer {self.bot.tokens["KSOFT"]}'}
         self.dankmemer_header = {'authorization': self.bot.tokens['MEMER']}
         weebclient.pluggable(bot=bot, api_key=self.bot.tokens['WEEB'])
-        arcadiaclient.pluggable(
-            bot=bot, token=self.bot.tokens['ARCADIA'], aiosession=self.session)
 
     def cog_unload(self):
         asyncio.ensure_future(self.session.close())
-        del self.bot.arcadia
 
     async def get_image_ksoft(self, tag: str, nsfw: bool = True):
         params = f'?tag={tag}&nsfw={nsfw}'
@@ -69,7 +64,7 @@ class Weeb(commands.Cog):
     async def cog_command_error(self, ctx, error):
         """A local error handler for all errors arising from commands in this cog"""
         if hasattr(error, 'original'):
-            if isinstance(error.original, aiohttp.ClientError) or isinstance(error.original, asyncio.futures.TimeoutError):
+            if isinstance(error.original, aiohttp.ClientError) or isinstance(error.original, asyncio.TimeoutError):
                 try:
                     await ctx.send(":exclamation: " + get_str(ctx, "cmd-nextep-error"), delete_after=20)
                 except discord.HTTPException:
@@ -103,7 +98,7 @@ class Weeb(commands.Cog):
         {help}
         """
         embed = discord.Embed(
-            description="Powered by weeb.sh and arcadia-api.")
+            description="Powered by weeb.sh")
         embed.set_author(name="Image list", icon_url=self.bot.user.avatar_url)
         if not ctx.guild:
             embed.color = 0x71368a
@@ -747,7 +742,7 @@ async def _{m}(self, ctx, pic=None, *, text: str = None):
         embed = discord.Embed(description=get_str(
             ctx, "cmd-slap").format(f'**{target.name}**', f'**{author.name}**'))
         if target == ctx.author:
-            pic = "https://s.put.re/1JQqwNT.gif"
+            pic = "https://i.imgur.com/7lPpsNw.gif"
             embed = discord.Embed(description=get_str(
                 ctx, "cmd-slap-yourself").format(f'**{author.name}**'))
         embed.set_image(url=pic)
@@ -770,7 +765,7 @@ async def _{m}(self, ctx, pic=None, *, text: str = None):
         embed = discord.Embed(description=get_str(
             ctx, "cmd-punch").format(f'**{target.name}**', f'**{author.name}**'))
         if target == ctx.author:
-            pic = "https://s.put.re/1JQqwNT.gif"
+            pic = "https://i.imgur.com/7lPpsNw.gif"
             embed = discord.Embed(description=get_str(
                 ctx, "cmd-punch-yourself").format(f'**{author.name}**'))
         embed.set_image(url=pic)

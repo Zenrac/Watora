@@ -276,7 +276,7 @@ class Useful(commands.Cog):
         else:
             embed = discord.Embed()
             embed.set_author(name=get_str(ctx, "cmd-help-title"),
-                             url="https://docs.watora.xyz/commands/music", icon_url=self.bot.user.avatar_url)
+                             url="https://watora.gitbook.io/watora/commands/music", icon_url=self.bot.user.avatar_url)
             if not ctx.guild:
                 embed.color = 0x71368a
             else:
@@ -341,7 +341,7 @@ class Useful(commands.Cog):
         embed.add_field(name="Donation",
                         value="[PayPal](https://www.paypal.me/watora)\n[Patreon](https://www.patreon.com/watora)")
         embed.add_field(
-            name="Info", value="[Website](https://watora.xyz/)\n[FAQ](https://docs.watora.xyz/faq)")
+            name="Info", value="[Website](https://watorabot.github.io/)\n[FAQ](https://watora.gitbook.io/watora/faq/)")
         embed.add_field(
             name="Social", value="[Discord](https://discordapp.com/invite/ArJgTpM)\n[Twitter](https://twitter.com/watorabot)")
         try:
@@ -548,7 +548,7 @@ class Useful(commands.Cog):
         try:
             member_number = sorted(
                 ctx.guild.members, key=lambda m: m.joined_at).index(user) + 1
-        except TypeError:
+        except Exception:
             member_number = 0
 
         created_on = "{}\n(".format(user_created) + "{}".format(get_str(ctx, "cmd-userinfo-days-ago")
@@ -797,8 +797,6 @@ class Useful(commands.Cog):
             "https://services.is-going-to-rickroll.me/"))
         em.add_field(name="AndyTempel", value='[KSoft.Si API]({})'.format(
             "https://api.ksoft.si/"))
-        em.add_field(name="Sworder & Ota",
-                     value='[arcadia-api]({})'.format("https://arcadia-api.xyz"))
         em.add_field(name="LazyShpee", value='[iode]({})'.format(
             "https://github.com/LazyShpee"))
         em.add_field(name="Akio", value='[MTCL]({})'.format(
@@ -1032,7 +1030,7 @@ class Useful(commands.Cog):
             e.set_thumbnail(url=self.bot.user.avatar_url)
             url = f"https://discordapp.com/api/oauth2/authorize?client_id={self.bot.user.id}&scope=bot"
             if self.bot.user.id == 220644154177355777:
-                url += "&redirect_uri=https%3A%2F%2Fwatora.xyz%2F%3Finvited%3Dyes"  # redirect uri
+                url += "&redirect_uri=https%3A%2F%2Fwatorabot.github.io%2F%3Finvited%3Dyes"  # redirect uri
             e.add_field(name='{}:'.format(get_str(ctx, "cmd-invitation-add-me")),
                         value='[{}]({})'.format(get_str(ctx, "cmd-invitation"), url), inline=False)
             e.add_field(name='{}:'.format(get_str(ctx, "cmd-invitation-my-server")),

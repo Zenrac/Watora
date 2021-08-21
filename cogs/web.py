@@ -90,7 +90,7 @@ class Update(commands.Cog):
 
             streamer = "https://www.twitch.tv/monstercat"
             game = discord.Streaming(url=streamer, name=title)
-            await self.bot.change_presence(activity=game, status=None, afk=False)
+            await self.bot.change_presence(activity=game, status=None)
 
     async def update(self, bypass=False):
 

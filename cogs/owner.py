@@ -9,6 +9,7 @@ import psutil
 import platform
 import logging
 import time
+import random
 
 from io import BytesIO
 from utils.watora import _list_cogs, bytes2human, owner_id, get_str, def_v, log
@@ -93,6 +94,19 @@ class Owner(commands.Cog):
             return await ctx.send("This cog cannot be unloaded.")
         self.bot.unload_extension("cogs." + extension_name.lower())
         await ctx.send(":heavy_check_mark: {} unloaded !".format(extension_name.lower()))
+        
+    @commands.command()
+    @commands.is_owner()
+    async def youtubestp(self, ctx, name: str):
+        """
+            {command_prefix}
+
+        fdgfgd
+        """    
+        settings = await SettingsDB.get_instance().get_glob_settings()
+        settings.source = name
+        await SettingsDB.get_instance().set_glob_settings(settings)
+        await ctx.send("ok")
 
     @commands.command()
     @commands.is_owner()
@@ -375,38 +389,6 @@ class Owner(commands.Cog):
             await ctx.send(embed=embed)
         except discord.Forbidden:
             await ctx.send(get_str(ctx, "need-embed-permission"), delete_after=20)
-
-    @commands.is_owner()
-    @commands.command(aliases=["activesend", "notifplayers"])
-    async def sendactive(self, ctx, *, texts):
-        """
-            {command_prefix}sendactive [text]
-
-        Sends a text to all my current voice users.
-        @users will notify every members in the voice channel.
-        """
-        playing = self.bot.lavalink.players.find_all(lambda p: p.is_playing)
-
-        for p in playing:
-            channel = self.bot.get_channel(p.channel)
-            if channel:
-                log.info(
-                    f"Send to {channel.guild} members in voice : {[g.name for g in p.connected_channel.members]}")
-                try:
-                    if "@users" in texts:
-                        msg = texts.replace("@users", ' '.join(
-                            [m.mention for m in p.connected_channel.members if not m.bot]))
-                        await channel.send(msg)
-                    elif "@user" in texts:
-                        msg = texts.replace("@user", ' '.join(
-                            [m.mention for m in p.connected_channel.members if not m.bot]))
-                        await channel.send(msg)
-                    else:
-                        await channel.send(texts)
-                except discord.Forbidden:
-                    pass
-                except discord.HTTPException:
-                    pass
 
     @commands.is_owner()
     @commands.command(aliases=['cp'])

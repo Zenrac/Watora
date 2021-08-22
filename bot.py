@@ -656,7 +656,8 @@ class Watora(commands.AutoShardedBot):
         # Load cogs
         for extension in _list_cogs():
             try:
-                self.load_extension("cogs." + extension)
+                if extension not in ["welcomer", "socketfix"]:
+                    self.load_extension("cogs." + extension)
             except Exception as e:
                 exc = '{}: {}'.format(type(e).__name__, e)
                 log.warning(

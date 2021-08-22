@@ -97,6 +97,106 @@ class Welcomer(commands.Cog):
     async def on_member_remove(self, member):
         settings = await SettingsDB.get_instance().get_guild_settings(member.guild.id)
         await self.welcomer(member, settings, True)
+        
+    @commands.group(aliases=["welcomeauto", "welcomemessage", "welcomemsg"])
+    @commands.guild_only()
+    @commands.cooldown(rate=1, per=1.5, type=commands.BucketType.user)
+    @checks.has_permissions(manage_guild=True)
+    async def welcome(self, ctx, *, args=None):
+        """
+            {command_prefix}welcome [text]
+            {command_prefix}welcome [random_msg1] | [random_msg2] | ...
+            {command_prefix}welcome off
+
+        {help}
+        """
+        settings = await SettingsDB.get_instance().get_guild_settings(ctx.guild.id)
+
+        if settings.welcomes:
+            if str(ctx.channel.id) in settings.welcomes and not args:
+                return await ctx.send(get_str(ctx, "cmd-welcome-current") + " :\n\n{}".format(settings.welcomes[str(ctx.channel.id)]))
+            elif not args:
+                return await ctx.send(get_str(ctx, "cmd-welcome-no-welcome-now").format("`{}welcome [text]`".format(get_server_prefixes(ctx.bot, ctx.guild))))
+        else:
+            if not args:
+                return await ctx.send(get_str(ctx, "cmd-welcome-no-welcome-now").format("`{}welcome [text]`".format(get_server_prefixes(ctx.bot, ctx.guild))))
+
+        if args.lower() in ["now", "current", "view", "display"]:
+            await ctx.invoke(self.bot.get_command("welcome"))
+
+        elif args.lower() in ["stop", "off", "empty", "nothing", "end", "disable", "remove", "reset", " "]:
+            await ctx.invoke(self.bot.get_command("welcome off"))
+
+        else:
+            settings.welcomes[str(ctx.channel.id)] = args
+            await SettingsDB.get_instance().set_guild_settings(settings)
+            await ctx.send(get_str(ctx, "cmd-welcome-enabled") + f" :\n\n{args}")
+
+    @welcome.command(aliases=["stop", "off", "empty", "nothing", "end", "disable", "remove", " "])
+    async def welcome_off(self, ctx):
+        """
+            {command_prefix}welcome off
+
+        {help}
+        """
+        settings = await SettingsDB.get_instance().get_guild_settings(ctx.guild.id)
+
+        if settings.welcomes and str(ctx.channel.id) in settings.welcomes:
+            settings.welcomes.pop(str(ctx.channel.id), None)
+            await ctx.send(get_str(ctx, "cmd-welcome-off-success"))
+            await SettingsDB.get_instance().set_guild_settings(settings)
+        else:
+            await ctx.send(get_str(ctx, "cmd-welcome-off-already"))
+
+    @commands.group(aliases=["goodbyeauto", "goodbyemessage", "goodbyemsg", "bbmsg", "byebye"])
+    @commands.guild_only()
+    @commands.cooldown(rate=1, per=1.5, type=commands.BucketType.user)
+    @checks.has_permissions(manage_guild=True)
+    async def goodbye(self, ctx, *, args=None):
+        """
+            {command_prefix}goodbye [text]
+            {command_prefix}goodbye [random_msg1] | [random_msg2] | ...
+            {command_prefix}goodbye off
+
+        {help}
+        """
+        settings = await SettingsDB.get_instance().get_guild_settings(ctx.guild.id)
+
+        if settings.goodbyes:
+            if str(ctx.channel.id) in settings.goodbyes and not args:
+                return await ctx.send(get_str(ctx, "cmd-goodbye-current") + " :\n\n{}".format(settings.goodbyes[str(ctx.channel.id)]))
+            elif not args:
+                return await ctx.send(get_str(ctx, "cmd-goodbye-no-goodbye-now").format("`{}goodbye [text]`".format(get_server_prefixes(ctx.bot, ctx.guild))))
+        else:
+            if not args:
+                return await ctx.send(get_str(ctx, "cmd-goodbye-no-goodbye-now").format("`{}goodbye [text]`".format(get_server_prefixes(ctx.bot, ctx.guild))))
+
+        if args.lower() in ["now", "current", "view", "display"]:
+            await ctx.invoke(self.bot.get_command("goodbye"))
+
+        elif args.lower() in ["stop", "off", "empty", "nothing", "end", "disable", "remove", "reset", " "]:
+            await ctx.invoke(self.bot.get_command("goodbye off"))
+
+        else:
+            settings.goodbyes[str(ctx.channel.id)] = args
+            await SettingsDB.get_instance().set_guild_settings(settings)
+            await ctx.send(get_str(ctx, "cmd-goodbye-enabled") + f" :\n\n{args}")
+
+    @goodbye.command(aliases=["stop", "off", "empty", "nothing", "end", "disable", "remove", " "])
+    async def goodbye_off(self, ctx):
+        """
+            {command_prefix}goodbye off
+
+        {help}
+        """
+        settings = await SettingsDB.get_instance().get_guild_settings(ctx.guild.id)
+
+        if settings.goodbyes and str(ctx.channel.id) in settings.goodbyes:
+            settings.goodbyes.pop(str(ctx.channel.id), None)
+            await ctx.send(get_str(ctx, "cmd-goodbye-off-success"))
+            await SettingsDB.get_instance().set_guild_settings(settings)
+        else:
+            await ctx.send(get_str(ctx, "cmd-goodbye-off-already"))
 
 
 def setup(bot):

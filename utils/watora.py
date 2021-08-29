@@ -76,6 +76,7 @@ def get_str(ctx, cmd, bot=None, can_owo=True):
         bot = ctx.bot
         lang = bot.languages_map.get(gid, 'english')
         weeb = bot.owo_map.get(gid, False)
+        texthelp = ""
     elif isinstance(ctx, discord.Guild):
         gid = ctx.id
         if bot:
@@ -102,7 +103,10 @@ def get_str(ctx, cmd, bot=None, can_owo=True):
             # I didn't translated the help for weeb commands.
             if 'Weeb' not in bot.cogs or (cmd.split("-")[1] not in [g.name for g in bot.cogs['Weeb'].get_commands()]):
                 log.error(f"TranslationError {lang} : {cmd} is not existing.")
-            text = "This translation isn't working, please report this command and what you done to my dev with `=bug`."
+            if '-help' in cmd and 'cmd-' in cmd:
+                realcmd = cmd.replace('cmd-', '').replace('-help', '')
+                texthelp = bot.get_command("youtubetogether").help.split("\n")[-1]
+            text = texthelp or "This translation isn't working, please report this command and what you done to my dev with `=bug`."
 
     if weeb and can_owo:
         text = owo.text_to_owo(text)

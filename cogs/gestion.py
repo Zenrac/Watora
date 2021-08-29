@@ -25,6 +25,7 @@ cmds['moderation'] = ["kick", "ban", "hackban",
                       "voicekick", "clean", "purge", "stfu"]
 cmds['config'] = ["prefix", "language", "owo", 'blacklist', 'settings', "defvolume", "defvote", "autoleave", "npmsg",
                   "autorole", "ignore", "disabledcommand", "setdj", "bind", "lazy", "autoplay", "autoconnect"]
+cmds['activities'] = ["youtube", "chess", "poker", "fishing", "betrayal"]
 
 cmd_list = {
     'Social actions':           ['tickle', 'cuddle', 'kiss', 'pat', 'lick', 'hug', 'poke', 'slap', 'punch', 'stare', 'bite', 'shoot'],

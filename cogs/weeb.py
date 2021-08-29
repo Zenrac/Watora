@@ -442,7 +442,7 @@ async def _{m}(self, ctx, pic=None, *, text: str = None):
         user = ctx.author
         pic = str(user.avatar_url_as(format='png'))
 
-    img = await self.get_meme_image('{m}', url=pic, username1=user.name, text=text, timeout=20)
+    img = await self.get_meme_image('{m.replace('youtubecomment', 'youtube')}', url=pic, username1=user.name, text=text, timeout=20)
     embed.set_image(url=f"attachment://%s" % img.filename)
     embed.set_footer(text="Powered by DANK MEMER IMGEN")
 

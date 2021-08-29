@@ -61,7 +61,7 @@ cmd_meme = {
                'facts', 'humansgood', 'knowyourlocation', 'master', 'note', 'ohno', 'plan', 'savehumanity', 'shit', 'slapsroof',
                'surprised', 'vr', 'walking'],
     '2 avatars': ['bed', 'madethis', 'screams', 'robinslap', 'spank'],
-    '1 avatar 1 text 1 username': ['byemom', 'quote', 'tweet', 'youtube'],
+    '1 avatar 1 text 1 username': ['byemom', 'quote', 'tweet', 'youtubecomment'],
     '1 avatar 1 text': ['garfield', 'floor', 'unpopular', 'whothisis']
 }
 

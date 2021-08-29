@@ -24,7 +24,7 @@ from utils.db import SettingsDB
 from utils.youtube_api import YoutubeAPI
 from utils.spotify import SpotifyError, Spotify
 from utils.chat_formatting import Paginator, Equalizer, Lazyer, split_str_lines
-from utils.watora import log, owner_id, get_server_prefixes, get_image_from_url, is_basicpatron, is_admin, is_patron, is_voter, sweet_bar, get_str, format_mentions, def_v, def_time, def_vote, match_local, match_url, time_rx, illegal_char, NoVoiceChannel, Jikan
+from utils.watora import log, owner_id, get_color, get_server_prefixes, get_image_from_url, is_basicpatron, is_admin, is_patron, is_voter, sweet_bar, get_str, format_mentions, def_v, def_time, def_vote, match_local, match_url, time_rx, illegal_char, NoVoiceChannel, Jikan
 
 
 class Music(commands.Cog):
@@ -278,7 +278,7 @@ class Music(commands.Cog):
                 color = int("FF015B", 16)
                 title = self.get_current_mc()
             else:
-                color = self.get_color(channel.guild)
+                color = get_color(channel.guild)
                 title = event.track.title
 
             embed = discord.Embed(colour=color, title=f"**{title}**")
@@ -801,7 +801,7 @@ class Music(commands.Cog):
 
     async def blindtest_embed(self, p, channel, msg=None, bonus=0):
         guild = self.bot.get_guild(int(p.guild_id))
-        color = self.get_color(msg.guild if msg else guild)
+        color = get_color(msg.guild if msg else guild)
         embed = discord.Embed(
             colour=color, title=f"**{p.blindtest.current_song.title}**", url=p.blindtest.current_song.url)
         embed.description = f'{get_str(channel.guild, "cmd-blindtest-video", bot=self.bot)} : **[{p.blindtest.current_song.video_name}]({p.blindtest.current_song.video_url})**'
@@ -984,7 +984,7 @@ class Music(commands.Cog):
         try_edit = False
         current = player.current
 
-        color = self.get_color(channel.guild)
+        color = get_color(channel.guild)
         pos = lavalink.utils.format_time(
             player.position).lstrip('0').lstrip(':')
         dur = lavalink.utils.format_time(
@@ -1151,12 +1151,6 @@ class Music(commands.Cog):
             query = query.replace(f'{m[0] + m[1] + "=" + m[2]}', '')
 
         return query.strip()
-
-    def get_color(self, guild=None):
-        """Gets the top role color otherwise select the Watora's main color"""
-        if not guild or str(guild.me.color) == "#000000":
-            return int("FF015B", 16)
-        return guild.me.color
 
     def prepare_track(self, track, embed=None):
         """Prepares a track before adding it to queue"""
@@ -1448,7 +1442,7 @@ class Music(commands.Cog):
         if not embed.fields:
             return await ctx.send(get_str(ctx, "cmd-blindtestscore-no-saved").format(f'`{get_server_prefixes(ctx.bot, ctx.guild)}bt`'))
 
-        embed.color = self.get_color(ctx.guild)
+        embed.color = get_color(ctx.guild)
         embed.set_author(
             name=f'{ctx.guild.name} - {get_str(ctx, "cmd-blindtest-rank")}', icon_url=ctx.guild.icon_url)
 
@@ -1728,7 +1722,7 @@ class Music(commands.Cog):
                 await ctx.send(get_str(ctx, "music-no-result").format("`{}search`".format(get_server_prefixes(ctx.bot, ctx.guild))))
             return
 
-        embed = discord.Embed(colour=self.get_color(ctx.guild))
+        embed = discord.Embed(colour=get_color(ctx.guild))
 
         if results['playlistInfo']:
             tracks = results['tracks']
@@ -2096,7 +2090,7 @@ class Music(commands.Cog):
             if 'kpop' in current.uri.lower():
                 color = int("3CA4E9", 16)
         else:
-            color = self.get_color(ctx.guild)
+            color = get_color(ctx.guild)
 
         pos = lavalink.utils.format_time(
             player.position).lstrip('0').lstrip(':')
@@ -2184,7 +2178,7 @@ class Music(commands.Cog):
             if requester:
                 msg += f"**{requester.name[:available_spaces]}**.\n"
 
-        embed = discord.Embed(title=get_str(ctx, "music-queue-list"), description=msg, color=self.get_color(
+        embed = discord.Embed(title=get_str(ctx, "music-queue-list"), description=msg, color=get_color(
             ctx.guild))  # Specify title to avoid issue when editing
         bottom = ''
 
@@ -3771,7 +3765,7 @@ class Music(commands.Cog):
 
         newlist = sorted(matching, key=lambda x: len(
             x.get('upvote', [])), reverse=True)
-        embed = discord.Embed(colour=self.get_color(ctx.guild))
+        embed = discord.Embed(colour=get_color(ctx.guild))
         embed.description = "**{}**:\n\n".format(
             get_str(ctx, "music-search-result"))
         bottom = '{} {}{}'.format(len(matching), get_str(
@@ -3859,7 +3853,7 @@ class Music(commands.Cog):
         else:
             title = f"Autoplaylist : {autopl['name']}"
 
-        embed = discord.Embed(title=title, colour=self.get_color(ctx.guild))
+        embed = discord.Embed(title=title, colour=get_color(ctx.guild))
 
         vote_list = autopl.get('upvote', [])
         if ctx.author.id in vote_list:
@@ -4406,7 +4400,7 @@ class Music(commands.Cog):
             if len('\n'.join(results)) + len(new) < 1975:
                 results.append(new)
                 index += 1
-        embed = discord.Embed(color=self.get_color(ctx.guild), title=get_str(
+        embed = discord.Embed(color=get_color(ctx.guild), title=get_str(
             ctx, "music-supersearch-select"), description="\n".join(results))
         result_message = await ctx.send(embed=embed)
 
@@ -5530,7 +5524,7 @@ class Music(commands.Cog):
             channel = guild.get_channel(player.channel)
         if not channel:
             return
-        color = self.get_color(guild)
+        color = get_color(guild)
         if inactivity:
             title = get_str(guild, "disconnecting-inactivity", bot=self.bot)
         else:

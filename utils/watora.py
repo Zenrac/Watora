@@ -123,6 +123,13 @@ def _list_cogs():
     return [os.path.splitext(f)[0] for f in cogs]
 
 
+def get_color(guild=None):
+    """Gets the top role color otherwise select the Watora's main color"""
+    if not guild or str(guild.me.color) == "#000000":
+        return int("FF015B", 16)
+    return guild.me.color
+
+
 def get_image_from_url(text):
     """Gets the url and check if it's an image from a text."""
 

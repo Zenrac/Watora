@@ -105,7 +105,7 @@ def get_str(ctx, cmd, bot=None, can_owo=True):
                 log.error(f"TranslationError {lang} : {cmd} is not existing.")
             if '-help' in cmd and 'cmd-' in cmd:
                 realcmd = cmd.replace('cmd-', '').replace('-help', '')
-                texthelp = bot.get_command("youtubetogether").help.split("\n")[-1]
+                texthelp = bot.get_command(realcmd).help.split("\n")[-1]
             text = texthelp or "This translation isn't working, please report this command and what you done to my dev with `=bug`."
 
     if weeb and can_owo:

@@ -24,7 +24,7 @@ from utils.db import SettingsDB
 from utils.youtube_api import YoutubeAPI
 from utils.spotify import SpotifyError, Spotify
 from utils.chat_formatting import Paginator, Equalizer, Lazyer, split_str_lines
-from utils.watora import log, owner_id, is_alone, get_server_prefixes, get_image_from_url, is_basicpatron, is_admin, is_patron, is_voter, sweet_bar, get_str, format_mentions, def_v, def_time, def_vote, match_local, match_url, time_rx, illegal_char, NoVoiceChannel, Jikan
+from utils.watora import log, owner_id, get_server_prefixes, get_image_from_url, is_basicpatron, is_admin, is_patron, is_voter, sweet_bar, get_str, format_mentions, def_v, def_time, def_vote, match_local, match_url, time_rx, illegal_char, NoVoiceChannel, Jikan
 
 
 class Music(commands.Cog):
@@ -169,7 +169,9 @@ class Music(commands.Cog):
         log.info("Preparing lavalink...")
 
         self.bot.lavalink = lavalink.Client(
-            bot=self.bot, loop=self.bot.loop, player=CustomPlayer, shard_count=self.bot.shard_count, user_id=self.bot.user.id)
+            bot=self.bot, loop=self.bot.loop,
+            player=CustomPlayer, shard_count=self.bot.shard_count,
+            user_id=self.bot.user.id, regions=[vr.name for vr in discord.VoiceRegion])
 
         eu = self.bot.tokens['NODE_EU']
         us = self.bot.tokens['NODE_US']
@@ -295,7 +297,7 @@ class Music(commands.Cog):
 
             if requester:
                 embed.set_author(
-                    name=requester.name, icon_url=requester.avatar_url or requester.default_avatar_url, url=event.track.uri)
+                    name=requester.name, icon_url=requester.avatar or requester.default_avatar_url, url=event.track.uri)
 
             if event.player.node.is_perso:
                 name = await self.bot.safe_fetch('user', event.player.node.name) or event.player.node.name
@@ -668,7 +670,7 @@ class Music(commands.Cog):
             return False
 
         channel = self.bot.get_channel(int(player.blindtest.channel))
-        print(check)
+
         if check and not player.blindtest.listening_mode:
             if player.blindtest.current_song and not player.blindtest.current_song.found:
                 player.blindtest.current_song.found = True
@@ -683,7 +685,7 @@ class Music(commands.Cog):
             if not player.blindtest.listening_mode:
                 asyncio.ensure_future(self.delete_old_npmsg(player))
                 player.channel = None
-            if not sum(1 for m in player.connected_channel.voice_states.values() if not (m.deaf or m.self_deaf)) - 1:
+            if not self.true_members_vc(player.connected_channel):
                 log.debug("[Blintest] Disabling blindtest cus I'm alone on {}.".format(
                     player.connected_channel.guild.name))
                 await player.blindtest.stop()
@@ -817,7 +819,7 @@ class Music(commands.Cog):
                                           can_owo=False).format(round(current_time() - p.blindtest.current_song.started_at, 2)))
             requester = msg.author
             embed.set_author(
-                name=requester.name, icon_url=requester.avatar_url or requester.default_avatar_url)
+                name=requester.name, icon_url=requester.avatar or requester.default_avatar_url)
         else:
             if not p.blindtest.current_song.found_reason:
                 p.blindtest.current_song.found_reason = get_str(
@@ -829,7 +831,7 @@ class Music(commands.Cog):
         """Auto play related son when queue ends."""
         settings = await SettingsDB.get_instance().get_guild_settings(int(player.guild_id))
         if player.is_connected and player.connected_channel and not player.is_playing and settings.autoplay and not player.queue and (attempt < 10):
-            if not sum(1 for m in player.connected_channel.voice_states.values() if not (m.deaf or m.self_deaf)) - 1 and player.timer_value is not False:
+            if not self.true_members_vc(player.connected_channel) and player.timer_value is not False:
                 return False
             previous = player.now or player.previous or player.current
             if not previous:
@@ -895,7 +897,7 @@ class Music(commands.Cog):
             requester = await self.bot.safe_fetch('member', p.current.requester, guild=c.guild)
             if requester:
                 embed.set_author(
-                    name=requester.name, icon_url=requester.avatar_url or requester.default_avatar_url, url=p.current.uri)
+                    name=requester.name, icon_url=requester.avatar or requester.default_avatar_url, url=p.current.uri)
 
             await self.send_new_np_msg(p, c, new_embed=embed)
 
@@ -995,7 +997,7 @@ class Music(commands.Cog):
         embed.url = current.uri
         if requester:
             embed.set_author(
-                name=requester.name, icon_url=requester.avatar_url or requester.default_avatar_url, url=current.uri)
+                name=requester.name, icon_url=requester.avatar or requester.default_avatar_url, url=current.uri)
         if thumb:
             embed.set_image(url=thumb)
 
@@ -1227,10 +1229,10 @@ class Music(commands.Cog):
 
         return f"LISTEN.moe {'K-POP' if kpop else 'J-POP'}"
 
-    async def is_dj(self, ctx):  # TODO: Remove it from this cog
+    async def is_dj(self, ctx):
         """Checks if a user is DJ or not"""
         if ctx.guild:
-            if is_alone(ctx.author):
+            if self.true_members_vc(ctx.author.voice.channel) == 1:
                 return True
             if is_admin(ctx.author, ctx.channel):
                 return True
@@ -1243,6 +1245,19 @@ class Music(commands.Cog):
                 if r.id in settings.djs or "all" in settings.djs:
                     return True
         return False
+
+
+    def true_members_vc(self, channel):
+        """Returns how many real member are in the voice channel"""
+        num_voice = len(channel.voice_states.keys())
+        for k, v in channel.voice_states.items():
+            if str(self.bot.user.id) == str(k) or v.deaf or v.self_deaf:
+                num_voice -= 1
+                continue
+            fetchedUser = channel.guild.get_member(int(k))
+            if fetchedUser and fetchedUser.bot:
+                num_voice -= 1
+        return num_voice
 
     async def is_perso(self, guild, name):
         """Checks if an autoplaylist is personal or not"""
@@ -1428,7 +1443,7 @@ class Music(commands.Cog):
                 embed.add_field(name=f'{pos}. {user}', value=points[user])
             else:
                 embed.set_footer(
-                    text=f"{pos}. {user} : {nb} {points[user]}", icon_url=user.avatar_url)
+                    text=f"{pos}. {user} : {nb} {points[user]}", icon_url=user.avatar)
 
         if not embed.fields:
             return await ctx.send(get_str(ctx, "cmd-blindtestscore-no-saved").format(f'`{get_server_prefixes(ctx.bot, ctx.guild)}bt`'))
@@ -1961,8 +1976,7 @@ class Music(commands.Cog):
         skip_votes = player.skip_votes
         settings = await SettingsDB.get_instance().get_guild_settings(ctx.guild.id)
         percent = settings.vote
-        reqvotes = (
-            (len([1 for m in my_vc.voice_states.values() if not m.self_deaf and not m.deaf]) - 1) / (100 / percent))
+        reqvotes = self.true_members_vc(my_vc) / (100 / percent)
         voter = ctx.message.author
 
         if voter.id == player.current.requester:
@@ -2048,8 +2062,7 @@ class Music(commands.Cog):
         if not await self.is_dj(ctx):
             settings = await SettingsDB.get_instance().get_guild_settings(ctx.guild.id)
             percent = settings.vote
-            reqvotes = (
-                (len([1 for m in my_vc.voice_states.values() if not m.self_deaf and not m.deaf]) - 1) / (100 / percent))
+            reqvotes = self.true_members_vc(my_vc) / (100 / percent)
             voter = ctx.message.author
             if voter.id not in clear_votes:
                 clear_votes.add(voter.id)
@@ -2100,7 +2113,7 @@ class Music(commands.Cog):
         embed.url = current.uri
         if requester:
             embed.set_author(
-                name=requester.name, icon_url=requester.avatar_url or requester.default_avatar_url, url=current.uri)
+                name=requester.name, icon_url=requester.avatar or requester.default_avatar_url, url=current.uri)
         if thumb:
             embed.set_image(url=thumb)
         settings = await SettingsDB.get_instance().get_guild_settings(ctx.guild.id)
@@ -2207,7 +2220,7 @@ class Music(commands.Cog):
 
         my_vc = ctx.guild.me.voice.channel
 
-        if not sum(1 for m in my_vc.voice_states.values() if not (m.deaf or m.self_deaf)) - 1:
+        if not self.true_members_vc(my_vc):
             if ctx.author.id not in my_vc.voice_states or (ctx.author.voice.self_deaf or ctx.author.voice.deaf):
                 return await ctx.send(get_str(ctx, "music-not-my-channel").format(f"**{my_vc}**"), delete_after=30)
 
@@ -2502,8 +2515,7 @@ class Music(commands.Cog):
             if player.is_playing:
                 settings = await SettingsDB.get_instance().get_guild_settings(ctx.guild.id)
                 percent = settings.vote
-                reqvotes = (
-                    (len([1 for m in my_vc.voice_states.values() if not m.self_deaf and not m.deaf]) - 1) / (100 / percent))
+                reqvotes = self.true_members_vc(my_vc) / (100 / percent)
                 voter = ctx.message.author
                 if voter.id not in stop_votes:
                     stop_votes.add(voter.id)
@@ -2556,7 +2568,7 @@ class Music(commands.Cog):
             elif not await self.is_dj(ctx):
                 if my_vc != ctx.author.voice.channel:
                     if (player.is_playing or player.queue) and not player.paused:
-                        if sum(1 for m in player.connected_channel.voice_states.values() if not (m.deaf or  m.self_deaf)) - 1:
+                        if self.true_members_vc(player.connected_channel):
                             raise NoVoiceChannel(
                                 get_str(ctx, "music-join-playing-a-song"))
 
@@ -3411,7 +3423,7 @@ class Music(commands.Cog):
             if avatar:
                 embed.set_thumbnail(url=avatar)
             if perso:
-                embed.set_author(name=title, icon_url=perso.avatar_url)
+                embed.set_author(name=title, icon_url=perso.avatar)
             else:
                 embed.title = title
 
@@ -5434,14 +5446,13 @@ class Music(commands.Cog):
                 return
             if str(after.channel.id) not in self.bot.autosongs_map[member.guild.id]:
                 return
-            if after.channel and (sum(1 for m in after.channel.voice_states.values() if not (m.deaf or m.self_deaf)) - 1) and not (member.guild.me.voice and member.guild.me.voice.mute):
+            if after.channel and self.true_members_vc(after.channel) and not (member.guild.me.voice and member.guild.me.voice.mute):
                 await self.auto_join_play(member, after)
 
         try:
             player = self.bot.lavalink.players.players[member.guild.id]
         except KeyError:
             return
-
         if member == member.guild.me and not after.channel:
             log.warning(
                 f"[Player] Just left voice for some reason. Disconnecting from {member.guild.id}/{member.guild.name}.")
@@ -5456,8 +5467,8 @@ class Music(commands.Cog):
                 if str(after.channel.id) in self.bot.autosongs_map[member.guild.id]:
                     if member != member.guild.me and member.guild.me.voice:
                         if before.channel != after.channel:
-                            if not (sum(1 for m in member.guild.me.voice.channel.voice_states.values() if not (m.deaf or m.self_deaf)) - 1):
-                                if after.channel and (sum(1 for m in after.channel.voice_states.values() if not (m.deaf or m.self_deaf)) - 1) and not (member.guild.me.voice and member.guild.me.voice.mute):
+                            if not self.true_members_vc(member.guild.me.voice.channel):
+                                if after.channel and self.true_members_vc(after.channel) and not (member.guild.me.voice and member.guild.me.voice.mute):
                                     await self.auto_join_play(member, after)
 
         # We don't care, right ?
@@ -5468,7 +5479,7 @@ class Music(commands.Cog):
 
         guild = self.bot.get_guild(int(player.guild_id))  # member.guild ?
 
-        if (sum(1 for m in my_voice_channel.voice_states.values() if not (m.deaf or m.self_deaf)) - 1) and not (guild.me.voice and guild.me.voice.mute):
+        if self.true_members_vc(my_voice_channel) and not (guild.me.voice and guild.me.voice.mute):
             if player.auto_paused:
                 player.auto_paused = False
                 if player.paused:

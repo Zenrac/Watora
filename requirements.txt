@@ -17,6 +17,7 @@ unidecode
 pyarcadia
 pymongo
 motor
+discord-together
 google-api-python-client
 uvloop ;'linux' in sys_platform
 discord.py

@@ -444,7 +444,7 @@ class Fun(commands.Cog):
                 user = check_str[0]
 
         if user:
-            pic = str(user.avatar_url)
+            pic = str(user.avatar)
 
         pic = pic.strip('<>')
 
@@ -472,7 +472,7 @@ class Fun(commands.Cog):
             total = "https://memegen.link/custom/{}/_.jpg?alt={}".format(
                 part1, pic)
         embed = discord.Embed()
-        embed.set_author(name=ctx.author.name, icon_url=ctx.author.avatar_url)
+        embed.set_author(name=ctx.author.name, icon_url=ctx.author.avatar)
 
         # download file
         async with aiohttp.request("GET", total) as resp:

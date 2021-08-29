@@ -276,7 +276,7 @@ class Useful(commands.Cog):
         else:
             embed = discord.Embed()
             embed.set_author(name=get_str(ctx, "cmd-help-title"),
-                             url="https://watora.gitbook.io/watora/commands/music", icon_url=self.bot.user.avatar_url)
+                             url="https://watora.gitbook.io/watora/commands/music", icon_url=self.bot.user.avatar)
             if not ctx.guild:
                 embed.color = 0x71368a
             else:
@@ -321,7 +321,7 @@ class Useful(commands.Cog):
         embed = discord.Embed()
         owner = await self.bot.safe_fetch('user', owner_id) or str(owner_id)
         embed.set_author(name=f"{self.bot.user.name} v{ver}",
-                         icon_url=self.bot.user.avatar_url)
+                         icon_url=self.bot.user.avatar)
         if isinstance(ctx.channel, discord.abc.GuildChannel):
             embed.color = ctx.guild.me.color
         # embed.add_field(name="Version", value=ver, inline=False)
@@ -425,10 +425,10 @@ class Useful(commands.Cog):
                         msg += f"`{pos}` **{user}** : **{nb}** vote{'s' if nb > 1 else ''}\n"
                     else:
                         e.set_footer(
-                            text=f"{pos} - {user} : {nb} vote{'s' if nb > 1 else ''}", icon_url=user.avatar_url)
+                            text=f"{pos} - {user} : {nb} vote{'s' if nb > 1 else ''}", icon_url=user.avatar)
         if isinstance(ctx.channel, discord.abc.GuildChannel):
             e.color = ctx.guild.me.color
-        e.set_thumbnail(url=self.bot.user.avatar_url)
+        e.set_thumbnail(url=self.bot.user.avatar)
         e.set_author(
             name=f"Top Voters of {month}:", url=f"https://discordbots.org/bot/{self.bot.user.id}/vote")
         e.description = f"{msg}\n**[Vote for {self.bot.user.name} on Discord Bot List](https://discordbots.org/bot/{self.bot.user.id}/vote)**"
@@ -502,7 +502,7 @@ class Useful(commands.Cog):
                         embed.set_author(name=get_str(
                             ctx, "cmd-avatar-someone-avatar").format(user))
 
-        ava = user.avatar_url
+        ava = user.avatar
         embed.set_image(url=ava or user.default_avatar_url)
         embed.set_author(name=embed.author.name,
                          url=ava or user.default_avatar_url)  # Hacky
@@ -607,9 +607,9 @@ class Useful(commands.Cog):
         name = str(user)
         name = " ~ ".join((name, user.nick)) if user.nick else name
 
-        if user.avatar_url:
-            data.set_author(name=name, url=user.avatar_url)
-            data.set_thumbnail(url=user.avatar_url)
+        if user.avatar:
+            data.set_author(name=name, url=user.avatar)
+            data.set_thumbnail(url=user.avatar)
         else:
             data.set_author(name=name)
 
@@ -834,7 +834,7 @@ class Useful(commands.Cog):
                 e.color = 0x71368a
             else:
                 e.color = ctx.me.color
-            e.set_thumbnail(url=self.bot.user.avatar_url)
+            e.set_thumbnail(url=self.bot.user.avatar)
             e.add_field(name='{}:'.format(get_str(ctx, "cmd-invitation-my-server")),
                         value='[World of Watora]({})'.format("https://discord.gg/ArJgTpM"))
             return await ctx.send(embed=e)
@@ -1027,7 +1027,7 @@ class Useful(commands.Cog):
                 e.color = 0x71368a
             else:
                 e.color = ctx.me.color
-            e.set_thumbnail(url=self.bot.user.avatar_url)
+            e.set_thumbnail(url=self.bot.user.avatar)
             url = f"https://discordapp.com/api/oauth2/authorize?client_id={self.bot.user.id}&scope=bot"
             if self.bot.user.id == 220644154177355777:
                 url += "&redirect_uri=https%3A%2F%2Fwatorabot.github.io%2F%3Finvited%3Dyes"  # redirect uri
@@ -1055,7 +1055,7 @@ class Useful(commands.Cog):
         channel = 268495043235545088
 
         e.set_author(name=str(
-            msg.author), icon_url=msg.author.avatar_url or msg.author.default_avatar_url)
+            msg.author), icon_url=msg.author.avatar or msg.author.default_avatar_url)
         e.description = content
         e.timestamp = msg.created_at
 
@@ -1115,7 +1115,7 @@ class Useful(commands.Cog):
         channel = 268495081202384896
 
         e.set_author(name=str(
-            msg.author), icon_url=msg.author.avatar_url or msg.author.default_avatar_url)
+            msg.author), icon_url=msg.author.avatar or msg.author.default_avatar_url)
         e.description = content
         e.timestamp = msg.created_at
 
@@ -1172,7 +1172,7 @@ class Useful(commands.Cog):
         channel = 346251537217093632
 
         e.set_author(name=str(
-            msg.author), icon_url=msg.author.avatar_url or msg.author.default_avatar_url)
+            msg.author), icon_url=msg.author.avatar or msg.author.default_avatar_url)
         e.description = content
         e.timestamp = msg.created_at
 
@@ -1647,10 +1647,10 @@ class Useful(commands.Cog):
         desc = ''
         for i, m in enumerate(settings.claim[str(member.id)].items(), start=1):
             guild = await self.bot.safe_fetch('guild', int(m[0]))
-            desc += f'`{i}. `' + (('**' + guild.name + '** ')
+            desc += f'`{i}.`' + (('**' + guild.name + '** ')
                                   if guild else '') + f'(`{m[0]}`) ' + f'({m[1]})\n'
         embed = discord.Embed(description=desc)
-        embed.set_author(name=member.name, icon_url=member.avatar_url)
+        embed.set_author(name=member.name, icon_url=member.avatar)
         max_claim = 2
         if await is_lover(self.bot, member):
             max_claim = 5

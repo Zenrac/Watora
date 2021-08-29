@@ -61,7 +61,7 @@ cmd_meme = {
                'facts', 'humansgood', 'knowyourlocation', 'master', 'note', 'ohno', 'plan', 'savehumanity', 'shit', 'slapsroof',
                'surprised', 'vr', 'walking'],
     '2 avatars': ['bed', 'madethis', 'screams', 'robinslap', 'spank'],
-    '1 avatar 1 text 1 username': ['byemom', 'quote', 'tweet', 'youtube'],
+    '1 avatar 1 text 1 username': ['byemom', 'quote', 'tweet', 'youtubecomment'],
     '1 avatar 1 text': ['garfield', 'floor', 'unpopular', 'whothisis']
 }
 
@@ -1449,7 +1449,7 @@ class Gestion(commands.Cog):
 
         e = discord.Embed()
         e.color = int("FF015B", 16)
-        e.set_thumbnail(url=self.bot.user.avatar_url)
+        e.set_thumbnail(url=self.bot.user.avatar)
         msg = f"Hi, I'm **{self.bot.user.name}**, thanks for adding me to your server !\n\nI'm currently \
             in English, but __I can speak in many other languages__.\n\n\
             Use **`{settings.prefix}help lang`** to display help about how to change my language.\n\

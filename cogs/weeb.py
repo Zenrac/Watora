@@ -2,6 +2,8 @@ import discord
 import aiohttp
 import asyncio
 import json
+import inspect
+import traceback
 
 from io import BytesIO
 from unidecode import unidecode
@@ -39,7 +41,7 @@ class Weeb(commands.Cog):
         url = ksoft_api + params
         async with self.session.get(url, headers=self.ksoft_headers, timeout=20) as response:
             if response.status != 200:
-                raise Forbidden('You are not allowed to access this resource.')
+                raise discord.Forbidden('You are not allowed to access this resource.')
             ext = response.content_type.split('/')[-1]
             img = await response.read()
             await response.release()

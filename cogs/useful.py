@@ -336,8 +336,9 @@ class Useful(commands.Cog):
         # embed.add_field(name="Users", value=users)
         embed.add_field(name="Owner", value=owner)
         embed.add_field(name="Commands", value=len(self.bot.commands))
+        nbAutoplaylists = await SettingsDB.get_instance().autoplaylist_settings_collection.count_documents({})
         embed.add_field(name="Autoplaylists",
-                        value=len(settings.autoplaylists))
+                        value=nbAutoplaylists)
         embed.add_field(name="Donation",
                         value="[PayPal](https://www.paypal.me/watora)\n[Patreon](https://www.patreon.com/watora)")
         embed.add_field(
@@ -406,7 +407,8 @@ class Useful(commands.Cog):
         if 'Update' in self.bot.cogs:
             msg = ""
             asyncio.ensure_future(self.bot.cogs['Update'].update())
-            votes = self.bot.cogs['Update'].votes
+            settings = await SettingsDB.get_instance().get_glob_settings()
+            votes = settings.votes
             counter = Counter(k['id'] for k in votes if k.get('id'))
             counter = OrderedDict(counter.most_common())
             top5 = []
@@ -430,8 +432,8 @@ class Useful(commands.Cog):
             e.color = ctx.guild.me.color
         e.set_thumbnail(url=self.bot.user.avatar)
         e.set_author(
-            name=f"Top Voters of {month}:", url=f"https://discordbots.org/bot/{self.bot.user.id}/vote")
-        e.description = f"{msg}\n**[Vote for {self.bot.user.name} on Discord Bot List](https://discordbots.org/bot/{self.bot.user.id}/vote)**"
+            name=f"Top Voters of {month}:", url=f"https://top.gg/bot/{self.bot.user.id}/vote")
+        e.description = f"{msg}\n**[Vote for {self.bot.user.name} on Top.gg](https://top.gg/bot/{self.bot.user.id}/vote)**"
 
         try:
             await ctx.send(embed=e)

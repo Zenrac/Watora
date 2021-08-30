@@ -772,7 +772,6 @@ class Gestion(commands.Cog):
         if user.id not in settings.blacklisted:
             settings.blacklisted.append(user.id)
             await SettingsDB.get_instance().set_glob_settings(settings)
-            self.bot.config = settings
             await ctx.send("User has been blacklisted.")
         else:
             await ctx.send("User is already blacklisted.")
@@ -791,7 +790,6 @@ class Gestion(commands.Cog):
         elif user.id not in settings.blacklisted:
             settings.blacklisted.append(user.id)
             await SettingsDB.get_instance().set_glob_settings(settings)
-            self.bot.config = settings
             await ctx.send("User has been blacklisted.")
         else:
             await ctx.send("User is already blacklisted.")
@@ -807,7 +805,6 @@ class Gestion(commands.Cog):
         if id not in settings.blacklisted:
             settings.blacklisted.append(id)
             await SettingsDB.get_instance().set_glob_settings(settings)
-            self.bot.config = settings
             await ctx.send("User has been blacklisted.")
         else:
             await ctx.send("User is already blacklisted.")
@@ -823,7 +820,6 @@ class Gestion(commands.Cog):
         if user.id in settings.blacklisted:
             settings.blacklisted.remove(user.id)
             await SettingsDB.get_instance().set_glob_settings(settings)
-            self.bot.config = settings
             await ctx.send("User has been removed from the blacklist.")
         else:
             await ctx.send("User is not blacklisted.")
@@ -839,7 +835,6 @@ class Gestion(commands.Cog):
         if id in settings.blacklisted:
             settings.blacklisted.remove(id)
             await SettingsDB.get_instance().set_glob_settings(settings)
-            self.bot.config = settings
             await ctx.send("User has been removed from the blacklist.")
         else:
             await ctx.send("User is not blacklisted.")
@@ -870,7 +865,6 @@ class Gestion(commands.Cog):
         settings = await SettingsDB.get_instance().get_glob_settings()
         settings.blacklisted = []
         await SettingsDB.get_instance().set_glob_settings(settings)
-        self.bot.config = settings
         await ctx.send("Blacklist is now empty.")
 
     def _populate_list(self, _list):

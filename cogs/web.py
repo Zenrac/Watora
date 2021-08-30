@@ -128,7 +128,10 @@ class Update(commands.Cog):
         url = f'https://discordbots.org/api/bots/220644154177355777/votes'
         async with self.session.get(url, headers=headers) as resp:
             if resp.status == 200:
-                self.votes = await resp.json()
+                settings = await SettingsDB.get_instance().get_glob_settings()
+                settings.votes = await resp.json()
+                self.bot.config = settings
+                await SettingsDB.get_instance().set_glob_settings(settings)
             await resp.release()
 
     async def post_stats(self, url, token, payload):

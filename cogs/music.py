@@ -912,6 +912,8 @@ class Music(commands.Cog):
             await player.blindtest.stop(send_final=False)
         await player.reset_equalizer()
         await player.disconnect()
+        if guild.voice_client:
+            await guild.voice_client.cleanup()
         await self.delete_old_npmsg(player)
 
         guild_info = f"{guild.id}/{guild.name}" if guild else f"{gid}"
@@ -1088,10 +1090,12 @@ class Music(commands.Cog):
                     if await self.bot.server_is_claimed(guild.id, glob_settings):
                         node = self.bot.lavalink.node_manager.get_node_by_name(
                             'Premium')
-
-                player = self.bot.lavalink.players.create(
-                    guild_id=guild.id, endpoint=str(guild.region), node=node)
-                log.debug(f'[Player] Creating {guild.id}/{guild.name}')
+                try:
+                    player = self.bot.lavalink.players.create(
+                        guild_id=guild.id, endpoint=str(guild.region), node=node)
+                    log.debug(f'[Player] Creating {guild.id}/{guild.name}')
+                except lavalink.NodeException:
+                    return await guild.send(get_str(guild, self.bot, "music-nodes-unavailable"))
             else:
                 raise NoVoiceChannel(
                     get_str(guild, "not-connected", bot=self.bot))

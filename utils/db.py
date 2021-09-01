@@ -18,12 +18,11 @@ class GuildSettings(Settings):
         self.volume = kwargs.get("volume", def_v)  # default volume
         self.vote = kwargs.get("vote", def_vote)  # default vote percent
         self.timer = kwargs.get("timer", def_time)  # default timer value
-        self.autoplay = kwargs.get("autoplay", False)
+        self.autoplay = kwargs.get("autoplay", True)
         self.owo = kwargs.get("owo", False)
         self.lazy = kwargs.get("lazy", False)
         self.channel = kwargs.get("channel", None)
         self.bound = kwargs.get("bound", None)
-        self.defaultnode = kwargs.get("defaultnode", None)
         self.customcommands = kwargs.get("customcommands", {})
         self.points = kwargs.get("points", {})
         self.welcomes = kwargs.get("welcomes", {})

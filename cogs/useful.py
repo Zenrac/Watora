@@ -302,7 +302,11 @@ class Useful(commands.Cog):
             embed.add_field(name="__", value=get_str(ctx, "cmd-help-more-info-cmd") + " **`{}help [command]`**".format(get_server_prefixes(
                 ctx.bot, ctx.guild)) + "\n" + get_str(ctx, "cmd-help-more-info-cat") + " **`{}help [category]`**".format(get_server_prefixes(ctx.bot, ctx.guild)))
             try:
-                await ctx.send(embed=embed)
+                view = discord.ui.View()
+                style = discord.ButtonStyle.url
+                view.add_item(item=discord.ui.Button(style=style, label="Read the doc!", url="https://watora.gitbook.io/watora/"))
+                view.add_item(item=discord.ui.Button(style=style, label=f"Support {self.bot.user.name}!", url="https://www.patreon.com/watora"))
+                await ctx.send(embed=embed, view=view)
             except discord.Forbidden:
                 await ctx.send(get_str(ctx, "need-embed-permission"))
 
@@ -685,13 +689,6 @@ class Useful(commands.Cog):
                 name="Patreon Server", value="Claimed by {}. Since {}".format(user, claimed[1]))
 
         settings = await SettingsDB.get_instance().get_guild_settings(ctx.guild.id)
-
-        if settings.defaultnode:
-            member = ctx.guild.get_member(int(settings.defaultnode))
-            if member:
-                # TODO: Translations
-                data.add_field(name='Default music node',
-                               value=f"Hosted by {member}", inline=False)
 
         if guild.icon_url:
             data.set_author(name=guild.name, url=guild.icon_url)
@@ -1885,12 +1882,6 @@ class Useful(commands.Cog):
             msg.append(struct.format(
                 get_str(ctx, f"cmd-settings-{name}"), values[i]))
 
-        if settings.defaultnode:
-            member = ctx.guild.get_member(int(settings.defaultnode))
-            if member:
-                # TODO: Translations and move it
-                msg.append(struct.format(
-                    "Default music node", f'Hosted by {member}'))
         embed.add_field(name=get_str(ctx, "cmd-settings-player"),
                         value='\n'.join(msg), inline=False)
 

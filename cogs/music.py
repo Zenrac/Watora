@@ -302,6 +302,9 @@ class Music(commands.Cog):
         elif isinstance(event, lavalink.events.TrackExceptionEvent):
             pass
 
+        elif isinstance(event, lavalink.events.PlayerUpdateEvent):
+            pass
+
         elif isinstance(event, lavalink.events.TrackStuckEvent):
             log.warning(f"{event.player.guild_id} is stuck !")
 
@@ -911,9 +914,14 @@ class Music(commands.Cog):
         if player.blindtest.is_running:
             await player.blindtest.stop(send_final=False)
         await player.reset_equalizer()
-        await player.disconnect()
         if guild.voice_client:
-            await guild.voice_client.cleanup()
+            try:
+                await guild.voice_client.disconnect()
+                await guild.voice_client.cleanup()
+            except Exception:
+                pass
+        await guild.change_voice_state(channel=None)
+        await player.disconnect()
         await self.delete_old_npmsg(player)
 
         guild_info = f"{guild.id}/{guild.name}" if guild else f"{gid}"
@@ -1081,15 +1089,10 @@ class Music(commands.Cog):
         if not player:
             if create:
                 node = None
-                settings = await SettingsDB.get_instance().get_guild_settings(guild.id)
-                if settings.defaultnode and guild.get_member(int(settings.defaultnode)):
+                glob_settings = await SettingsDB.get_instance().get_glob_settings()
+                if await self.bot.server_is_claimed(guild.id, glob_settings):
                     node = self.bot.lavalink.node_manager.get_node_by_name(
-                        str(settings.defaultnode))
-                if not node:
-                    glob_settings = await SettingsDB.get_instance().get_glob_settings()
-                    if await self.bot.server_is_claimed(guild.id, glob_settings):
-                        node = self.bot.lavalink.node_manager.get_node_by_name(
-                            'Premium')
+                        'Premium')
                 try:
                     player = self.bot.lavalink.players.create(
                         guild_id=guild.id, endpoint=str(guild.region), node=node)
@@ -1903,6 +1906,7 @@ class Music(commands.Cog):
         await player.seek(track_time)
         await ctx.send(get_str(ctx, "music-moveto-moved").format(f'**{new_duration}**'))
 
+    @commands.cooldown(rate=1, per=1.5, type=commands.BucketType.guild)
     @commands.command(name='skip', aliases=['next', 's'])
     async def skip_song(self, ctx):
         """
@@ -1942,6 +1946,7 @@ class Music(commands.Cog):
                 await ctx.send(get_str(ctx, "music-skip-success").format(f"**{ctx.author}**"), delete_after=20)
                 await player.skip()
             else:
+                ctx.command.reset_cooldown(ctx)
                 await ctx.send(get_str(ctx, "music-skip-added") + ' **[{}/{}]**'.format(total_votes, math.ceil(reqvotes)))
         else:
             await ctx.send(get_str(ctx, "music-skip-already"))
@@ -2476,6 +2481,7 @@ class Music(commands.Cog):
                     if total_votes < math.ceil(reqvotes):
                         if total_votes == 1:
                             await ctx.send(get_str(ctx, "music-stop-song-running"))
+                        ctx.command.reset_cooldown(ctx)
                         return await ctx.send(get_str(ctx, "music-stop-vote") + ' **[{}/{}]**'.format(total_votes, math.ceil(reqvotes)))
                 else:
                     return await ctx.send(get_str(ctx, "music-stop-already"))

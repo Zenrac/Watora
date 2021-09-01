@@ -582,7 +582,7 @@ class Gestion(commands.Cog):
 
         if ctx.message.mentions:
             user = ctx.message.mentions[-1]
-            if user.mention not in name:  # It was a prefix
+            if user.mention not in name and user.mention.replace('<@', '<@!') not in name:  # It was a prefix
                 user = None
                 if len(ctx.message.mentions) > 1:
                     user = ctx.message.mentions[0]
@@ -621,7 +621,7 @@ class Gestion(commands.Cog):
 
         if ctx.message.mentions:
             user = ctx.message.mentions[-1]
-            if user.mention not in name:  # It was a prefix
+            if user.mention not in name and user.mention.replace('<@', '<@!') not in name:  # It was a prefix
                 user = None
                 if len(ctx.message.mentions) > 1:
                     user = ctx.message.mentions[0]

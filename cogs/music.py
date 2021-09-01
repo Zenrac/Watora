@@ -1302,7 +1302,7 @@ class Music(commands.Cog):
             file_name = autoplaylist
             if ctx.message.mentions:
                 user = ctx.message.mentions[-1]
-                if user.mention not in file_name:  # It was a prefix
+                if user.mention not in file_name and user.mention.replace('<@', '<@!') not in file_name:  # It was a prefix
                     user = None
                     if len(ctx.message.mentions) > 1:
                         user = ctx.message.mentions[0]
@@ -2813,7 +2813,7 @@ class Music(commands.Cog):
 
         if ctx.message.mentions:
             user = ctx.message.mentions[-1]
-            if user.mention not in file_name:  # It was a prefix
+            if user.mention not in file_name and user.mention.replace('<@', '<@!') not in file_name:  # It was a prefix
                 user = None
                 if len(ctx.message.mentions) > 1:
                     user = ctx.message.mentions[0]
@@ -2937,7 +2937,7 @@ class Music(commands.Cog):
 
         if ctx.message.mentions:
             user = ctx.message.mentions[-1]
-            if user.mention not in file_name:  # It was a prefix
+            if user.mention not in file_name and user.mention.replace('<@', '<@!') not in file_name:  # It was a prefix
                 user = None
                 if len(ctx.message.mentions) > 1:
                     user = ctx.message.mentions[0]
@@ -3025,7 +3025,7 @@ class Music(commands.Cog):
 
         if ctx.message.mentions:
             user = ctx.message.mentions[-1]
-            if user.mention not in file_name:  # It was a prefix
+            if user.mention not in file_name and user.mention.replace('<@', '<@!') not in file_name:  # It was a prefix
                 user = None
                 if len(ctx.message.mentions) > 1:
                     user = ctx.message.mentions[0]
@@ -3167,7 +3167,7 @@ class Music(commands.Cog):
 
         if ctx.message.mentions:
             user = ctx.message.mentions[-1]
-            if user.mention not in name:  # It was a prefix
+            if user.mention not in name and user.mention.replace('<@', '<@!') not in name:  # It was a prefix
                 user = None
                 if len(ctx.message.mentions) > 1:
                     user = ctx.message.mentions[0]
@@ -3337,7 +3337,7 @@ class Music(commands.Cog):
             name = name_lower
             if ctx.message.mentions:
                 user = ctx.message.mentions[-1]
-                if user.mention not in name:  # It was a prefix
+                if user.mention not in name and user.mention.replace('<@', '<@!') not in name:  # It was a prefix
                     user = None
                     if len(ctx.message.mentions) > 1:
                         user = ctx.message.mentions[0]
@@ -3403,7 +3403,7 @@ class Music(commands.Cog):
 
             if ctx.message.mentions:
                 user = ctx.message.mentions[-1]
-                if user.mention not in name:  # It was a prefix
+                if user.mention not in name and user.mention.replace('<@', '<@!') not in name:  # It was a prefix
                     user = None
                     if len(ctx.message.mentions) > 1:
                         user = ctx.message.mentions[0]
@@ -3597,7 +3597,7 @@ class Music(commands.Cog):
 
         if ctx.message.mentions:
             user = ctx.message.mentions[-1]
-            if user.mention not in name:  # It was a prefix
+            if user.mention not in name and user.mention.replace('<@', '<@!') not in name:  # It was a prefix
                 user = None
                 if len(ctx.message.mentions) > 1:
                     user = ctx.message.mentions[0]
@@ -3805,7 +3805,7 @@ class Music(commands.Cog):
 
             if ctx.message.mentions:
                 user = ctx.message.mentions[-1]
-                if user.mention not in name:  # It was a prefix
+                if user.mention not in name and user.mention.replace('<@', '<@!') not in name:  # It was a prefix
                     user = None
                     if len(ctx.message.mentions) > 1:
                         user = ctx.message.mentions[0]

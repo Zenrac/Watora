@@ -690,9 +690,9 @@ class Useful(commands.Cog):
 
         settings = await SettingsDB.get_instance().get_guild_settings(ctx.guild.id)
 
-        if guild.icon_url:
-            data.set_author(name=guild.name, url=guild.icon_url)
-            data.set_thumbnail(url=guild.icon_url)
+        if guild.icon:
+            data.set_author(name=guild.name, url=guild.icon)
+            data.set_thumbnail(url=guild.icon)
         else:
             data.set_author(name=guild.name)
 
@@ -710,7 +710,7 @@ class Useful(commands.Cog):
 
         {help}
         """
-        role = self.bot.get_role(ctx, name)
+        role = ctx.guild.get_role(ctx, name)
 
         if not role:
             return await ctx.send(get_str(ctx, "cmd-joinclan-role-not-found").format(name))
@@ -818,12 +818,12 @@ class Useful(commands.Cog):
 
         {help}
         """
-        patchchannel = self.bot.get_channel(340263164505620483)
+        patchchannel = self.bot.safe_fetch('channel', 340263164505620483)
         try:
             if ctx.guild:
                 settings = await SettingsDB.get_instance().get_guild_settings(ctx.guild.id)
                 if settings.language == "french":
-                    patchchannel = self.bot.get_channel(268492317164437506)
+                    patchchannel = self.bot.safe_fetch('channel', 268492317164437506)
         except KeyError:
             pass
         if not patchchannel:
@@ -1313,7 +1313,7 @@ class Useful(commands.Cog):
         """
         msg = []
         n = 1985
-        patchchannel = self.bot.get_channel(id)
+        patchchannel = self.bot.safe_fetch('channel', id)
         if not patchchannel:
             return
         async for lmsg in patchchannel.history(limit=nb):
@@ -1377,7 +1377,7 @@ class Useful(commands.Cog):
             if not name:
                 return await self.bot.send_cmd_help(ctx)
 
-        role = self.bot.get_role(ctx, name)
+        role = ctx.guild.get_role(ctx, name)
 
         if not role:
             return await ctx.send(get_str(ctx, "cmd-joinclan-role-not-found").format(name))
@@ -1428,7 +1428,7 @@ class Useful(commands.Cog):
 
         {help}
         """
-        role = self.bot.get_role(ctx, name)
+        role = ctx.guild.get_role(ctx, name)
 
         if not role:
             return await ctx.send(get_str(ctx, "cmd-joinclan-role-not-found").format(name))
@@ -1463,7 +1463,7 @@ class Useful(commands.Cog):
 
         {help}
         """
-        role = self.bot.get_role(ctx, name)
+        role = ctx.guild.get_role(ctx, name)
 
         if not role:
             return await ctx.send(get_str(ctx, "cmd-joinclan-role-not-found").format(name))
@@ -1789,7 +1789,7 @@ class Useful(commands.Cog):
         embed = discord.Embed()
 
         embed.set_author(name=get_str(
-            ctx, "cmd-settings-title"), icon_url=guild.icon_url)
+            ctx, "cmd-settings-title"), icon_url=guild.icon)
         if not guild:
             embed.color = 0x71368a
         else:

@@ -231,7 +231,7 @@ class Music(commands.Cog):
             event.player.now = event.player.current
 
             # Send now playing message
-            channel = self.bot.get_channel(event.player.channel)
+            channel = self.bot.safe_fetch(event.player.channel)
             gid = int(event.player.guild_id)
 
             # cancel inact task
@@ -649,7 +649,7 @@ class Music(commands.Cog):
         if not player.blindtest.channel:
             return False
 
-        channel = self.bot.get_channel(int(player.blindtest.channel))
+        channel = self.bot.safe_fetch('channel', int(player.blindtest.channel))
 
         if check and not player.blindtest.listening_mode:
             if player.blindtest.current_song and not player.blindtest.current_song.found:
@@ -863,7 +863,7 @@ class Music(commands.Cog):
     async def update_msg_radio(self, p):
         """Updates the now playing message according to the radio current song"""
         self.radio_update(p.current)
-        c = self.bot.get_channel(p.channel)
+        c = self.bot.safe_fetch('channel', p.channel)
         if c:
             if 'kpop' in p.current.uri.lower():
                 color = int("3CA4E9", 16)
@@ -1024,6 +1024,7 @@ class Music(commands.Cog):
     async def send_new_np_msg(self, player, channel, new_embed, message=None, force_send: bool = False):
         """Sends a new np msg and maybe delete the old one / or edit it"""
         # Check if it is worth to edit instead
+        print("new")
         try_edit = False
         if player.npmsg and not force_send:
             try:
@@ -1422,7 +1423,7 @@ class Music(commands.Cog):
 
         embed.color = get_color(ctx.guild)
         embed.set_author(
-            name=f'{ctx.guild.name} - {get_str(ctx, "cmd-blindtest-rank")}', icon_url=ctx.guild.icon_url)
+            name=f'{ctx.guild.name} - {get_str(ctx, "cmd-blindtest-rank")}', icon_url=ctx.guild.icon)
 
         return await ctx.send(embed=embed)
 
@@ -4541,7 +4542,7 @@ class Music(commands.Cog):
 
         {help}
         """
-        role = self.bot.get_role(ctx, name)
+        role = ctx.guild.get_role(ctx, name)
 
         if not role:
             return await ctx.send(get_str(ctx, "cmd-joinclan-role-not-found").format(name))
@@ -4583,7 +4584,7 @@ class Music(commands.Cog):
 
         {help}
         """
-        role = self.bot.get_role(ctx, name)
+        role = ctx.guild.get_role(ctx, name)
 
         if not role:
             return await ctx.send(get_str(ctx, "cmd-joinclan-role-not-found").format(name))
@@ -5068,7 +5069,7 @@ class Music(commands.Cog):
         if desc:
             embed = discord.Embed(description=desc[:1900])
             embed.set_author(name='Autoconnect list',
-                             icon_url=ctx.guild.icon_url)
+                             icon_url=ctx.guild.icon)
             await ctx.send(embed=embed)
         else:
             await ctx.send(get_str(ctx, "music-autoconnect-list-empty").format("`{}autoconnect add`".format(get_server_prefixes(ctx.bot, ctx.guild))))

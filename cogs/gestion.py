@@ -24,7 +24,7 @@ cmds['useful'] = ["don", "info", "poll", "stats", "credits", "changelog", "perms
 cmds['moderation'] = ["kick", "ban", "hackban",
                       "voicekick", "clean", "purge", "stfu"]
 cmds['config'] = ["prefix", "language", "owo", 'blacklist', 'settings', "defvolume", "defvote", "autoleave", "npmsg",
-                  "autorole", "ignore", "disabledcommand", "setdj", "bind", "lazy", "autoplay", "autoconnect"]
+                  "ignore", "disabledcommand", "setdj", "bind", "lazy", "autoplay", "autoconnect"]
 cmds['activities'] = ["youtube", "chess", "poker", "fishing", "betrayal"]
 
 cmd_list = {
@@ -1173,109 +1173,6 @@ class Gestion(commands.Cog):
                     await user.send(get_str(ctx, "cmd-hackban-failed"))
         else:
             await ctx.send(get_str(ctx, "cmd-hackban-cancelled"), delete_after=30)
-
-
-    @commands.guild_only()
-    @commands.cooldown(rate=1, per=1.5, type=commands.BucketType.user)
-    @commands.group(aliases=["ar", "aar", "autoasignrole", "autoasignroles", "autoroles"], invoke_without_command=True)
-    async def autorole(self, ctx, *, role):
-        """
-            {command_prefix}autorole add [role]
-            {command_prefix}autorole remove [role]
-            {command_prefix}autorole reset
-            {command_prefix}autorole now
-
-        {help}
-        """
-        if not ctx.invoked_subcommand:
-            await ctx.invoke(self.autorole_set, name=role)
-
-    @autorole.command(name="now", aliases=["list", "queue", "current"])
-    async def autorole_now(self, ctx):
-        """
-            {command_prefix}autorole now
-
-        {help}
-        """
-        settings = await SettingsDB.get_instance().get_guild_settings(ctx.guild.id)
-        roles = []
-        for id in settings.autoroles:
-            role = ctx.guild.get_role(id)
-            if role:
-                roles.append(role.name)
-        if not roles:
-            return await ctx.send(get_str(ctx, "cmd-autorole-no-autorole"))
-        msg = "`{}`".format("`, `".join(roles))
-        await ctx.send(get_str(ctx, "cmd-autorole-list-{}".format("roles" if len(settings.autoroles) > 1 else "one-role")).format(msg))
-
-    @checks.has_permissions(manage_guild=True)
-    @autorole.command(name="reset", aliases=["off", "delete", "stop", "rien"])
-    async def autorole_reset(self, ctx):
-        """
-            {command_prefix}autorole reset
-
-        {help}
-        """
-        settings = await SettingsDB.get_instance().get_guild_settings(ctx.guild.id)
-        settings.autoroles = []
-        await SettingsDB.get_instance().set_guild_settings(settings)
-        await ctx.send(get_str(ctx, "cmd-autorole-all-removed"))
-
-    @checks.has_permissions(manage_guild=True)
-    @autorole.command(name="set", aliases=["add", "+", "are", "config"])
-    async def autorole_set(self, ctx, *, name):
-        """
-            {command_prefix}autorole add [role]
-
-        {help}
-        """
-        role = self.bot.get_role(ctx, name)
-
-        if not role:
-            return await ctx.send(get_str(ctx, "cmd-joinclan-role-not-found").format(name))
-        if role.position >= ctx.author.top_role.position and ctx.author.id != owner_id and not ctx.author is ctx.guild.owner:
-            return await ctx.send(get_str(ctx, "role-not-enough-high"))
-        if role.position >= ctx.me.top_role.position:
-            return await ctx.send(get_str(ctx, "not-enough-permissions"))
-
-        settings = await SettingsDB.get_instance().get_guild_settings(ctx.guild.id)
-        if role.id not in settings.autoroles:
-            settings.autoroles.append(role.id)
-        roles = []
-        for id in settings.autoroles:
-            role = ctx.guild.get_role(id)
-            if role:
-                roles.append(role.name)
-        await SettingsDB.get_instance().set_guild_settings(settings)
-        msg = "`{}`".format("`, `".join(roles))
-        await ctx.send(get_str(ctx, "cmd-autorole-updated-{}".format("roles" if len(settings.autoroles) > 1 else "one-role")).format(msg))
-
-    @checks.has_permissions(manage_guild=True)
-    @autorole.command(name="remove", aliases=["-"])
-    async def autorole_remove(self, ctx, *, name):
-        """
-            {command_prefix}autorole remove [role]
-
-        {help}
-        """
-        role = self.bot.get_role(ctx, name)
-
-        if not role:
-            return await ctx.send(get_str(ctx, "cmd-joinclan-role-not-found").format(name))
-
-        settings = await SettingsDB.get_instance().get_guild_settings(ctx.guild.id)
-        if role.id in settings.autoroles:
-            settings.autoroles.remove(role.id)
-        roles = []
-        for id in settings.autoroles:
-            role = ctx.guild.get_role(id)
-            if role:
-                roles.append(role.name)
-        await SettingsDB.get_instance().set_guild_settings(settings)
-        if not roles:
-            return await ctx.send(get_str(ctx, "cmd-autorole-all-removed"))
-        msg = "`{}`".format("`, `".join(roles))
-        await ctx.send(get_str(ctx, "cmd-autorole-updated-{}".format("roles" if len(settings.autoroles) > 1 else "one-role")).format(msg))
 
     @commands.command(aliases=["removeclan", "leaveclan", "jclan", "lclan"])
     @commands.guild_only()

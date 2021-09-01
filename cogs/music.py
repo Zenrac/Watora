@@ -232,6 +232,8 @@ class Music(commands.Cog):
 
             # Send now playing message
             channel = event.player.channel
+            if isinstance(channel, int):
+                channel = await self.bot.safe_fetch('channel', event.player.channel)
 
             gid = int(event.player.guild_id)
 

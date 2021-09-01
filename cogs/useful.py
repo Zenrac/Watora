@@ -198,8 +198,8 @@ class Useful(commands.Cog):
         married = settings.marry[str(ctx.author.id)]
         married_since = married['date']
         married_with = await self.bot.safe_fetch('user', int(married["id"])) or married['name']
-        datetime_date = datetime.strptime(married_since, '%d %b %Y')
-        since_married = (ctx.message.created_at - datetime_date).days
+        datetime_date = datetime.strptime(married_since, '%d %b %Y').replace(tzinfo=None)
+        since_married = (ctx.message.created_at.replace(tzinfo=None) - datetime_date).days
         since_married_full = "{} ({})".format(f"**{married_since}**", get_str(ctx, "cmd-userinfo-days-ago").format(
             since_married) if since_married > 1 else get_str(ctx, "cmd-userinfo-day-ago").format(since_married))
 

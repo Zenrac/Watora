@@ -15,6 +15,7 @@ from time import time as current_time
 from itertools import islice
 from discord.ext import commands
 from datetime import datetime
+from discord import abc
 from collections import Counter, OrderedDict
 
 from utils.customplayer import CustomPlayer
@@ -316,19 +317,18 @@ class Music(commands.Cog):
             except discord.HTTPException:
                 pass
 
-    async def connect_player(self, ctx, player, channel_id: int, settings=None):
+    async def connect_player(self, ctx, player, channel: abc.Connectable, settings=None):
         """ Connects a player to a channel. """
         if not settings:
             settings = await SettingsDB.get_instance().get_guild_settings(ctx.guild.id)
         if settings.channel:
-            player.channel = ctx.guild.get_channel(
-                settings.channel).id if ctx.guild.get_channel(settings.channel) else ctx.channel.id
+            player.channel = ctx.guild.get_channel(settings.channel) or ctx.channel
         elif settings.channel is None:
-            player.channel = ctx.channel.id
+            player.channel = ctx.channel
         else:
             player.channel = None
 
-        await player.connect(channel_id)
+        await player.connect(channel)
 
     async def estimate_time_until(self, player, position):
         """
@@ -921,7 +921,7 @@ class Music(commands.Cog):
             except Exception:
                 pass
         await guild.change_voice_state(channel=None)
-        await player.disconnect()
+        await player.disconnect(guild)
         await self.delete_old_npmsg(player)
 
         guild_info = f"{guild.id}/{guild.name}" if guild else f"{gid}"
@@ -1077,7 +1077,9 @@ class Music(commands.Cog):
         player = self.bot.lavalink.players.get(guild.id)
         if player and not player.is_connected:
             if player.channel_id:
-                await player.connect(int(player.channel_id))
+                channel = guild.get_channel(int(player.channel_id))
+                if channel:
+                    await player.connect(channel)
             elif create:
                 return player
             else:
@@ -2514,7 +2516,7 @@ class Music(commands.Cog):
         player = await self.get_player(ctx.guild, True, ctx.author.id)
 
         if not ctx.guild.me.voice:
-            await self.connect_player(ctx, player, channel.id)
+            await self.connect_player(ctx, player, channel)
             try:
                 await ctx.message.add_reaction("☑")
             except discord.Forbidden:
@@ -2531,7 +2533,7 @@ class Music(commands.Cog):
                             raise NoVoiceChannel(
                                 get_str(ctx, "music-join-playing-a-song"))
 
-            await player.connect(channel.id)
+            await player.connect(channel)
             await ctx.send(get_str(ctx, "music-join-moved-success").format(f"**{channel}**"), delete_after=15)
 
         tries = 0
@@ -5150,7 +5152,7 @@ class Music(commands.Cog):
             after.channel.id)]
         if not song_info:
             player = await self.get_player(member.guild, True, member.id)
-            return await player.connect(after.channel.id)
+            return await player.connect(after.channel)
         song_info = random.choice(song_info.split('|')).strip()
         if 'autoplaylist:' in song_info:
             file_name = song_info.replace('autoplaylist:', '').strip()
@@ -5159,7 +5161,7 @@ class Music(commands.Cog):
                 return
             player = await self.get_player(member.guild, True, member.id)
             if not player.is_connected:
-                await player.connect(after.channel.id)
+                await player.connect(after.channel)
                 tries = 0
                 while not player.is_connected and tries < 5:
                     # Wait till the player connects to discord.. REE..
@@ -5167,13 +5169,12 @@ class Music(commands.Cog):
                     tries += 0.5
             else:
                 if int(player.channel_id) != after.channel.id:
-                    await player.connect(after.channel.id)
+                    await player.connect(after.channel)
             player.autoplaylist = settings
             player.authorplaylist = member
             player.queue.clear()
             await player.skip()
         else:
-            chan_id = after.channel.id
             if 'radio:' in song_info:
                 song_info = song_info.replace('radio:', '').strip()
                 song_info = self.list_radiolist.get(song_info)
@@ -5187,7 +5188,7 @@ class Music(commands.Cog):
             if not results or not results['tracks']:
                 return
 
-            await player.connect(chan_id)
+            await player.connect(after.channel)
 
             if results['playlistInfo']:
                 tracks = results['tracks']

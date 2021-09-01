@@ -914,7 +914,7 @@ class Music(commands.Cog):
         if player.blindtest.is_running:
             await player.blindtest.stop(send_final=False)
         await player.reset_equalizer()
-        if guild.voice_client:
+        if guild and guild.voice_client:
             try:
                 await guild.voice_client.disconnect()
                 await guild.voice_client.cleanup()
@@ -3775,7 +3775,7 @@ class Music(commands.Cog):
                 settings.private = m["private"]
                 settings.shuffle = m["shuffle"]
                 settings.whitelist = m["whitelist"]
-                settings.is_personal = m["is_personal"] or self.is_perso(ctx.guild, name)
+                settings.is_personal = m["is_personal"] or await self.is_perso(ctx.guild, name)
                 settings.description = m.get("description", "")
                 settings.avatar = m.get("avatar", "")
                 settings.upvote = m.get("upvote", [])

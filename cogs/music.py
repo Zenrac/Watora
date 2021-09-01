@@ -231,7 +231,8 @@ class Music(commands.Cog):
             event.player.now = event.player.current
 
             # Send now playing message
-            channel = self.bot.safe_fetch('channel', event.player.channel)
+            channel = event.player.channel
+
             gid = int(event.player.guild_id)
 
             # cancel inact task
@@ -276,11 +277,6 @@ class Music(commands.Cog):
             if requester:
                 embed.set_author(
                     name=requester.name, icon_url=requester.avatar or requester.default_avatar_url, url=event.track.uri)
-
-            if event.player.node.is_perso:
-                name = await self.bot.safe_fetch('user', event.player.node.name) or event.player.node.name
-                # TODO: Translations
-                embed.set_footer(text=f"Hosted by {name}")
 
             asyncio.ensure_future(self.send_new_np_msg(
                 event.player, channel, new_embed=embed))
@@ -408,8 +404,6 @@ class Music(commands.Cog):
 
     async def cog_check(self, ctx):
         """A check which applies to all commands in Music"""
-        if 'hostconfig' in str(ctx.command):  # TODO: Remove this after moving commands to an other cog
-            return True
         if isinstance(ctx.channel, discord.abc.PrivateChannel) and not ctx.author.id == owner_id:
             await ctx.send('```py\n{}\n```'.format(get_str(ctx, "music-not-in-dm")))
             raise commands.errors.CommandNotFound  # because it avoid a checkfailure message
@@ -417,12 +411,6 @@ class Music(commands.Cog):
 
     async def prepare_url(self, query, node=None, source='ytsearch'):
         """Prepares the url if it's an url or not etc... Ensures dict."""
-        settings = await SettingsDB.get_instance().get_glob_settings()
-        default_source = settings.source
-
-        if source == 'ytsearch' and (not node or not node.is_perso):
-            source = default_source
-
         if not match_url(query):
             if query.lower().startswith(('listen.moe', 'listen moe', 'listenmoe')):
                 if 'k' in query.lower():
@@ -649,7 +637,7 @@ class Music(commands.Cog):
         if not player.blindtest.channel:
             return False
 
-        channel = self.bot.safe_fetch('channel', int(player.blindtest.channel))
+        channel = await self.bot.safe_fetch('channel', int(player.blindtest.channel))
 
         if check and not player.blindtest.listening_mode:
             if player.blindtest.current_song and not player.blindtest.current_song.found:
@@ -863,7 +851,7 @@ class Music(commands.Cog):
     async def update_msg_radio(self, p):
         """Updates the now playing message according to the radio current song"""
         self.radio_update(p.current)
-        c = self.bot.safe_fetch('channel', p.channel)
+        c = await self.bot.safe_fetch('channel', p.channel)
         if c:
             if 'kpop' in p.current.uri.lower():
                 color = int("3CA4E9", 16)
@@ -987,10 +975,6 @@ class Music(commands.Cog):
                 name=requester.name, icon_url=requester.avatar or requester.default_avatar_url, url=current.uri)
         if thumb:
             embed.set_image(url=thumb)
-
-        if player.node.is_perso:
-            name = await self.bot.safe_fetch('user', player.node.name) or player.node.name
-            embed.set_footer(text=f"Hosted by {name}")
 
         async for entry in channel.history(limit=3):
             if not entry or not player.npmsg:  # idk
@@ -2078,11 +2062,7 @@ class Music(commands.Cog):
             embed.set_image(url=thumb)
         settings = await SettingsDB.get_instance().get_guild_settings(ctx.guild.id)
         if not settings.channel:
-            player.channel = ctx.channel.id
-        if player.node.is_perso:
-            name = await self.bot.safe_fetch('user', player.node.name) or player.node.name
-            # TODO: Translations
-            embed.set_footer(text=f"Hosted by {name}")
+            player.channel = ctx.channel
         await self.send_new_np_msg(player, ctx.channel, new_embed=embed, message=ctx.message, force_send=True)
 
     @commands.cooldown(rate=1, per=1.5, type=commands.BucketType.user)
@@ -4180,7 +4160,7 @@ class Music(commands.Cog):
 
         typing = True
 
-        channel = ctx.guild.get_channel(player.channel)
+        channel = player.channel
         if channel:
             async for entry in channel.history(limit=5):
                 if not entry or not player.npmsg:  # idk
@@ -5298,7 +5278,7 @@ class Music(commands.Cog):
 
     async def disconnect_message(self, player, guild, channel=None, inactivity=True):
         if not channel:
-            channel = guild.get_channel(player.channel)
+            channel = player.channel
         if not channel:
             return
         color = get_color(guild)

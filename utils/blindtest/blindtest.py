@@ -38,8 +38,8 @@ class BlindTest:
         return ['opening'] * values[0] + ['ending'] * values[1] + ['ost'] * values[2]
 
     @property
-    def bt_channel(self):
-        return self.bot.safe_fetch('channel', int(self.channel))
+    async def bt_channel(self):
+        return await self.bot.safe_fetch('channel', int(self.channel))
 
     @property
     def guild(self):

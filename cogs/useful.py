@@ -818,12 +818,12 @@ class Useful(commands.Cog):
 
         {help}
         """
-        patchchannel = self.bot.safe_fetch('channel', 340263164505620483)
+        patchchannel = await self.bot.safe_fetch('channel', 340263164505620483)
         try:
             if ctx.guild:
                 settings = await SettingsDB.get_instance().get_guild_settings(ctx.guild.id)
                 if settings.language == "french":
-                    patchchannel = self.bot.safe_fetch('channel', 268492317164437506)
+                    patchchannel = await self.bot.safe_fetch('channel', 268492317164437506)
         except KeyError:
             pass
         if not patchchannel:
@@ -1313,7 +1313,7 @@ class Useful(commands.Cog):
         """
         msg = []
         n = 1985
-        patchchannel = self.bot.safe_fetch('channel', id)
+        patchchannel = await self.bot.safe_fetch('channel', id)
         if not patchchannel:
             return
         async for lmsg in patchchannel.history(limit=nb):

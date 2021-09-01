@@ -8,24 +8,6 @@ class discordtogether(commands.Cog):
         self.bot = bot
         self.togetherControl = DiscordTogether(bot)
 
-    @commands.command(aliases=['activity', 'activities', 'activitiestogether'])
-    async def activitytogether(self, ctx):
-        """
-            {command_prefix}youtube
-
-        Starts the youtube activity in your voice channel.
-        """
-        if not ctx.author.voice:
-            return await ctx.send(get_str(ctx, "music-join-no-channel"))
-        link = await self.togetherControl.create_link(ctx.author.voice.channel.id, 'youtube')
-
-        embed=discord.Embed(
-            title="Youtube Together",
-            description=f"[Click Here]({link})",
-            color=get_color(ctx.guild)
-        )
-        await ctx.send(embed=embed)
-
     @commands.command(aliases=['youtube'])
     async def youtubetogether(self, ctx):
         """

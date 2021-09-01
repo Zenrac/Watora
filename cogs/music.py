@@ -231,7 +231,7 @@ class Music(commands.Cog):
             event.player.now = event.player.current
 
             # Send now playing message
-            channel = self.bot.safe_fetch(event.player.channel)
+            channel = self.bot.safe_fetch('channel', event.player.channel)
             gid = int(event.player.guild_id)
 
             # cancel inact task
@@ -1024,7 +1024,6 @@ class Music(commands.Cog):
     async def send_new_np_msg(self, player, channel, new_embed, message=None, force_send: bool = False):
         """Sends a new np msg and maybe delete the old one / or edit it"""
         # Check if it is worth to edit instead
-        print("new")
         try_edit = False
         if player.npmsg and not force_send:
             try:

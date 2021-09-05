@@ -5112,12 +5112,6 @@ class Music(commands.Cog):
             await self.disconnect_player(player)
 
     @commands.Cog.listener()
-    async def on_guild_channel_update(self, before, after):
-        if before.rtc_region != after.rtc_region:
-            log.debug("[Guild] \"%s\" changed regions on channel \"%s\": %s -> %s" %
-                      (after.guild.name, after.name, before.rtc_region, after.rtc_region))
-
-    @commands.Cog.listener()
     async def on_guild_channel_delete(self, channel):
         guild = channel.guild
         if hasattr(self.bot, 'lavalink') and guild.id in self.bot.lavalink.players.players:

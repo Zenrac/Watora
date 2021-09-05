@@ -1079,14 +1079,10 @@ class Music(commands.Cog):
                 node = None
                 glob_settings = await SettingsDB.get_instance().get_glob_settings()
                 if await self.bot.server_is_claimed(guild.id, glob_settings):
-                    node = self.bot.lavalink.node_manager.get_node_by_name(
-                        'Premium')
-                try:
-                    player = self.bot.lavalink.players.create(
-                        guild_id=guild.id, endpoint=str(guild.region), node=node)
-                    log.debug(f'[Player] Creating {guild.id}/{guild.name}')
-                except lavalink.NodeException:
-                    return await guild.send(get_str(guild, self.bot, "music-nodes-unavailable"))
+                    node = self.bot.lavalink.node_manager.get_node_by_name('Premium')
+                player = self.bot.lavalink.players.create(
+                    guild_id=guild.id, endpoint=str(guild.region), node=node)
+                log.debug(f'[Player] Creating {guild.id}/{guild.name}')
             else:
                 raise NoVoiceChannel(
                     get_str(guild, "not-connected", bot=self.bot))

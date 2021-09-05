@@ -5112,6 +5112,12 @@ class Music(commands.Cog):
             await self.disconnect_player(player)
 
     @commands.Cog.listener()
+    async def on_guild_channel_update(self, before, after):
+        if before.rtc_region != after.rtc_region:
+            log.debug("[Guild] \"%s\" changed regions on channel \"%s\": %s -> %s" %
+                      (after.guild.name, after.name, before.rtc_region, after.rtc_region))
+
+    @commands.Cog.listener()
     async def on_guild_channel_delete(self, channel):
         guild = channel.guild
         if hasattr(self.bot, 'lavalink') and guild.id in self.bot.lavalink.players.players:
@@ -5182,6 +5188,7 @@ class Music(commands.Cog):
 
     @commands.Cog.listener()
     async def on_voice_state_update(self, member, before, after):
+
         if not hasattr(self.bot, 'lavalink'):
             return
 
@@ -5226,7 +5233,11 @@ class Music(commands.Cog):
 
         my_voice_channel = player.connected_channel
 
-        guild = self.bot.get_guild(int(player.guild_id))  # member.guild ?
+        guild = self.bot.get_guild(int(player.guild_id)) or member.guild
+
+        if (guild.voice_client.channel != player.connected_channel):
+            guild.voice_client.channel = player.connected_channel or guild.me.voice.channel
+            await player.connect(channel=guild.voice_client.channel)
 
         if self.true_members_vc(my_voice_channel) and not (guild.me.voice and guild.me.voice.mute):
             if player.auto_paused:

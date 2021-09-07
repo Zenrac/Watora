@@ -3744,12 +3744,11 @@ class Music(commands.Cog):
     async def pltrans(self, ctx):
         settings = await SettingsDB.get_instance().get_glob_settings()
         for m in settings.autoplaylists.values():
-            original_name = name
             name = m["name"].lower()
             if name:
                 settings = await SettingsDB.get_instance().get_autoplaylists_settings(name)
                 settings.songs = m["songs"]
-                settings.name = original_name
+                settings.name = m["name"]
                 settings.created_by = m["created_by"]
                 settings.created_by_name = m["created_by_name"]
                 settings.created_date = m["created_date"]

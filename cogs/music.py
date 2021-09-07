@@ -2865,9 +2865,9 @@ class Music(commands.Cog):
 
         settings = await SettingsDB.get_instance().get_autoplaylists_settings(file_name)
 
-        if not settings.name:
+        if settings.name:
             file_name = format_mentions(file_name)
-            return await ctx.send(get_str(ctx, "music-plnew-already-exists").format(f"**{file_name}**"))
+            return await ctx.send(get_str(ctx, "music-plnew-already-exists").format(f"**{file_name_original}**"))
 
         settings.name = file_name_original
         settings.created_by = str(ctx.author.id)
@@ -3759,8 +3759,8 @@ class Music(commands.Cog):
                 settings.description = m.get("description", "")
                 settings.avatar = m.get("avatar", "")
                 settings.upvote = m.get("upvote", [])
-                if settings.name:
-                    await SettingsDB.get_instance().set_autoplaylists_settings(settings)
+                print(f"Added: {name}")
+                await SettingsDB.get_instance().set_autoplaylists_settings(settings)
 
     @commands.command(aliases=['plvote', 'votepl', 'upvotepl'])
     @commands.cooldown(rate=1, per=1.0, type=commands.BucketType.user)

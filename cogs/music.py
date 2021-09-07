@@ -1891,7 +1891,7 @@ class Music(commands.Cog):
         await ctx.send(get_str(ctx, "music-moveto-moved").format(f'**{new_duration}**'))
 
     @commands.cooldown(rate=1, per=1.5, type=commands.BucketType.guild)
-    @commands.command(name='skip', aliases=['next', 's'])
+    @commands.command(name='skip', aliases=['next', 's', 'n'])
     async def skip_song(self, ctx):
         """
             {command_prefix}skip

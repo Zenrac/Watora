@@ -3390,7 +3390,7 @@ class Music(commands.Cog):
                 if user:
                     name_lower = str(user.id)
 
-            settings = await SettingsDB.get_instance().get_autoplaylists_settings(name_lower)
+            autopl = settings = await SettingsDB.get_instance().get_autoplaylists_settings(name_lower)
             if not settings.name:
                 player = await self.get_player(ctx.guild)
                 if player.autoplaylist:

@@ -3503,7 +3503,7 @@ class Music(commands.Cog):
                         desc = ' '.join(opt.split(' ')[1:])
                         pic = get_image_from_url(desc)
                         if pic:
-                            autopl['avatar'] = pic
+                            autopl.avatar = pic
                             em.add_field(name='Avatar', value=pic)
                             em.set_thumbnail(url=pic)
                         else:

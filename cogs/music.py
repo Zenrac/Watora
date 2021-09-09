@@ -1187,10 +1187,6 @@ class Music(commands.Cog):
     async def is_dj(self, ctx):
         """Checks if a user is DJ or not"""
         if ctx.guild:
-            if not ctx.author.voice:
-                return False
-            if self.true_members_vc(ctx.author.voice.channel) == 1:
-                return True
             if is_admin(ctx.author, ctx.channel):
                 return True
             if ctx.channel.permissions_for(ctx.author).manage_guild:
@@ -1201,6 +1197,10 @@ class Music(commands.Cog):
                     return True
                 if r.id in settings.djs or "all" in settings.djs:
                     return True
+            if not ctx.author.voice:
+                return False
+            if self.true_members_vc(ctx.author.voice.channel) == 1:
+                return True
         return False
 
 

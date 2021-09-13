@@ -1357,7 +1357,7 @@ class Music(commands.Cog):
         player.blindtest.severity = int(severity)
         player.blindtest.timeout = int(timeout)
         player.blindtest.songs = songs
-        player.blindtest.channel = int(ctx.channel.id)
+        player.blindtest.channel = ctx.channel
         player.blindtest.percentage = percentage
         player.blindtest.wait = int(wait)
         return songs
@@ -4831,12 +4831,12 @@ class Music(commands.Cog):
         try:
             channel = [c for c in ctx.guild.channels if (str(c.id) == new_channel or isinstance(
                 new_channel, str) and c.name.lower() == new_channel.lower()) and isinstance(c, discord.TextChannel)][0]
-            new_channel = channel.id
+            new_channel = channel
         except IndexError:
             return await ctx.send(get_str(ctx, "music-npmsg-not-found").format(f"`{new_channel}`"))
 
         settings = await SettingsDB.get_instance().get_guild_settings(ctx.guild.id)
-        settings.channel = new_channel
+        settings.channel = new_channel.id
         if ctx.guild.id in self.bot.lavalink.players.players:
             player = await self.get_player(ctx.guild)
             player.channel = new_channel
@@ -4859,7 +4859,7 @@ class Music(commands.Cog):
         settings.channel = None
         if ctx.guild.id in self.bot.lavalink.players.players:
             player = await self.get_player(ctx.guild)
-            player.channel = ctx.channel.id
+            player.channel = ctx.channel
 
         await SettingsDB.get_instance().set_guild_settings(settings)
         await ctx.send(get_str(ctx, "music-npmsg-reset"))

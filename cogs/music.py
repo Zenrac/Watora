@@ -278,7 +278,7 @@ class Music(commands.Cog):
 
             if requester:
                 embed.set_author(
-                    name=requester.name, icon_url=requester.avatar or requester.default_avatar_url, url=event.track.uri)
+                    name=requester.name, icon_url=requester.avatar or requester.default_avatar, url=event.track.uri)
 
             asyncio.ensure_future(self.send_new_np_msg(
                 event.player, channel, new_embed=embed))
@@ -789,7 +789,7 @@ class Music(commands.Cog):
                                           can_owo=False).format(round(current_time() - p.blindtest.current_song.started_at, 2)))
             requester = msg.author
             embed.set_author(
-                name=requester.name, icon_url=requester.avatar or requester.default_avatar_url)
+                name=requester.name, icon_url=requester.avatar or requester.default_avatar)
         else:
             if not p.blindtest.current_song.found_reason:
                 p.blindtest.current_song.found_reason = get_str(
@@ -867,7 +867,7 @@ class Music(commands.Cog):
             requester = await self.bot.safe_fetch('member', p.current.requester, guild=c.guild)
             if requester:
                 embed.set_author(
-                    name=requester.name, icon_url=requester.avatar or requester.default_avatar_url, url=p.current.uri)
+                    name=requester.name, icon_url=requester.avatar or requester.default_avatar, url=p.current.uri)
 
             await self.send_new_np_msg(p, c, new_embed=embed)
 
@@ -974,7 +974,7 @@ class Music(commands.Cog):
         embed.url = current.uri
         if requester:
             embed.set_author(
-                name=requester.name, icon_url=requester.avatar or requester.default_avatar_url, url=current.uri)
+                name=requester.name, icon_url=requester.avatar or requester.default_avatar, url=current.uri)
         if thumb:
             embed.set_image(url=thumb)
 
@@ -2057,7 +2057,7 @@ class Music(commands.Cog):
         embed.url = current.uri
         if requester:
             embed.set_author(
-                name=requester.name, icon_url=requester.avatar or requester.default_avatar_url, url=current.uri)
+                name=requester.name, icon_url=requester.avatar or requester.default_avatar, url=current.uri)
         if thumb:
             embed.set_image(url=thumb)
         settings = await SettingsDB.get_instance().get_guild_settings(ctx.guild.id)

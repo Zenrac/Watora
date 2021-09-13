@@ -509,9 +509,9 @@ class Useful(commands.Cog):
                             ctx, "cmd-avatar-someone-avatar").format(user))
 
         ava = user.avatar
-        embed.set_image(url=ava or user.default_avatar_url)
+        embed.set_image(url=ava or user.default_avatar)
         embed.set_author(name=embed.author.name,
-                         url=ava or user.default_avatar_url)  # Hacky
+                         url=ava or user.default_avatar)  # Hacky
         try:
             await ctx.send(embed=embed)
         except discord.Forbidden:
@@ -1054,7 +1054,7 @@ class Useful(commands.Cog):
         channel = 268495043235545088
 
         e.set_author(name=str(
-            msg.author), icon_url=msg.author.avatar or msg.author.default_avatar_url)
+            msg.author), icon_url=msg.author.avatar or msg.author.default_avatar)
         e.description = content
         e.timestamp = msg.created_at
 
@@ -1114,7 +1114,7 @@ class Useful(commands.Cog):
         channel = 268495081202384896
 
         e.set_author(name=str(
-            msg.author), icon_url=msg.author.avatar or msg.author.default_avatar_url)
+            msg.author), icon_url=msg.author.avatar or msg.author.default_avatar)
         e.description = content
         e.timestamp = msg.created_at
 
@@ -1171,7 +1171,7 @@ class Useful(commands.Cog):
         channel = 346251537217093632
 
         e.set_author(name=str(
-            msg.author), icon_url=msg.author.avatar or msg.author.default_avatar_url)
+            msg.author), icon_url=msg.author.avatar or msg.author.default_avatar)
         e.description = content
         e.timestamp = msg.created_at
 

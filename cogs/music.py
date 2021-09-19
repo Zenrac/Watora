@@ -4521,7 +4521,7 @@ class Music(commands.Cog):
 
         {help}
         """
-        role = ctx.guild.get_role(ctx, name)
+        role = ctx.guild.get_role(name)
 
         if not role:
             return await ctx.send(get_str(ctx, "cmd-joinclan-role-not-found").format(name))
@@ -4563,7 +4563,7 @@ class Music(commands.Cog):
 
         {help}
         """
-        role = ctx.guild.get_role(ctx, name)
+        role = ctx.guild.get_role(name)
 
         if not role:
             return await ctx.send(get_str(ctx, "cmd-joinclan-role-not-found").format(name))

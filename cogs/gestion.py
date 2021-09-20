@@ -593,7 +593,7 @@ class Gestion(commands.Cog):
                    name.lower() or str(r.id) == name]
         if not targets:  # maybe a role
             is_role = True
-            target = ctx.guild.get_role(name)
+            target = ctx.bot.get_role(ctx, name)
 
             if not target:
                 return await self.bot.send_cmd_help(ctx)
@@ -632,7 +632,7 @@ class Gestion(commands.Cog):
                    name.lower() or str(r.id) == name]
         if not targets:  # maybe a role
             is_role = True
-            target = ctx.guild.get_role(name)
+            target = ctx.bot.get_role(ctx, name)
 
             if not target:
                 return await self.bot.send_cmd_help(ctx)
@@ -1182,7 +1182,7 @@ class Gestion(commands.Cog):
 
         {help}
         """
-        role = ctx.guild.get_role(name)
+        role = ctx.bot.get_role(ctx, name)
 
         if not role:
             return await ctx.send(get_str(ctx, "cmd-joinclan-role-not-found").format(name))
@@ -1229,7 +1229,7 @@ class Gestion(commands.Cog):
         {help}
         """
         settings = await SettingsDB.get_instance().get_guild_settings(ctx.guild.id)
-        role = ctx.guild.get_role(name)
+        role = ctx.bot.get_role(ctx, name)
         if not role:
             return await ctx.send(get_str(ctx, "cmd-joinclan-role-not-found").format(name))
         if role.id not in settings.clans:
@@ -1248,7 +1248,7 @@ class Gestion(commands.Cog):
         {help}
         """
         settings = await SettingsDB.get_instance().get_guild_settings(ctx.guild.id)
-        role = ctx.guild.get_role(name)
+        role = ctx.bot.get_role(ctx, name)
         if not role:
             return await ctx.send(get_str(ctx, "cmd-joinclan-role-not-found").format(name))
         if settings.clans:
@@ -1273,7 +1273,7 @@ class Gestion(commands.Cog):
         msg = [get_str(ctx, "cmd-clan-list")]
         if settings.clans:
             for clan in settings.clans:
-                role = ctx.guild.get_role(clan)
+                role = ctx.bot.get_role(clan)
                 if not role:
                     settings.clans.remove(clan)
                     await SettingsDB.get_instance().set_guild_settings(settings)

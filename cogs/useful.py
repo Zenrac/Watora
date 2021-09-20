@@ -710,7 +710,7 @@ class Useful(commands.Cog):
 
         {help}
         """
-        role = ctx.guild.get_role(name)
+        role = ctx.bot.get_role(ctx, name)
 
         if not role:
             return await ctx.send(get_str(ctx, "cmd-joinclan-role-not-found").format(name))
@@ -1377,7 +1377,7 @@ class Useful(commands.Cog):
             if not name:
                 return await self.bot.send_cmd_help(ctx)
 
-        role = ctx.guild.get_role(name)
+        role = ctx.bot.get_role(ctx, name)
 
         if not role:
             return await ctx.send(get_str(ctx, "cmd-joinclan-role-not-found").format(name))
@@ -1428,7 +1428,7 @@ class Useful(commands.Cog):
 
         {help}
         """
-        role = ctx.guild.get_role(name)
+        role = ctx.bot.get_role(ctx, name)
 
         if not role:
             return await ctx.send(get_str(ctx, "cmd-joinclan-role-not-found").format(name))
@@ -1463,7 +1463,7 @@ class Useful(commands.Cog):
 
         {help}
         """
-        role = ctx.guild.get_role(name)
+        role = ctx.bot.get_role(ctx, name)
 
         if not role:
             return await ctx.send(get_str(ctx, "cmd-joinclan-role-not-found").format(name))

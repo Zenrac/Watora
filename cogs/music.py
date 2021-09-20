@@ -3741,29 +3741,6 @@ class Music(commands.Cog):
 
         await ctx.send(embed=embed)
 
-
-    @commands.command()
-    async def pltrans(self, ctx):
-        settings = await SettingsDB.get_instance().get_glob_settings()
-        for m in settings.autoplaylists.values():
-            name = m["name"].lower()
-            if name:
-                settings = await SettingsDB.get_instance().get_autoplaylists_settings(name)
-                settings.songs = m["songs"]
-                settings.name = m["name"]
-                settings.created_by = m["created_by"]
-                settings.created_by_name = m["created_by_name"]
-                settings.created_date = m["created_date"]
-                settings.private = m["private"]
-                settings.shuffle = m["shuffle"]
-                settings.whitelist = m["whitelist"]
-                settings.is_personal = m["is_personal"] or await self.is_perso(ctx.guild, name)
-                settings.description = m.get("description", "")
-                settings.avatar = m.get("avatar", "")
-                settings.upvote = m.get("upvote", [])
-                print(f"Added: {name}")
-                await SettingsDB.get_instance().set_autoplaylists_settings(settings)
-
     @commands.command(aliases=['plvote', 'votepl', 'upvotepl'])
     @commands.cooldown(rate=1, per=1.0, type=commands.BucketType.user)
     async def plupvote(self, ctx, *, name=None):
@@ -3896,7 +3873,7 @@ class Music(commands.Cog):
                 results['playlistInfo'] = {
                     'selectedTrack': -1, 'name': 'Current Queue'}
             else:
-                return await load.edit(content=get_str(ctx, "music-plinfo-empty-auto").format("`{}pladd`".format(get_server_prefixes(ctx.bot, ctx.guild))))
+                return await ctx.send(content=get_str(ctx, "music-plinfo-empty-auto").format("`{}pladd`".format(get_server_prefixes(ctx.bot, ctx.guild))))
 
         if not song_url:
             if player.current:
@@ -4493,7 +4470,7 @@ class Music(commands.Cog):
                 raise commands.errors.CheckFailure
             return await ctx.invoke(self.setdj_set, name=role)
 
-    @setdj.command(name="now", aliases=["queue", "dj", "djs", "display", "list", "liste", "info"])
+    @setdj.command(name="now", aliases=["queue", "current", "display", "list", "liste", "info"])
     async def setdj_now(self, ctx):
         """
             {command_prefix}setdj now

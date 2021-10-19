@@ -39,7 +39,7 @@ class BlindTest:
 
     @property
     def bt_channel(self):
-        return self.bot.get_channel(int(self.channel))
+        return self.channel
 
     @property
     def guild(self):

@@ -198,8 +198,8 @@ class Useful(commands.Cog):
         married = settings.marry[str(ctx.author.id)]
         married_since = married['date']
         married_with = await self.bot.safe_fetch('user', int(married["id"])) or married['name']
-        datetime_date = datetime.strptime(married_since, '%d %b %Y')
-        since_married = (ctx.message.created_at - datetime_date).days
+        datetime_date = datetime.strptime(married_since, '%d %b %Y').replace(tzinfo=None)
+        since_married = (ctx.message.created_at.replace(tzinfo=None) - datetime_date).days
         since_married_full = "{} ({})".format(f"**{married_since}**", get_str(ctx, "cmd-userinfo-days-ago").format(
             since_married) if since_married > 1 else get_str(ctx, "cmd-userinfo-day-ago").format(since_married))
 
@@ -276,7 +276,7 @@ class Useful(commands.Cog):
         else:
             embed = discord.Embed()
             embed.set_author(name=get_str(ctx, "cmd-help-title"),
-                             url="https://watora.gitbook.io/watora/commands/music", icon_url=self.bot.user.avatar_url)
+                             url="https://watora.gitbook.io/watora/commands/music", icon_url=self.bot.user.avatar)
             if not ctx.guild:
                 embed.color = 0x71368a
             else:
@@ -302,7 +302,11 @@ class Useful(commands.Cog):
             embed.add_field(name="__", value=get_str(ctx, "cmd-help-more-info-cmd") + " **`{}help [command]`**".format(get_server_prefixes(
                 ctx.bot, ctx.guild)) + "\n" + get_str(ctx, "cmd-help-more-info-cat") + " **`{}help [category]`**".format(get_server_prefixes(ctx.bot, ctx.guild)))
             try:
-                await ctx.send(embed=embed)
+                view = discord.ui.View()
+                style = discord.ButtonStyle.url
+                view.add_item(item=discord.ui.Button(style=style, label="Read the doc!", url="https://watora.gitbook.io/watora/"))
+                view.add_item(item=discord.ui.Button(style=style, label=f"Support {self.bot.user.name}!", url="https://www.patreon.com/watora"))
+                await ctx.send(embed=embed, view=view)
             except discord.Forbidden:
                 await ctx.send(get_str(ctx, "need-embed-permission"))
 
@@ -321,7 +325,7 @@ class Useful(commands.Cog):
         embed = discord.Embed()
         owner = await self.bot.safe_fetch('user', owner_id) or str(owner_id)
         embed.set_author(name=f"{self.bot.user.name} v{ver}",
-                         icon_url=self.bot.user.avatar_url)
+                         icon_url=self.bot.user.avatar)
         if isinstance(ctx.channel, discord.abc.GuildChannel):
             embed.color = ctx.guild.me.color
         # embed.add_field(name="Version", value=ver, inline=False)
@@ -336,8 +340,9 @@ class Useful(commands.Cog):
         # embed.add_field(name="Users", value=users)
         embed.add_field(name="Owner", value=owner)
         embed.add_field(name="Commands", value=len(self.bot.commands))
+        nbAutoplaylists = await SettingsDB.get_instance().autoplaylist_settings_collection.count_documents({})
         embed.add_field(name="Autoplaylists",
-                        value=len(settings.autoplaylists))
+                        value=nbAutoplaylists)
         embed.add_field(name="Donation",
                         value="[PayPal](https://www.paypal.me/watora)\n[Patreon](https://www.patreon.com/watora)")
         embed.add_field(
@@ -406,7 +411,8 @@ class Useful(commands.Cog):
         if 'Update' in self.bot.cogs:
             msg = ""
             asyncio.ensure_future(self.bot.cogs['Update'].update())
-            votes = self.bot.cogs['Update'].votes
+            settings = await SettingsDB.get_instance().get_glob_settings()
+            votes = settings.votes
             counter = Counter(k['id'] for k in votes if k.get('id'))
             counter = OrderedDict(counter.most_common())
             top5 = []
@@ -425,13 +431,13 @@ class Useful(commands.Cog):
                         msg += f"`{pos}` **{user}** : **{nb}** vote{'s' if nb > 1 else ''}\n"
                     else:
                         e.set_footer(
-                            text=f"{pos} - {user} : {nb} vote{'s' if nb > 1 else ''}", icon_url=user.avatar_url)
+                            text=f"{pos} - {user} : {nb} vote{'s' if nb > 1 else ''}", icon_url=user.avatar)
         if isinstance(ctx.channel, discord.abc.GuildChannel):
             e.color = ctx.guild.me.color
-        e.set_thumbnail(url=self.bot.user.avatar_url)
+        e.set_thumbnail(url=self.bot.user.avatar)
         e.set_author(
-            name=f"Top Voters of {month}:", url=f"https://discordbots.org/bot/{self.bot.user.id}/vote")
-        e.description = f"{msg}\n**[Vote for {self.bot.user.name} on Discord Bot List](https://discordbots.org/bot/{self.bot.user.id}/vote)**"
+            name=f"Top Voters of {month}:", url=f"https://top.gg/bot/{self.bot.user.id}/vote")
+        e.description = f"{msg}\n**[Vote for {self.bot.user.name} on Top.gg](https://top.gg/bot/{self.bot.user.id}/vote)**"
 
         try:
             await ctx.send(embed=e)
@@ -502,10 +508,10 @@ class Useful(commands.Cog):
                         embed.set_author(name=get_str(
                             ctx, "cmd-avatar-someone-avatar").format(user))
 
-        ava = user.avatar_url
-        embed.set_image(url=ava or user.default_avatar_url)
+        ava = user.avatar
+        embed.set_image(url=ava or user.default_avatar)
         embed.set_author(name=embed.author.name,
-                         url=ava or user.default_avatar_url)  # Hacky
+                         url=ava or user.default_avatar)  # Hacky
         try:
             await ctx.send(embed=embed)
         except discord.Forbidden:
@@ -607,9 +613,9 @@ class Useful(commands.Cog):
         name = str(user)
         name = " ~ ".join((name, user.nick)) if user.nick else name
 
-        if user.avatar_url:
-            data.set_author(name=name, url=user.avatar_url)
-            data.set_thumbnail(url=user.avatar_url)
+        if user.avatar:
+            data.set_author(name=name, url=user.avatar)
+            data.set_thumbnail(url=user.avatar)
         else:
             data.set_author(name=name)
 
@@ -684,16 +690,9 @@ class Useful(commands.Cog):
 
         settings = await SettingsDB.get_instance().get_guild_settings(ctx.guild.id)
 
-        if settings.defaultnode:
-            member = ctx.guild.get_member(int(settings.defaultnode))
-            if member:
-                # TODO: Translations
-                data.add_field(name='Default music node',
-                               value=f"Hosted by {member}", inline=False)
-
-        if guild.icon_url:
-            data.set_author(name=guild.name, url=guild.icon_url)
-            data.set_thumbnail(url=guild.icon_url)
+        if guild.icon:
+            data.set_author(name=guild.name, url=guild.icon)
+            data.set_thumbnail(url=guild.icon)
         else:
             data.set_author(name=guild.name)
 
@@ -711,7 +710,7 @@ class Useful(commands.Cog):
 
         {help}
         """
-        role = self.bot.get_role(ctx, name)
+        role = ctx.bot.get_role(ctx, name)
 
         if not role:
             return await ctx.send(get_str(ctx, "cmd-joinclan-role-not-found").format(name))
@@ -819,12 +818,12 @@ class Useful(commands.Cog):
 
         {help}
         """
-        patchchannel = self.bot.get_channel(340263164505620483)
+        patchchannel = await self.bot.safe_fetch('channel', 340263164505620483)
         try:
             if ctx.guild:
                 settings = await SettingsDB.get_instance().get_guild_settings(ctx.guild.id)
                 if settings.language == "french":
-                    patchchannel = self.bot.get_channel(268492317164437506)
+                    patchchannel = await self.bot.safe_fetch('channel', 268492317164437506)
         except KeyError:
             pass
         if not patchchannel:
@@ -834,7 +833,7 @@ class Useful(commands.Cog):
                 e.color = 0x71368a
             else:
                 e.color = ctx.me.color
-            e.set_thumbnail(url=self.bot.user.avatar_url)
+            e.set_thumbnail(url=self.bot.user.avatar)
             e.add_field(name='{}:'.format(get_str(ctx, "cmd-invitation-my-server")),
                         value='[World of Watora]({})'.format("https://discord.gg/ArJgTpM"))
             return await ctx.send(embed=e)
@@ -1027,7 +1026,7 @@ class Useful(commands.Cog):
                 e.color = 0x71368a
             else:
                 e.color = ctx.me.color
-            e.set_thumbnail(url=self.bot.user.avatar_url)
+            e.set_thumbnail(url=self.bot.user.avatar)
             url = f"https://discordapp.com/api/oauth2/authorize?client_id={self.bot.user.id}&scope=bot"
             if self.bot.user.id == 220644154177355777:
                 url += "&redirect_uri=https%3A%2F%2Fwatorabot.github.io%2F%3Finvited%3Dyes"  # redirect uri
@@ -1055,7 +1054,7 @@ class Useful(commands.Cog):
         channel = 268495043235545088
 
         e.set_author(name=str(
-            msg.author), icon_url=msg.author.avatar_url or msg.author.default_avatar_url)
+            msg.author), icon_url=msg.author.avatar or msg.author.default_avatar)
         e.description = content
         e.timestamp = msg.created_at
 
@@ -1115,7 +1114,7 @@ class Useful(commands.Cog):
         channel = 268495081202384896
 
         e.set_author(name=str(
-            msg.author), icon_url=msg.author.avatar_url or msg.author.default_avatar_url)
+            msg.author), icon_url=msg.author.avatar or msg.author.default_avatar)
         e.description = content
         e.timestamp = msg.created_at
 
@@ -1172,7 +1171,7 @@ class Useful(commands.Cog):
         channel = 346251537217093632
 
         e.set_author(name=str(
-            msg.author), icon_url=msg.author.avatar_url or msg.author.default_avatar_url)
+            msg.author), icon_url=msg.author.avatar or msg.author.default_avatar)
         e.description = content
         e.timestamp = msg.created_at
 
@@ -1314,7 +1313,7 @@ class Useful(commands.Cog):
         """
         msg = []
         n = 1985
-        patchchannel = self.bot.get_channel(id)
+        patchchannel = await self.bot.safe_fetch('channel', id)
         if not patchchannel:
             return
         async for lmsg in patchchannel.history(limit=nb):
@@ -1378,7 +1377,7 @@ class Useful(commands.Cog):
             if not name:
                 return await self.bot.send_cmd_help(ctx)
 
-        role = self.bot.get_role(ctx, name)
+        role = ctx.bot.get_role(ctx, name)
 
         if not role:
             return await ctx.send(get_str(ctx, "cmd-joinclan-role-not-found").format(name))
@@ -1429,7 +1428,7 @@ class Useful(commands.Cog):
 
         {help}
         """
-        role = self.bot.get_role(ctx, name)
+        role = ctx.bot.get_role(ctx, name)
 
         if not role:
             return await ctx.send(get_str(ctx, "cmd-joinclan-role-not-found").format(name))
@@ -1464,7 +1463,7 @@ class Useful(commands.Cog):
 
         {help}
         """
-        role = self.bot.get_role(ctx, name)
+        role = ctx.bot.get_role(ctx, name)
 
         if not role:
             return await ctx.send(get_str(ctx, "cmd-joinclan-role-not-found").format(name))
@@ -1647,10 +1646,10 @@ class Useful(commands.Cog):
         desc = ''
         for i, m in enumerate(settings.claim[str(member.id)].items(), start=1):
             guild = await self.bot.safe_fetch('guild', int(m[0]))
-            desc += f'`{i}. `' + (('**' + guild.name + '** ')
+            desc += f'`{i}.`' + (('**' + guild.name + '** ')
                                   if guild else '') + f'(`{m[0]}`) ' + f'({m[1]})\n'
         embed = discord.Embed(description=desc)
-        embed.set_author(name=member.name, icon_url=member.avatar_url)
+        embed.set_author(name=member.name, icon_url=member.avatar)
         max_claim = 2
         if await is_lover(self.bot, member):
             max_claim = 5
@@ -1790,7 +1789,7 @@ class Useful(commands.Cog):
         embed = discord.Embed()
 
         embed.set_author(name=get_str(
-            ctx, "cmd-settings-title"), icon_url=guild.icon_url)
+            ctx, "cmd-settings-title"), icon_url=guild.icon)
         if not guild:
             embed.color = 0x71368a
         else:
@@ -1883,12 +1882,6 @@ class Useful(commands.Cog):
             msg.append(struct.format(
                 get_str(ctx, f"cmd-settings-{name}"), values[i]))
 
-        if settings.defaultnode:
-            member = ctx.guild.get_member(int(settings.defaultnode))
-            if member:
-                # TODO: Translations and move it
-                msg.append(struct.format(
-                    "Default music node", f'Hosted by {member}'))
         embed.add_field(name=get_str(ctx, "cmd-settings-player"),
                         value='\n'.join(msg), inline=False)
 

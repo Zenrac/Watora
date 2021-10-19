@@ -17,14 +17,14 @@ from utils.watora import globprefix, log, owner_id, get_server_prefixes, get_str
 cmds = {}
 cmds['music'] = ["join", "np", "play", "queue", "search", "skip", "forceskip", "replay", "previous", "relatedsong", "replaynow", "previousnow", "stop", "pl", "radio",
                  "repeat", "pause", "volume", "playnow", "playnext", "clear", "promote", "shuffle", "remove", "moveto", "lyrics", "bassboost", "equalizer", "blindtest", "blindtestscore"]
-cmds['fun'] = ["8ball", "minesweeper", "ily", "roll", "flip", "me", "customcommand", "choice",
-               "ascii", "meme", "picture", "osu", "marry", "divorce", "anime", "manga", "char", "nextep"]  # TODO: Add mal command with a translation
+cmds['fun'] = ["8ball", "ily", "roll", "flip", "me", "customcommand", "choice",
+               "ascii", "meme", "picture", "osu", "marry", "divorce", "anime", "manga", "char", "nextep", "mal", "schedule"]  # TODO: Add mal command with a translation
 cmds['useful'] = ["don", "info", "poll", "stats", "credits", "changelog", "permsinfo", "version", "infoshard", "avatar",
                   "userinfo", "serverinfo", "roleinfo", "getrole", "ping", "invitation", "suggestion", "bug", "feedback", "clan", "joinclan"]
 cmds['moderation'] = ["kick", "ban", "hackban",
                       "voicekick", "clean", "purge", "stfu"]
 cmds['config'] = ["prefix", "language", "owo", 'blacklist', 'settings', "defvolume", "defvote", "autoleave", "npmsg",
-                  "autorole", "ignore", "disabledcommand", "setdj", "bind", "lazy", "autoplay", "autoconnect"]
+                  "ignore", "disabledcommand", "setdj", "bind", "lazy", "autoplay", "autoconnect"]
 cmds['activities'] = ["youtube", "chess", "poker", "fishing", "betrayal"]
 
 cmd_list = {
@@ -582,7 +582,7 @@ class Gestion(commands.Cog):
 
         if ctx.message.mentions:
             user = ctx.message.mentions[-1]
-            if user.mention not in name:  # It was a prefix
+            if user.mention not in name and user.mention.replace('<@', '<@!') not in name:  # It was a prefix
                 user = None
                 if len(ctx.message.mentions) > 1:
                     user = ctx.message.mentions[0]
@@ -593,7 +593,7 @@ class Gestion(commands.Cog):
                    name.lower() or str(r.id) == name]
         if not targets:  # maybe a role
             is_role = True
-            target = self.bot.get_role(ctx, name)
+            target = ctx.bot.get_role(ctx, name)
 
             if not target:
                 return await self.bot.send_cmd_help(ctx)
@@ -621,7 +621,7 @@ class Gestion(commands.Cog):
 
         if ctx.message.mentions:
             user = ctx.message.mentions[-1]
-            if user.mention not in name:  # It was a prefix
+            if user.mention not in name and user.mention.replace('<@', '<@!') not in name:  # It was a prefix
                 user = None
                 if len(ctx.message.mentions) > 1:
                     user = ctx.message.mentions[0]
@@ -632,7 +632,7 @@ class Gestion(commands.Cog):
                    name.lower() or str(r.id) == name]
         if not targets:  # maybe a role
             is_role = True
-            target = self.bot.get_role(ctx, name)
+            target = ctx.bot.get_role(ctx, name)
 
             if not target:
                 return await self.bot.send_cmd_help(ctx)
@@ -772,7 +772,6 @@ class Gestion(commands.Cog):
         if user.id not in settings.blacklisted:
             settings.blacklisted.append(user.id)
             await SettingsDB.get_instance().set_glob_settings(settings)
-            self.bot.config = settings
             await ctx.send("User has been blacklisted.")
         else:
             await ctx.send("User is already blacklisted.")
@@ -791,7 +790,6 @@ class Gestion(commands.Cog):
         elif user.id not in settings.blacklisted:
             settings.blacklisted.append(user.id)
             await SettingsDB.get_instance().set_glob_settings(settings)
-            self.bot.config = settings
             await ctx.send("User has been blacklisted.")
         else:
             await ctx.send("User is already blacklisted.")
@@ -807,7 +805,6 @@ class Gestion(commands.Cog):
         if id not in settings.blacklisted:
             settings.blacklisted.append(id)
             await SettingsDB.get_instance().set_glob_settings(settings)
-            self.bot.config = settings
             await ctx.send("User has been blacklisted.")
         else:
             await ctx.send("User is already blacklisted.")
@@ -823,7 +820,6 @@ class Gestion(commands.Cog):
         if user.id in settings.blacklisted:
             settings.blacklisted.remove(user.id)
             await SettingsDB.get_instance().set_glob_settings(settings)
-            self.bot.config = settings
             await ctx.send("User has been removed from the blacklist.")
         else:
             await ctx.send("User is not blacklisted.")
@@ -839,7 +835,6 @@ class Gestion(commands.Cog):
         if id in settings.blacklisted:
             settings.blacklisted.remove(id)
             await SettingsDB.get_instance().set_glob_settings(settings)
-            self.bot.config = settings
             await ctx.send("User has been removed from the blacklist.")
         else:
             await ctx.send("User is not blacklisted.")
@@ -870,7 +865,6 @@ class Gestion(commands.Cog):
         settings = await SettingsDB.get_instance().get_glob_settings()
         settings.blacklisted = []
         await SettingsDB.get_instance().set_glob_settings(settings)
-        self.bot.config = settings
         await ctx.send("Blacklist is now empty.")
 
     def _populate_list(self, _list):
@@ -1180,109 +1174,6 @@ class Gestion(commands.Cog):
         else:
             await ctx.send(get_str(ctx, "cmd-hackban-cancelled"), delete_after=30)
 
-
-    @commands.guild_only()
-    @commands.cooldown(rate=1, per=1.5, type=commands.BucketType.user)
-    @commands.group(aliases=["ar", "aar", "autoasignrole", "autoasignroles", "autoroles"], invoke_without_command=True)
-    async def autorole(self, ctx, *, role):
-        """
-            {command_prefix}autorole add [role]
-            {command_prefix}autorole remove [role]
-            {command_prefix}autorole reset
-            {command_prefix}autorole now
-
-        {help}
-        """
-        if not ctx.invoked_subcommand:
-            await ctx.invoke(self.autorole_set, name=role)
-
-    @autorole.command(name="now", aliases=["list", "queue", "current"])
-    async def autorole_now(self, ctx):
-        """
-            {command_prefix}autorole now
-
-        {help}
-        """
-        settings = await SettingsDB.get_instance().get_guild_settings(ctx.guild.id)
-        roles = []
-        for id in settings.autoroles:
-            role = ctx.guild.get_role(id)
-            if role:
-                roles.append(role.name)
-        if not roles:
-            return await ctx.send(get_str(ctx, "cmd-autorole-no-autorole"))
-        msg = "`{}`".format("`, `".join(roles))
-        await ctx.send(get_str(ctx, "cmd-autorole-list-{}".format("roles" if len(settings.autoroles) > 1 else "one-role")).format(msg))
-
-    @checks.has_permissions(manage_guild=True)
-    @autorole.command(name="reset", aliases=["off", "delete", "stop", "rien"])
-    async def autorole_reset(self, ctx):
-        """
-            {command_prefix}autorole reset
-
-        {help}
-        """
-        settings = await SettingsDB.get_instance().get_guild_settings(ctx.guild.id)
-        settings.autoroles = []
-        await SettingsDB.get_instance().set_guild_settings(settings)
-        await ctx.send(get_str(ctx, "cmd-autorole-all-removed"))
-
-    @checks.has_permissions(manage_guild=True)
-    @autorole.command(name="set", aliases=["add", "+", "are", "config"])
-    async def autorole_set(self, ctx, *, name):
-        """
-            {command_prefix}autorole add [role]
-
-        {help}
-        """
-        role = self.bot.get_role(ctx, name)
-
-        if not role:
-            return await ctx.send(get_str(ctx, "cmd-joinclan-role-not-found").format(name))
-        if role.position >= ctx.author.top_role.position and ctx.author.id != owner_id and not ctx.author is ctx.guild.owner:
-            return await ctx.send(get_str(ctx, "role-not-enough-high"))
-        if role.position >= ctx.me.top_role.position:
-            return await ctx.send(get_str(ctx, "not-enough-permissions"))
-
-        settings = await SettingsDB.get_instance().get_guild_settings(ctx.guild.id)
-        if role.id not in settings.autoroles:
-            settings.autoroles.append(role.id)
-        roles = []
-        for id in settings.autoroles:
-            role = ctx.guild.get_role(id)
-            if role:
-                roles.append(role.name)
-        await SettingsDB.get_instance().set_guild_settings(settings)
-        msg = "`{}`".format("`, `".join(roles))
-        await ctx.send(get_str(ctx, "cmd-autorole-updated-{}".format("roles" if len(settings.autoroles) > 1 else "one-role")).format(msg))
-
-    @checks.has_permissions(manage_guild=True)
-    @autorole.command(name="remove", aliases=["-"])
-    async def autorole_remove(self, ctx, *, name):
-        """
-            {command_prefix}autorole remove [role]
-
-        {help}
-        """
-        role = self.bot.get_role(ctx, name)
-
-        if not role:
-            return await ctx.send(get_str(ctx, "cmd-joinclan-role-not-found").format(name))
-
-        settings = await SettingsDB.get_instance().get_guild_settings(ctx.guild.id)
-        if role.id in settings.autoroles:
-            settings.autoroles.remove(role.id)
-        roles = []
-        for id in settings.autoroles:
-            role = ctx.guild.get_role(id)
-            if role:
-                roles.append(role.name)
-        await SettingsDB.get_instance().set_guild_settings(settings)
-        if not roles:
-            return await ctx.send(get_str(ctx, "cmd-autorole-all-removed"))
-        msg = "`{}`".format("`, `".join(roles))
-        await ctx.send(get_str(ctx, "cmd-autorole-updated-{}".format("roles" if len(settings.autoroles) > 1 else "one-role")).format(msg))
-
     @commands.command(aliases=["removeclan", "leaveclan", "jclan", "lclan"])
     @commands.guild_only()
     async def joinclan(self, ctx, *, name):
@@ -1291,7 +1182,7 @@ class Gestion(commands.Cog):
 
         {help}
         """
-        role = self.bot.get_role(ctx, name)
+        role = ctx.bot.get_role(ctx, name)
 
         if not role:
             return await ctx.send(get_str(ctx, "cmd-joinclan-role-not-found").format(name))
@@ -1338,7 +1229,7 @@ class Gestion(commands.Cog):
         {help}
         """
         settings = await SettingsDB.get_instance().get_guild_settings(ctx.guild.id)
-        role = self.bot.get_role(ctx, name)
+        role = ctx.bot.get_role(ctx, name)
         if not role:
             return await ctx.send(get_str(ctx, "cmd-joinclan-role-not-found").format(name))
         if role.id not in settings.clans:
@@ -1357,7 +1248,7 @@ class Gestion(commands.Cog):
         {help}
         """
         settings = await SettingsDB.get_instance().get_guild_settings(ctx.guild.id)
-        role = self.bot.get_role(ctx, name)
+        role = ctx.bot.get_role(ctx, name)
         if not role:
             return await ctx.send(get_str(ctx, "cmd-joinclan-role-not-found").format(name))
         if settings.clans:
@@ -1382,7 +1273,7 @@ class Gestion(commands.Cog):
         msg = [get_str(ctx, "cmd-clan-list")]
         if settings.clans:
             for clan in settings.clans:
-                role = self.bot.get_role(ctx, clan)
+                role = ctx.bot.get_role(clan)
                 if not role:
                     settings.clans.remove(clan)
                     await SettingsDB.get_instance().set_guild_settings(settings)
@@ -1450,7 +1341,7 @@ class Gestion(commands.Cog):
 
         e = discord.Embed()
         e.color = int("FF015B", 16)
-        e.set_thumbnail(url=self.bot.user.avatar_url)
+        e.set_thumbnail(url=self.bot.user.avatar)
         msg = f"Hi, I'm **{self.bot.user.name}**, thanks for adding me to your server !\n\nI'm currently \
             in English, but __I can speak in many other languages__.\n\n\
             Use **`{settings.prefix}help lang`** to display help about how to change my language.\n\

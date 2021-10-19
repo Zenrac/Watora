@@ -1,18 +1,12 @@
 import discord
 from discord.ext import commands
 from discordTogether import DiscordTogether
-from utils.watora import get_str
+from utils.watora import get_str, get_color
 
 class discordtogether(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         self.togetherControl = DiscordTogether(bot)
-
-    def get_color(self, guild=None):
-        """Gets the top role color otherwise select the Watora's main color"""
-        if not guild or str(guild.me.color) == "#000000":
-            return int("FF015B", 16)
-        return guild.me.color
 
     @commands.command(aliases=['youtube'])
     async def youtubetogether(self, ctx):
@@ -28,7 +22,7 @@ class discordtogether(commands.Cog):
         embed=discord.Embed(
             title="Youtube Together",
             description=f"[Click Here]({link})",
-            color=self.get_color(ctx.guild)
+            color=get_color(ctx.guild)
         )
         await ctx.send(embed=embed)
 
@@ -46,7 +40,7 @@ class discordtogether(commands.Cog):
         embed=discord.Embed(
             title="Poker Together",
             description=f"[Click Here]({link})",
-            color=self.get_color(ctx.guild)
+            color=get_color(ctx.guild)
         )
         await ctx.send(embed=embed)
 
@@ -64,7 +58,7 @@ class discordtogether(commands.Cog):
         embed=discord.Embed(
             title="Chess Together",
             description=f"[Click Here]({link})",
-            color=self.get_color(ctx.guild)
+            color=get_color(ctx.guild)
         )
         await ctx.send(embed=embed)
 
@@ -82,7 +76,7 @@ class discordtogether(commands.Cog):
         embed=discord.Embed(
             title="Betrayal Together",
             description=f"[Click Here]({link})",
-            color=self.get_color(ctx.guild)
+            color=get_color(ctx.guild)
         )
         await ctx.send(embed=embed)
 
@@ -100,7 +94,7 @@ class discordtogether(commands.Cog):
         embed=discord.Embed(
             title="Fishing Together",
             description=f"[Click Here]({link})",
-            color=self.get_color(ctx.guild)
+            color=get_color(ctx.guild)
             )
         await ctx.send(embed=embed)
 

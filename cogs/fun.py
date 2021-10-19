@@ -20,93 +20,9 @@ class Fun(commands.Cog):
 
     def __init__(self, bot):
         self.bot = bot
-        self.minesweeper_levels = {
-            'BEGINNER': (10, 10, 10),
-            'INTERMEDIATE': (12, 12, 25),
-            'EXPERT': (14, 14, 50)
-        }
 
     def to_keycap(self, c):
         return '\N{KEYCAP TEN}' if c == 10 else str(c) + '\u20e3'
-
-    def generate_minesweeper_board(self, nrows, ncols, nbombs):
-        """
-        Generates a minesweeper board as an array of arrays of numbers.
-        -1 is a bomb,
-        0 is empty,
-        Positive numbers are the number of adjacent bombs.
-        """
-        nrows = max(1, min(14, nrows))
-        ncols = max(1, min(14, ncols))
-        nbombs = max(0, min(ncols * nrows, nbombs))
-        bombs = []
-        posibilities = []
-        for r in range(nrows):
-            for c in range(ncols):
-                posibilities += [(r, c)]
-        for i in range(nbombs):
-            if posibilities:
-                newbomb = {'x': -1, 'y': -1}
-                position = random.choice(posibilities)
-                newbomb['x'] = position[0]
-                newbomb['y'] = position[1]
-                posibilities.remove(position)
-                bombs.append(newbomb)
-
-        board = [[0] * ncols for _ in range(nrows)]
-        for r in range(nrows):
-            for c in range(ncols):
-                has_bomb = any(
-                    map(lambda b: b['x'] == r and b['y'] == c, bombs))
-                if has_bomb:
-                    board[r][c] = -1
-                else:
-                    adjc = 0
-                    for i in range(r - 1, r + 2):
-                        for j in range(c - 1, c + 2):
-                            adjc += sum(map(lambda b: 1 if b['x']
-                                            == i and b['y'] == j else 0, bombs))
-                    board[r][c] = adjc
-
-        REPR = [':bomb:', ':cyclone:', ':one:', ':two:', ':three:',
-                ':four:', ':five:', ':six:', ':seven:', ':eight:']
-        msg = '\n'.join(''.join(map(lambda n: "||{}||".format(
-            REPR[n + 1] if len(REPR) > n + 1 else ':cyclone:'), row)) for row in board)
-        if len(msg) > 2000:
-            # Prevent from infinite loop.
-            return self.generate_minesweeper_board(min(ncols - 1, 10), min(nrows - 1, 10), nbombs)
-        return msg
-
-    @commands.command(aliases=["mine", "mines", "demineur", "démineur"])
-    async def minesweeper(self, ctx, level_or_rows='BEGINNER', ncols: int = 10, nbombs: int = 10):
-        """
-            {command_prefix}minesweeper [level]
-            {command_prefix}minesweeper [number of rows] [number of cols] [number of bombs]
-
-        {help}
-            BEGINNER: 10, 10, 10,
-            INTERMEDIATE: 12, 12, 25
-            EXPERT: 14, 14, 50
-        """
-        choice = None
-
-        for k in self.minesweeper_levels.keys():
-            if k.startswith(level_or_rows.upper()):
-                choice = self.minesweeper_levels[k]
-                break
-
-        if choice:
-            board = self.generate_minesweeper_board(*choice)
-            return await ctx.send(board)
-        try:
-            level_or_rows = int(level_or_rows)
-            ncols = int(ncols)
-            nbombs = int(nbombs)
-        except ValueError:
-            return await self.bot.send_cmd_help(ctx)
-
-        board = self.generate_minesweeper_board(level_or_rows, ncols, nbombs)
-        await ctx.send(board)
 
     @commands.command(name="8ball", aliases=["8balls", "eightball"])
     async def _8ball(self, ctx, *, more: str):
@@ -444,7 +360,7 @@ class Fun(commands.Cog):
                 user = check_str[0]
 
         if user:
-            pic = str(user.avatar_url)
+            pic = str(user.avatar)
 
         pic = pic.strip('<>')
 
@@ -472,7 +388,7 @@ class Fun(commands.Cog):
             total = "https://memegen.link/custom/{}/_.jpg?alt={}".format(
                 part1, pic)
         embed = discord.Embed()
-        embed.set_author(name=ctx.author.name, icon_url=ctx.author.avatar_url)
+        embed.set_author(name=ctx.author.name, icon_url=ctx.author.avatar)
 
         # download file
         async with aiohttp.request("GET", total) as resp:

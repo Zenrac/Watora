@@ -48,7 +48,7 @@ else:
 
 loop = asyncio.get_event_loop()
 
-shard_count = 60
+shard_count = 30
 shard_per_instance = 10
 instance_count = int(shard_count / shard_per_instance)
 

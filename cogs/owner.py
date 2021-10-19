@@ -258,7 +258,7 @@ class Owner(commands.Cog):
         """
         embed = discord.Embed()
         embed.set_author(name=self.bot.user.name,
-                         icon_url=self.bot.user.avatar_url)
+                         icon_url=self.bot.user.avatar)
         if not ctx.guild:
             embed.color = 0x71368a
         else:

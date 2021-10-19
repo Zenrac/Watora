@@ -118,17 +118,3 @@ def is_in_guilds(*guild_ids):
         return guild.id in guild_ids
 
     return commands.check(predicate)
-
-
-def is_alone(author):
-    if not author.guild.me.voice or not author.voice:
-        return False
-    num_voice = sum(1 for m in author.voice.channel.members if not (
-        m.voice.deaf or m.bot or m.voice.self_deaf))
-    if num_voice == 1 and author.guild.me.voice.channel == author.voice.channel:
-        return True
-    return False
-
-
-def is_lounge_cpp():
-    return is_in_guilds(145079846832308224)

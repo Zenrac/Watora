@@ -49,7 +49,7 @@ else:
 loop = asyncio.get_event_loop()
 
 shard_count = 30
-shard_per_instance = 5
+shard_per_instance = 10
 instance_count = int(shard_count / shard_per_instance)
 
 selection = -5

@@ -2,6 +2,8 @@ import discord
 import aiohttp
 import asyncio
 import json
+import inspect
+import traceback
 
 from io import BytesIO
 from unidecode import unidecode
@@ -9,8 +11,6 @@ from urllib.parse import quote
 from discord.ext import commands
 from utils.watora import is_lover, get_str, is_basicpatron, get_image_from_url
 from weebapi import Client as weebclient
-from arcadia.errors import Forbidden
-from arcadia import Client as arcadiaclient
 from cogs.gestion import cmd_list, cmd_meme
 
 memer = "https://dankmemer.services/api"
@@ -32,19 +32,16 @@ class Weeb(commands.Cog):
             'authorization': f'Bearer {self.bot.tokens["KSOFT"]}'}
         self.dankmemer_header = {'authorization': self.bot.tokens['MEMER']}
         weebclient.pluggable(bot=bot, api_key=self.bot.tokens['WEEB'])
-        arcadiaclient.pluggable(
-            bot=bot, token=self.bot.tokens['ARCADIA'], aiosession=self.session)
 
     def cog_unload(self):
         asyncio.ensure_future(self.session.close())
-        del self.bot.arcadia
 
     async def get_image_ksoft(self, tag: str, nsfw: bool = True):
         params = f'?tag={tag}&nsfw={nsfw}'
         url = ksoft_api + params
         async with self.session.get(url, headers=self.ksoft_headers, timeout=20) as response:
             if response.status != 200:
-                raise Forbidden('You are not allowed to access this resource.')
+                raise discord.Forbidden('You are not allowed to access this resource.')
             ext = response.content_type.split('/')[-1]
             img = await response.read()
             await response.release()
@@ -69,7 +66,7 @@ class Weeb(commands.Cog):
     async def cog_command_error(self, ctx, error):
         """A local error handler for all errors arising from commands in this cog"""
         if hasattr(error, 'original'):
-            if isinstance(error.original, aiohttp.ClientError) or isinstance(error.original, asyncio.futures.TimeoutError):
+            if isinstance(error.original, aiohttp.ClientError) or isinstance(error.original, asyncio.TimeoutError):
                 try:
                     await ctx.send(":exclamation: " + get_str(ctx, "cmd-nextep-error"), delete_after=20)
                 except discord.HTTPException:
@@ -89,7 +86,7 @@ class Weeb(commands.Cog):
             url += '&{}={}'.format(p, v)
         async with self.session.get(url, headers=self.dankmemer_header, timeout=timeout) as response:
             if response.status != 200:
-                raise Forbidden('You are not allowed to access this resource.')
+                raise discord.Forbidden('You are not allowed to access this resource.')
             ext = response.content_type.split('/')[-1]
             img = BytesIO(await response.read())
             await response.release()
@@ -103,8 +100,8 @@ class Weeb(commands.Cog):
         {help}
         """
         embed = discord.Embed(
-            description="Powered by weeb.sh and arcadia-api.")
-        embed.set_author(name="Image list", icon_url=self.bot.user.avatar_url)
+            description="Powered by weeb.sh")
+        embed.set_author(name="Image list", icon_url=self.bot.user.avatar)
         if not ctx.guild:
             embed.color = 0x71368a
         else:
@@ -173,7 +170,7 @@ async def _{m}(self, ctx, pic=None):
     if not pic:
         user = ctx.author
     embed = discord.Embed()
-    embed.set_author(name=ctx.author.name, icon_url=ctx.author.avatar_url)
+    embed.set_author(name=ctx.author.name, icon_url=ctx.author.avatar)
     if not user:
         if ctx.message.mentions:
             user = ctx.message.mentions[-1]
@@ -195,7 +192,7 @@ async def _{m}(self, ctx, pic=None):
         pic = pic.strip('<>')
 
     if user:
-        pic = str(user.avatar_url_as(format='png'))
+        pic = str(user.avatar.replace(format='png'))
     elif not get_image_from_url(pic):
         return await self.bot.send_cmd_help(ctx)
 
@@ -224,7 +221,7 @@ async def _{m}(self, ctx, pic=None):
     if not pic:
         user = ctx.author
     embed = discord.Embed()
-    embed.set_author(name=ctx.author.name, icon_url=ctx.author.avatar_url)
+    embed.set_author(name=ctx.author.name, icon_url=ctx.author.avatar)
     if not user:
         if ctx.message.mentions:
             user = ctx.message.mentions[-1]
@@ -246,7 +243,7 @@ async def _{m}(self, ctx, pic=None):
         pic = pic.strip('<>')
 
     if user:
-        pic = str(user.avatar_url_as(format='png'))
+        pic = str(user.avatar.replace(format='png'))
     elif not get_image_from_url(pic):
         return await self.bot.send_cmd_help(ctx)
 
@@ -271,7 +268,7 @@ async def _{m}(self, ctx, *, text):
     Write some text about {m}.
     {doc}
     embed = discord.Embed()
-    embed.set_author(name=ctx.author.name, icon_url=ctx.author.avatar_url)
+    embed.set_author(name=ctx.author.name, icon_url=ctx.author.avatar)
 
     img = await self.get_meme_image('{m.replace("sip", "")}', text=text, timeout=20)
     embed.set_image(url=f"attachment://%s" % img.filename)
@@ -303,7 +300,7 @@ async def _{m}(self, ctx, pic=None, pic2=None):
     if not pic2:
         user2 = ctx.author
     embed = discord.Embed()
-    embed.set_author(name=ctx.author.name, icon_url=ctx.author.avatar_url)
+    embed.set_author(name=ctx.author.name, icon_url=ctx.author.avatar)
     if not user:
         if ctx.message.mentions:
             user = ctx.message.mentions[-1]
@@ -344,11 +341,11 @@ async def _{m}(self, ctx, pic=None, pic2=None):
         pic2 = pic2.strip('<>')
 
     if user:
-        pic = str(user.avatar_url_as(format='png'))
+        pic = str(user.avatar.replace(format='png'))
     elif not get_image_from_url(pic):
         return await self.bot.send_cmd_help(ctx)
     if user2:
-        pic2 = str(user2.avatar_url_as(format='png'))
+        pic2 = str(user2.avatar.replace(format='png'))
     elif not get_image_from_url(pic2):
         return await self.bot.send_cmd_help(ctx)
 
@@ -376,7 +373,7 @@ async def _{m}(self, ctx, pic=None, *, text=None):
     if not pic:
         user = ctx.author
     embed = discord.Embed()
-    embed.set_author(name=ctx.author.name, icon_url=ctx.author.avatar_url)
+    embed.set_author(name=ctx.author.name, icon_url=ctx.author.avatar)
     if not user:
         if ctx.message.mentions:
             user = ctx.message.mentions[-1]
@@ -394,10 +391,10 @@ async def _{m}(self, ctx, pic=None, *, text=None):
         pic = pic.strip('<>')
 
     if user:
-        pic = str(user.avatar_url_as(format='png'))
+        pic = str(user.avatar.replace(format='png'))
     elif not get_image_from_url(pic):
         text = (pic if pic else '') + ' ' + (text if text else '')
-        pic = str(ctx.author.avatar_url_as(format='png'))
+        pic = str(ctx.author.avatar.replace(format='png'))
 
     img = await self.get_meme_image('{m}', url=pic, text=text, timeout=20)
     embed.set_image(url=f"attachment://%s" % img.filename)
@@ -423,7 +420,7 @@ async def _{m}(self, ctx, pic=None, *, text: str = None):
     if not pic:
         user = ctx.author
     embed = discord.Embed()
-    embed.set_author(name=ctx.author.name, icon_url=ctx.author.avatar_url)
+    embed.set_author(name=ctx.author.name, icon_url=ctx.author.avatar)
     if not user:
         if ctx.message.mentions:
             user = ctx.message.mentions[-1]
@@ -441,13 +438,13 @@ async def _{m}(self, ctx, pic=None, *, text: str = None):
         pic = pic.strip('<>')
 
     if user:
-        pic = str(user.avatar_url_as(format='png'))
+        pic = str(user.avatar.replace(format='png'))
     elif not get_image_from_url(pic):
         text = (pic if pic else '') + ' ' + (text if text else '')
         user = ctx.author
-        pic = str(user.avatar_url_as(format='png'))
+        pic = str(user.avatar.replace(format='png'))
 
-    img = await self.get_meme_image('{m}', url=pic, username1=user.name, text=text, timeout=20)
+    img = await self.get_meme_image('{m.replace('youtubecomment', 'youtube')}', url=pic, username1=user.name, text=text, timeout=20)
     embed.set_image(url=f"attachment://%s" % img.filename)
     embed.set_footer(text="Powered by DANK MEMER IMGEN")
 
@@ -468,7 +465,7 @@ async def _{m}(self, ctx, pic=None, *, text: str = None):
         if ctx.guild and not ctx.channel.is_nsfw():
             return await ctx.send(get_str(ctx, "need-nsfw-channel-to-be-used"))
         embed = discord.Embed()
-        embed.set_author(name=ctx.author.name, icon_url=ctx.author.avatar_url)
+        embed.set_author(name=ctx.author.name, icon_url=ctx.author.avatar)
         img = await self.get_image_ksoft('hentai_gif')
         embed.set_image(url=img)
         embed.set_footer(text="Powered by KSoft.Si API")
@@ -747,7 +744,7 @@ async def _{m}(self, ctx, pic=None, *, text: str = None):
         embed = discord.Embed(description=get_str(
             ctx, "cmd-slap").format(f'**{target.name}**', f'**{author.name}**'))
         if target == ctx.author:
-            pic = "https://s.put.re/1JQqwNT.gif"
+            pic = "https://i.imgur.com/7lPpsNw.gif"
             embed = discord.Embed(description=get_str(
                 ctx, "cmd-slap-yourself").format(f'**{author.name}**'))
         embed.set_image(url=pic)
@@ -770,7 +767,7 @@ async def _{m}(self, ctx, pic=None, *, text: str = None):
         embed = discord.Embed(description=get_str(
             ctx, "cmd-punch").format(f'**{target.name}**', f'**{author.name}**'))
         if target == ctx.author:
-            pic = "https://s.put.re/1JQqwNT.gif"
+            pic = "https://i.imgur.com/7lPpsNw.gif"
             embed = discord.Embed(description=get_str(
                 ctx, "cmd-punch-yourself").format(f'**{author.name}**'))
         embed.set_image(url=pic)
@@ -851,11 +848,11 @@ async def _{m}(self, ctx, pic=None, *, text: str = None):
             url = True
             pic = pic.replace('--url', '')
         elif not pic:
-            pic = str(ctx.author.avatar_url_as(format='png'))
+            pic = str(ctx.author.avatar.replace(format='png'))
             url = True
 
         embed = discord.Embed()
-        embed.set_author(name=ctx.author.name, icon_url=ctx.author.avatar_url)
+        embed.set_author(name=ctx.author.name, icon_url=ctx.author.avatar)
 
         if ctx.message.mentions:
             user = ctx.message.mentions[-1]
@@ -876,7 +873,7 @@ async def _{m}(self, ctx, pic=None, *, text: str = None):
 
         if user:
             url = True
-            pic = str(user.avatar_url_as(format='png'))
+            pic = str(user.avatar.replace(format='png'))
 
         pic = pic.strip('<>')
 

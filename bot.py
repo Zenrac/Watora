@@ -36,15 +36,20 @@ def start_bot(shard_count=None, shard_ids=None, send=None):
 class Watora(commands.AutoShardedBot):
 
     def __init__(self, shard_count=None, shard_ids=None, send=None):
+        title = "%shelp | patreon.com/watora" % globprefix
+        streamer = "https://www.twitch.tv/monstercat"
+        game = discord.Streaming(url=streamer, name=title)
+        intents = discord.Intents.default()
+
         super().__init__(
             command_prefix=_prefix_callable,
             case_insensitive=True,
             description='',
             shard_ids=shard_ids,
             shard_count=shard_count,
-            status=discord.Status.idle,
-            fetch_offline_members=False,
-            max_messages=None
+            activity=game,
+            max_messages=None,
+            intents=intents
         )
 
         self.pipe = send
@@ -74,9 +79,14 @@ class Watora(commands.AutoShardedBot):
     def guild_count(self):
         return sum(self.config.server_count.values())
 
-    async def server_is_claimed(self, guild_id):
+    @property
+    def is_main_process(self):
+        return 0 in self.shards
+
+    async def server_is_claimed(self, guild_id, settings=None):
         """Checks if a server is claimed or not"""
-        settings = await SettingsDB.get_instance().get_glob_settings()
+        if not settings:
+            settings = await SettingsDB.get_instance().get_glob_settings()
         for k, m in settings.claim.items():
             if str(guild_id) in m.keys():
                 fetched_member = await is_patron(self, int(k), fetch=True)
@@ -404,7 +414,7 @@ class Watora(commands.AutoShardedBot):
                 if isinstance(error.original, aiohttp.ClientError):
                     log.debug("Command raised an exception: ClientError")
                     return
-                if isinstance(error.original, asyncio.futures.TimeoutError):
+                if isinstance(error.original, asyncio.TimeoutError):
                     log.debug("Command raised an exception: TimeoutError")
                     return
 
@@ -540,7 +550,10 @@ class Watora(commands.AutoShardedBot):
 
     async def on_message_check(self, message, settings, cmd_prefix):
         words = message.content[len(cmd_prefix):].split(' ')
-        cmd = self.get_command(' '.join(words[:2]))
+        try:
+            cmd = self.get_command(' '.join(words[:2]))
+        except IndexError:
+            cmd = None
         if not cmd:
             cmd = self.get_command(words[0])
         if cmd:
@@ -636,14 +649,15 @@ class Watora(commands.AutoShardedBot):
         # Multiprocessing guild count
         self.owner_id = owner_id
         self.config = await SettingsDB.get_instance().get_glob_settings()
-        if 0 in self.shards and self.shard_count != len(self.config.server_count):
+        if self.is_main_process and self.shard_count != len(self.config.server_count):
             self.config.server_count = {}
             await SettingsDB.get_instance().set_glob_settings(self.config)
 
         # Load cogs
         for extension in _list_cogs():
             try:
-                self.load_extension("cogs." + extension)
+                if extension not in ["welcomer", "socketfix"]:
+                    self.load_extension("cogs." + extension)
             except Exception as e:
                 exc = '{}: {}'.format(type(e).__name__, e)
                 log.warning(
@@ -668,10 +682,15 @@ class Watora(commands.AutoShardedBot):
             self.pipe.send(1)
             self.pipe.close()
 
+        # Disable all loggers
+        # for name in ['launcher', 'lavalink', 'listenmoe']:
+        #    logger = logging.getLogger(name)
+        #    logger.disabled = not logger.disabled
+
         self.init_ok = True
 
     async def on_shard_ready(self, shard_id):
         log.info(f"Shard {shard_id} is ready")
 
     def run(self):
-        super().run(token, reconnect=True, bot=True)
+        super().run(token, reconnect=True)

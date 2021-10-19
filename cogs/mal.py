@@ -23,7 +23,7 @@ class Mal(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         self.session = aiohttp.ClientSession(loop=self.bot.loop)
-        self.bot.jikan = AioJikan(loop=self.bot.loop)
+        self.bot.jikan = AioJikan()
         self.temp = None
 
     def cog_unload(self):
@@ -111,7 +111,7 @@ class Mal(commands.Cog):
         """
             {command_prefix}schedule (day)
 
-        {help}
+        Returns which animes are scheduled for a day.
         """
         await ctx.trigger_typing()
         days = ('monday', 'tuesday', 'wednesday',
@@ -138,7 +138,7 @@ class Mal(commands.Cog):
         """
             {command_prefix}mal (username)
 
-        {help}
+        Returns information about a MyAnimeList user.
         """
         if not username:
             username = ctx.author.name

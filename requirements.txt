@@ -8,7 +8,7 @@ python3-mal
 pytz
 psutil
 bs4
-git+https://github.com/Zenrac/Lavalink.py.git@manual
+git+https://github.com/Zenrac/Lavalink.py.git
 git+git://github.com/AWConant/jikanpy.git
 monstercatFM
 weebapi
@@ -17,6 +17,7 @@ unidecode
 pyarcadia
 pymongo
 motor
+discord-together
 google-api-python-client
 uvloop ;'linux' in sys_platform
 discord.py

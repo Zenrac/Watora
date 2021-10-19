@@ -107,15 +107,15 @@ class YoutubeAPI:
         rep = await self.make_request(f'search?part=snippet&relatedToVideoId={id}&type=video&id=10')
         if not rep:
             return {}
-        song_id = id
         results = rep['items']
         for result in results:
             if result['id']['videoId'] != id:
                 if not player or (result['id']['videoId'] not in player.already_played):
-                    if player:
-                        player.already_played.add(result['id']['videoId'])
-                        player.already_played.add(id)
-                    return result['id']['videoId']
+                    if '1 hour' in result.get('snippet', {}).get('title', '').lower():  # Avoid 1 hour version
+                        if player:
+                            player.already_played.add(result['id']['videoId'])
+                            player.already_played.add(id)
+                        return result['id']['videoId']
         return results[randrange(len(results))]['id']['videoId']
         # If all recommendation have been already played..
         # Return a random result and hope it'll not create an

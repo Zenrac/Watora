@@ -1,391 +1,31 @@
 import re
-import os
 import bs4
-import sys
 import math
 import shlex
-import difflib
 import random
 import asyncio
 import inspect
 import aiohttp
 import discord
-import logging
 import lavalink
 import traceback
 
-from lavalink.events import PlayerUpdateEvent
 from jikanpy.exceptions import JikanException
 from time import time as current_time
 from itertools import islice
 from discord.ext import commands
 from datetime import datetime
-from async_timeout import timeout as ac_timeout
+from discord import abc
 from collections import Counter, OrderedDict
 
+from utils.customplayer import CustomPlayer
+from utils.blindtest.blindTestSong import BlindTestSong
 from utils import checks
-from utils.db import SettingsDB
+from utils.db import SettingsDB, AutoplaylistSettings
 from utils.youtube_api import YoutubeAPI
 from utils.spotify import SpotifyError, Spotify
 from utils.chat_formatting import Paginator, Equalizer, Lazyer, split_str_lines
-from utils.watora import log, owner_id, is_alone, get_server_prefixes, get_image_from_url, is_basicpatron, is_admin, is_patron, is_voter, is_lover, sweet_bar, get_str, format_mentions, def_v, def_time, def_vote, match_local, match_url, time_rx, illegal_char, NoVoiceChannel, Jikan
-
-
-class BlindTestSong:
-    def __init__(self, jikan=None, url: str = None, title: str = None, id: int = None, image_url: str = None):
-        self.jikan = jikan
-        self.title = title
-        self.id = id
-        self._titles = [self.title]
-        self.url = url
-        self.image_url = image_url
-        self.alternative_added = False
-        self.found = False
-        self.found_reason = None
-        self.video_url = None
-        self.video_name = None
-
-        self.invalid_words = ('tv', 'openings', 'opening', 'part', 'ending', 'op', 'ed', 'full',
-                              'lyrics', 'hd', 'official', 'feat', '1080p', '60fps', 'version', 'season')
-
-        self.invalid_separators = [
-            ';', ':', '|', '(', ')', '{', '}', '[', ']', '「', '」', ' -', ' -']
-
-    @property
-    def is_anime(self):
-        return (self.id is not None)
-
-    @property
-    def titles(self):
-        return self._titles
-
-    async def add_alternative_titles(self, optional=[]):
-        if optional:
-            if isinstance(optional, list):
-                self._titles += optional
-            else:
-                self._titles += [optional]
-        if self.is_anime:
-            if not self.alternative_added:
-                settings = await SettingsDB.get_instance().get_glob_settings()
-                if str(self.id) in settings.cachedanimes:
-                    self._titles += settings.cachedanimes[str(self.id)]
-                    self.alternative_added = True
-                else:
-                    for m in range(6):
-                        try:
-                            selection = await asyncio.wait_for(self.jikan.anime(self.id), timeout=m + 2)
-                            break
-                        except (asyncio.TimeoutError, JikanException, aiohttp.ClientError):
-                            selection = False
-
-                    if selection:
-                        selection = Jikan(selection)
-                        altenatives = [
-                            selection.title, selection.title_english, selection.title_japanese]
-                        altenatives += selection.title_synonyms
-                        settings.cachedanimes[str(self.id)] = altenatives
-                        await SettingsDB.get_instance().set_glob_settings(settings)
-                        self._titles += altenatives
-                        self.alternative_added = True
-
-        self._titles += [self.title]
-        titles = self._titles.copy()
-
-        for m in range(10):
-            new_titles = self.generate_anwers(titles)
-            if new_titles == titles:
-                break
-            titles = new_titles
-
-        self._titles = titles
-
-    def generate_anwers(self, titles):
-        titles = filter(None, titles)
-        titles = [x.lower() for x in titles]
-        new_titles = titles.copy()
-
-        for m in titles:
-
-            for separator in self.invalid_separators:
-                if separator in m:
-                    if len(m.split(separator)[0]) > 2:
-                        new_titles.append(m.split(separator)[0].strip())
-            for word in m.split(' '):
-                if word in self.invalid_words:
-                    new_titles.append(m.replace(word, '').strip())
-            digit = [int(s) for s in m.split() if s.isdigit()]
-            if digit:
-                if len(m.split(str(digit[0]))[0]) > 2:
-                    new_titles.append(m.split(str(digit[0]))[0].strip())
-
-        titles = new_titles.copy()
-        for m in new_titles:
-            without = re.sub(r'\W+', ' ', m).strip()
-            titles.append(without)
-
-        titles = filter(None, titles)
-        return list(set(titles))  # bye bye duplicates
-
-
-class BlindTest:
-    def __init__(self, player):
-        self.bot = player.node._manager._lavalink.bot
-        self.jikan = self.bot.jikan
-        self.player = player
-        self.songs = []
-        self.points = {}
-        self.severity = 100
-        self.channel = None
-        self.current_song = None
-        self.next_song = None
-        self.accept_longest_word = False
-        self.listening_mode = False
-        self.current_task = []
-        self.timeout = 120
-        self.percentage = '100,0,0'
-        self.wait = 5
-
-    @property
-    def is_running(self):
-        return bool(self.songs) or bool(self.next_song and (self.current_song != self.next_song))
-
-    @property
-    def partition(self):
-        values = [abs(int(m)) for m in self.percentage.split(',')]
-        while len(values) < 3:
-            values.append(0)
-        return ['opening'] * values[0] + ['ending'] * values[1] + ['ost'] * values[2]
-
-    @property
-    def bt_channel(self):
-        return self.bot.get_channel(int(self.channel))
-
-    @property
-    def guild(self):
-        return self.bot.get_guild(int(self.player.guild_id))
-
-    def clean_tasks(self):
-        for task in self.current_task:
-            task.cancel()
-        self.current_task = []
-
-    async def stop(self, bypass=False, send_final=True):
-        if self.is_running or bypass:
-            embed = await self.get_classement()
-            if embed.fields:
-                embed.title = get_str(
-                    self.guild, "cmd-blindtest-final-rank", bot=self.bot)
-                await self.bt_channel.send(embed=embed)
-            if send_final:
-                await self.send_final_embed()
-        self.clean_tasks()
-        settings = await SettingsDB.get_instance().get_guild_settings(int(self.player.guild_id))
-        for k, v in self.points.items():
-            settings.points[k] = settings.points.get(k, 0) + v
-        await SettingsDB.get_instance().set_guild_settings(settings)
-        self.songs = []
-        self.points = {}
-
-    async def send_final_embed(self):
-        e = discord.Embed(description=get_str(
-            self.guild, "cmd-blindtest-enjoyed", bot=self.bot))
-        e.description += "\n\n**[{}](https://www.patreon.com/bePatron?u=7139372)** {}".format(
-            get_str(self.guild, "support-watora", bot=self.bot), get_str(self.guild, "support-watora-end", bot=self.bot))
-        e.description += '\n' + get_str(self.guild, "suggest-features", bot=self.bot).format(
-            f"`{get_server_prefixes(self.bot, self.guild)}suggestion`")
-        await self.bt_channel.send(embed=e)
-
-    def pop(self, next=False):
-        song = self.songs.pop(random.randrange(len(self.songs)))
-        if next:
-            self.next_song = song
-        else:
-            self.current_song = song
-        return song
-
-    def get_song_keywords(self):
-        if self.current_song.is_anime:
-            search_end = ' ' + random.choice(self.partition)
-            parts = self.current_song.title.split(':')
-            if len(parts) > 1 and len(self.current_song.title.split(':')[0]) > 2:
-                if len(self.current_song.title.split(':')[1]) > 40:
-                    # Holy shit this is too long.
-                    search_beg = self.current_song.title.split(':')[0]
-                else:
-                    search_beg = self.current_song.title
-            else:
-                search_beg = self.current_song.title
-            return search_beg + search_end
-        return self.current_song.url
-
-    def remaining_song(self):
-        return len(self.songs)
-
-    async def get_classement(self, embed=None):
-        if not embed:
-            embed = discord.Embed()
-        counter = Counter(self.points)
-        classement = OrderedDict(counter.most_common())
-        for i, user in enumerate(classement, start=1):
-            if len(embed.fields) > 10:
-                break
-            u = await self.bot.safe_fetch('member', int(user), guild=self.guild)
-            if u:
-                embed.add_field(name=f'{i}. {u}', value=self.points[user])
-        return embed
-
-    def answer_is_valid(self, *, query):
-        query = query.lower()
-        naked_query = re.sub(r'\W+', ' ', query).strip()
-        title = self.current_song.title
-        titles = self.current_song.titles
-
-        if query in titles or naked_query in titles:
-            return True
-        for ti in titles:
-            if ti in query or ti in naked_query:
-                return True
-
-        if self.accept_longest_word:
-            longest = sorted(title.split(' '), key=len)[-1]
-            if longest in query or longest in naked_query:
-                return True
-
-        for m in titles:
-            if (len(m) * (self.severity / 100)) <= len(query):
-                if query in m:
-                    return True
-
-        for m in titles:
-            if ''.join(m.split()) in ''.join(query.split()):
-                return True
-            if ''.join(m.split()) in ''.join(naked_query.split()):
-                return True
-        return False
-
-
-class CustomPlayer(lavalink.DefaultPlayer):
-    def __init__(self, guild_id: int, node):
-        super().__init__(guild_id, node)
-
-        self.channel_id = None
-        self.previous = None
-        self.description = None
-
-        self.stop_votes = set()
-        self.skip_votes = set()
-        self.clear_votes = set()
-        self.already_played = set()
-
-        self.auto_paused = False
-        self.autoplaylist = None
-        self.list = None
-        self.authorplaylist = None
-        self.npmsg = None
-        self.now = None
-        self.channel = None
-        self.timer_value = def_time  # can be edited in settings.json
-
-        self.blindtest = BlindTest(self)
-
-        asyncio.ensure_future(self.init_with_db(guild_id))
-
-    async def init_with_db(self, guild_id):
-        settings = await SettingsDB.get_instance().get_guild_settings(int(guild_id))
-
-        # await asyncio.sleep(1)  # not sure if useful.. But it prevents to send data too fast?
-        await self.set_volume(settings.volume)
-
-        if settings.timer != def_time:
-            if settings.timer or await self.node._manager._lavalink.bot.server_is_claimed(int(guild_id)):
-                self.timer_value = settings.timer
-            elif not settings.timer:
-                del settings.timer
-                await SettingsDB.get_instance().set_guild_settings(settings)
-
-        if settings.channel:
-            self.channel = settings.channel
-
-    async def play(self, track=None, **kwargs):
-        if self.repeat and self.current:
-            self.queue.append(self.current)
-
-        self.current = None
-        self.last_update = 0
-        self.last_position = 0
-        self.position_timestamp = 0
-        self.paused = False
-
-        if not track:
-            if not self.queue:
-                await self.stop()
-                await self.node._dispatch_event(lavalink.events.QueueEndEvent(self))
-                return
-
-            if self.shuffle:
-                track = self.queue.pop(randrange(len(self.queue)))
-            else:
-                track = self.queue.pop(0)
-
-        self.current = track
-        if not kwargs:
-            kwargs = await self.optional_parameters(track.uri)
-        await self.node._send(op='play', guildId=self.guild_id, track=track.track, **kwargs)
-        await self.node._dispatch_event(lavalink.events.TrackStartEvent(self, track))
-
-    async def optional_parameters(self, url):
-        kwargs = {}
-        start_time = re.findall('[&?](t|start|starts|s)=(\d+)', url)
-        if start_time:
-            kwargs['startTime'] = str(int(start_time[-1][-1]) * 1000)
-        end_time = re.findall('[&?](e|end|ends)=(\d+)', url)
-        if end_time:
-            kwargs['endTime'] = str(int(end_time[-1][-1]) * 1000)
-
-        return kwargs
-
-    async def update_state(self, state: dict):
-        """
-        Updates the position of the player.
-        Parameters
-        ----------
-        state: dict
-            The state that is given to update.
-        """
-        self.last_update = current_time() * 1000
-        self.last_position = state.get('position', 0)
-        self.position_timestamp = state.get('time', 0)
-
-        try:
-            await self.update_title()
-        except Exception:  # I don't want the task to finish because of a stupid thing
-            pass
-
-        event = PlayerUpdateEvent(
-            self, self.last_position, self.position_timestamp)
-        await self.node._dispatch_event(event)
-
-    async def update_title(self):
-        music_cog = self.node._manager._lavalink.bot.cogs.get('Music')
-        if self.current:
-            timestamps = self.current.extra.get('timestamps', [])
-            for timestamp in reversed(timestamps):
-                time, title = timestamp
-                milliseconds = (
-                    sum(x * int(t) for x, t in zip([1, 60, 3600], reversed(time.split(":")))) * 1000)
-                if self.last_position >= milliseconds:
-                    title = title.strip()
-                    if self.current.title != title:
-                        self.current.title = title
-                        if music_cog:
-                            await music_cog.reload_np_msg(self)
-                    break
-
-    async def stop(self):
-        """ Stops the player. Overrided to remove the eq reset"""
-        await self.node._send(op='stop', guildId=self.guild_id)
-        self.current = None
+from utils.watora import log, owner_id, get_color, get_server_prefixes, get_image_from_url, is_basicpatron, is_admin, is_patron, is_voter, sweet_bar, get_str, format_mentions, def_v, def_time, def_vote, match_local, match_url, time_rx, illegal_char, NoVoiceChannel, Jikan
 
 
 class Music(commands.Cog):
@@ -530,24 +170,31 @@ class Music(commands.Cog):
         log.info("Preparing lavalink...")
 
         self.bot.lavalink = lavalink.Client(
-            bot=self.bot, loop=self.bot.loop, player=CustomPlayer, shard_count=self.bot.shard_count, user_id=self.bot.user.id)
+            bot=self.bot, loop=self.bot.loop,
+            player=CustomPlayer, shard_count=self.bot.shard_count,
+            user_id=self.bot.user.id, regions=[vr.name for vr in discord.VoiceRegion])
 
         eu = self.bot.tokens['NODE_EU']
         us = self.bot.tokens['NODE_US']
         asia = self.bot.tokens['NODE_ASIA']
+        premium = self.bot.tokens['NODE_PREMIUM']
 
         resume_config = {
             'resume_key': self.bot.tokens["LAVALINK_RESUME_KEY"] + str(sum(self.bot.shards.keys())),
             'resume_timeout': 600
         }
 
+        # Main Nodes
+
         # self.bot.lavalink.add_node(region='asia', host=asia['HOST'], password=asia['PASSWORD'], name='Asia', **resume_config)
-        self.bot.lavalink.add_node(
-            region='eu', host=eu['HOST'], password=eu['PASSWORD'], name='Europe', port=2333, **resume_config)
+        # self.bot.lavalink.add_node(
+        #     region='eu', host=eu['HOST'], password=eu['PASSWORD'], name='Europe', port=2333, **resume_config)
         self.bot.lavalink.add_node(
             region='us', host=us['HOST'], password=us['PASSWORD'], name='America', port=2333, **resume_config)
 
-        await self.prepare_custom_nodes()
+        # Premium Nodes
+        self.bot.lavalink.add_node(
+            region='us', host=premium['HOST'], password=premium['PASSWORD'], name='Premium', port=2333, is_perso=True, **resume_config)
 
         self.bot.add_listener(
             self.bot.lavalink.voice_update_handler, 'on_socket_response')
@@ -557,15 +204,20 @@ class Music(commands.Cog):
         # self.prepare_lavalink_logger(level_console=logging.INFO, level_file=logging.WARNING)
         log.info("Lavalink is ready.")
 
-    async def prepare_custom_nodes(self):
-        settings = await SettingsDB.get_instance().get_glob_settings()
-        for name, val in settings.custom_hosts.items():
-            resume_config = {
-                'resume_key': name + str(sum(self.bot.shards.keys())),
-                'resume_timeout': 600
-            }
-            self.bot.lavalink.add_node(
-                region=None, host=val['host'], password=val['password'], name=name, port=val['port'], is_perso=True, **resume_config)
+    async def ensure_node_connection(self, ip, port, password):
+        headers = {
+            'Authorization': password,
+            'Num-Shards': str(self.bot.shard_count),
+            'User-Id': str(self.bot.user.id)
+        }
+
+        try:
+            ws = await asyncio.wait_for(self.session.ws_connect('ws://{}:{}'.format(str(ip), str(port)), headers=headers), timeout=2)
+        except (aiohttp.ClientError, asyncio.TimeoutError):
+            return False
+
+        await ws.close()
+        return True
 
     async def track_hook(self, event):
         if isinstance(event, lavalink.events.TrackStartEvent):
@@ -579,7 +231,10 @@ class Music(commands.Cog):
             event.player.now = event.player.current
 
             # Send now playing message
-            channel = self.bot.get_channel(event.player.channel)
+            channel = event.player.channel
+            if isinstance(channel, int):
+                channel = await self.bot.safe_fetch('channel', event.player.channel)
+
             gid = int(event.player.guild_id)
 
             # cancel inact task
@@ -604,7 +259,7 @@ class Music(commands.Cog):
                 color = int("FF015B", 16)
                 title = self.get_current_mc()
             else:
-                color = self.get_color(channel.guild)
+                color = get_color(channel.guild)
                 title = event.track.title
 
             embed = discord.Embed(colour=color, title=f"**{title}**")
@@ -623,11 +278,7 @@ class Music(commands.Cog):
 
             if requester:
                 embed.set_author(
-                    name=requester.name, icon_url=requester.avatar_url or requester.default_avatar_url, url=event.track.uri)
-
-            if event.player.node.is_perso:
-                name = await self.bot.safe_fetch('user', event.player.node.name) or event.player.node.name
-                embed.set_footer(text=f"Hosted by {name}")
+                    name=requester.name, icon_url=requester.avatar or requester.default_avatar, url=event.track.uri)
 
             asyncio.ensure_future(self.send_new_np_msg(
                 event.player, channel, new_embed=embed))
@@ -650,6 +301,9 @@ class Music(commands.Cog):
         elif isinstance(event, lavalink.events.TrackExceptionEvent):
             pass
 
+        elif isinstance(event, lavalink.events.PlayerUpdateEvent):
+            pass
+
         elif isinstance(event, lavalink.events.TrackStuckEvent):
             log.warning(f"{event.player.guild_id} is stuck !")
 
@@ -661,19 +315,18 @@ class Music(commands.Cog):
             except discord.HTTPException:
                 pass
 
-    async def connect_player(self, ctx, player, channel_id: int, settings=None):
+    async def connect_player(self, ctx, player, channel: abc.Connectable, settings=None):
         """ Connects a player to a channel. """
         if not settings:
             settings = await SettingsDB.get_instance().get_guild_settings(ctx.guild.id)
         if settings.channel:
-            player.channel = ctx.guild.get_channel(
-                settings.channel).id if ctx.guild.get_channel(settings.channel) else ctx.channel.id
+            player.channel = ctx.guild.get_channel(settings.channel) or ctx.channel
         elif settings.channel is None:
-            player.channel = ctx.channel.id
+            player.channel = ctx.channel
         else:
             player.channel = None
 
-        await player.connect(channel_id)
+        await player.connect(channel)
 
     async def estimate_time_until(self, player, position):
         """
@@ -724,19 +377,20 @@ class Music(commands.Cog):
                 player.current.extra['timestamps'] = self.get_timestamps(desc)
             if new_thumb:  # Do not replace if it's None.
                 thumb = new_thumb
+            if not thumb:
+                thumb = "https://img.youtube.com/vi/{}/maxresdefault.jpg".format(track.identifier)
+
         elif 'twitch' in uri:
             if 'monstercat' in uri:
-                thumb = 'https://s.put.re/5E4pWAe.jpg'
-            elif 'relaxbeats' in uri:
-                thumb = 'https://s.put.re/DJ9X959.gif'
+                thumb = 'https://images8.alphacoders.com/556/thumb-1920-556234.png'
         elif 'listen.moe' in uri:
-            thumb = 'https://s.put.re/SBvKRzf.png'
+            thumb = 'https://i.imgur.com/BUXHdqD.png'
             if 'kpop' in uri:
-                thumb = 'https://s.put.re/hqkaco3.png'
+                thumb = 'https://i.imgur.com/qieR0tY.png'
         elif 'soundcloud' in uri:
             thumb = track.artwork.replace('large', 't250x250')
         if not thumb:
-            thumb = 'https://s.put.re/Jkrar3b.jpg'
+            thumb = 'https://i.imgur.com/JQXNkCB.jpg'
 
         if player.current:
             player.current.artwork = thumb
@@ -752,8 +406,6 @@ class Music(commands.Cog):
 
     async def cog_check(self, ctx):
         """A check which applies to all commands in Music"""
-        if 'hostconfig' in str(ctx.command):  # TODO: Remove this after moving commands to an other cog
-            return True
         if isinstance(ctx.channel, discord.abc.PrivateChannel) and not ctx.author.id == owner_id:
             await ctx.send('```py\n{}\n```'.format(get_str(ctx, "music-not-in-dm")))
             raise commands.errors.CommandNotFound  # because it avoid a checkfailure message
@@ -761,12 +413,6 @@ class Music(commands.Cog):
 
     async def prepare_url(self, query, node=None, source='ytsearch'):
         """Prepares the url if it's an url or not etc... Ensures dict."""
-        settings = await SettingsDB.get_instance().get_glob_settings()
-        default_source = settings.source
-
-        if source == 'ytsearch' and (not node or not node.is_perso):
-            source = default_source
-
         if not match_url(query):
             if query.lower().startswith(('listen.moe', 'listen moe', 'listenmoe')):
                 if 'k' in query.lower():
@@ -935,15 +581,11 @@ class Music(commands.Cog):
     async def autoplaylist_loop(self, player, error_count=0):
         """Autoplaylist auto-add song loop"""
         if player.connected_channel and player.is_connected and not player.is_playing and player.autoplaylist and not player.queue:
-            # if not sum(1 for m in player.connected_channel.members if not (m.voice.deaf or m.bot or m.voice.self_deaf)):
-            #     log.info("[Autoplaylist] Disabling autoplaylist cus I'm alone.")
-            #     player.autoplaylist = None
-            #     return False
             if not player.list:
-                player.list = player.autoplaylist['songs'].copy()
+                player.list = player.autoplaylist.songs.copy()
                 player.list.reverse()
             if player.list:
-                if len(player.list) > 1 and player.autoplaylist['shuffle']:
+                if len(player.list) > 1 and player.autoplaylist.shuffle:
                     random.shuffle(player.list)
                     song_url = player.list.pop()
                     if player.now and player.now.uri == song_url:  # avoid the same song to be played twice in a row
@@ -962,7 +604,7 @@ class Music(commands.Cog):
                     return True
                 else:
                     try:
-                        player.autoplaylist['songs'].remove(song_url)
+                        player.autoplaylist.songs.remove(song_url)
                     except ValueError:
                         pass
                     if 'removed' in results.get('exception', {}).get('message', '').lower():
@@ -997,7 +639,7 @@ class Music(commands.Cog):
         if not player.blindtest.channel:
             return False
 
-        channel = self.bot.get_channel(int(player.blindtest.channel))
+        channel = await self.bot.safe_fetch('channel', int(player.blindtest.channel))
 
         if check and not player.blindtest.listening_mode:
             if player.blindtest.current_song and not player.blindtest.current_song.found:
@@ -1013,7 +655,7 @@ class Music(commands.Cog):
             if not player.blindtest.listening_mode:
                 asyncio.ensure_future(self.delete_old_npmsg(player))
                 player.channel = None
-            if not sum(1 for m in player.connected_channel.members if not (m.voice.deaf or m.bot or m.voice.self_deaf)):
+            if not self.true_members_vc(player.connected_channel):
                 log.debug("[Blintest] Disabling blindtest cus I'm alone on {}.".format(
                     player.connected_channel.guild.name))
                 await player.blindtest.stop()
@@ -1037,7 +679,7 @@ class Music(commands.Cog):
                 if not player.blindtest.listening_mode:
                     await song.add_alternative_titles(track['info']['title'])
                     track['info']['title'] = "Blindtest"
-                    track['info']['uri'] = "https://watora.xyz/"
+                    track['info']['uri'] = "https://watorabot.github.io/"
                     track['info']['artwork'] = None
                 if player not in self.bot.lavalink.players.players.values():
                     return False  # Who knows at it could take some times before being here
@@ -1129,7 +771,7 @@ class Music(commands.Cog):
 
     async def blindtest_embed(self, p, channel, msg=None, bonus=0):
         guild = self.bot.get_guild(int(p.guild_id))
-        color = self.get_color(msg.guild if msg else guild)
+        color = get_color(msg.guild if msg else guild)
         embed = discord.Embed(
             colour=color, title=f"**{p.blindtest.current_song.title}**", url=p.blindtest.current_song.url)
         embed.description = f'{get_str(channel.guild, "cmd-blindtest-video", bot=self.bot)} : **[{p.blindtest.current_song.video_name}]({p.blindtest.current_song.video_url})**'
@@ -1147,7 +789,7 @@ class Music(commands.Cog):
                                           can_owo=False).format(round(current_time() - p.blindtest.current_song.started_at, 2)))
             requester = msg.author
             embed.set_author(
-                name=requester.name, icon_url=requester.avatar_url or requester.default_avatar_url)
+                name=requester.name, icon_url=requester.avatar or requester.default_avatar)
         else:
             if not p.blindtest.current_song.found_reason:
                 p.blindtest.current_song.found_reason = get_str(
@@ -1159,7 +801,7 @@ class Music(commands.Cog):
         """Auto play related son when queue ends."""
         settings = await SettingsDB.get_instance().get_guild_settings(int(player.guild_id))
         if player.is_connected and player.connected_channel and not player.is_playing and settings.autoplay and not player.queue and (attempt < 10):
-            if not sum(1 for m in player.connected_channel.members if not (m.voice.deaf or m.bot or m.voice.self_deaf)):
+            if not self.true_members_vc(player.connected_channel) and player.timer_value is not False:
                 return False
             previous = player.now or player.previous or player.current
             if not previous:
@@ -1211,7 +853,7 @@ class Music(commands.Cog):
     async def update_msg_radio(self, p):
         """Updates the now playing message according to the radio current song"""
         self.radio_update(p.current)
-        c = self.bot.get_channel(p.channel)
+        c = await self.bot.safe_fetch('channel', p.channel)
         if c:
             if 'kpop' in p.current.uri.lower():
                 color = int("3CA4E9", 16)
@@ -1225,7 +867,7 @@ class Music(commands.Cog):
             requester = await self.bot.safe_fetch('member', p.current.requester, guild=c.guild)
             if requester:
                 embed.set_author(
-                    name=requester.name, icon_url=requester.avatar_url or requester.default_avatar_url, url=p.current.uri)
+                    name=requester.name, icon_url=requester.avatar or requester.default_avatar, url=p.current.uri)
 
             await self.send_new_np_msg(p, c, new_embed=embed)
 
@@ -1262,7 +904,14 @@ class Music(commands.Cog):
         if player.blindtest.is_running:
             await player.blindtest.stop(send_final=False)
         await player.reset_equalizer()
-        await player.disconnect()
+        if guild and guild.voice_client:
+            try:
+                await guild.voice_client.disconnect()
+                await guild.voice_client.cleanup()
+            except Exception:
+                pass
+        await guild.change_voice_state(channel=None)
+        await player.disconnect(guild)
         await self.delete_old_npmsg(player)
 
         guild_info = f"{guild.id}/{guild.name}" if guild else f"{gid}"
@@ -1312,7 +961,7 @@ class Music(commands.Cog):
         try_edit = False
         current = player.current
 
-        color = self.get_color(channel.guild)
+        color = get_color(channel.guild)
         pos = lavalink.utils.format_time(
             player.position).lstrip('0').lstrip(':')
         dur = lavalink.utils.format_time(
@@ -1325,7 +974,7 @@ class Music(commands.Cog):
         embed.url = current.uri
         if requester:
             embed.set_author(
-                name=requester.name, icon_url=requester.avatar_url or requester.default_avatar_url, url=current.uri)
+                name=requester.name, icon_url=requester.avatar or requester.default_avatar, url=current.uri)
         if thumb:
             embed.set_image(url=thumb)
 
@@ -1414,7 +1063,9 @@ class Music(commands.Cog):
         player = self.bot.lavalink.players.get(guild.id)
         if player and not player.is_connected:
             if player.channel_id:
-                await player.connect(int(player.channel_id))
+                channel = guild.get_channel(int(player.channel_id))
+                if channel:
+                    await player.connect(channel)
             elif create:
                 return player
             else:
@@ -1424,15 +1075,11 @@ class Music(commands.Cog):
                 raise NoVoiceChannel(
                     get_str(guild, "not-connected", bot=self.bot))
         if not player:
-            settings = await SettingsDB.get_instance().get_guild_settings(guild.id)
-
-            if settings.defaultnode and guild.get_member(int(settings.defaultnode)):
-                user_id = settings.defaultnode
-
-            node = self.bot.lavalink.node_manager.get_node_by_name(
-                str(user_id))
-
             if create:
+                node = None
+                glob_settings = await SettingsDB.get_instance().get_glob_settings()
+                if await self.bot.server_is_claimed(guild.id, glob_settings):
+                    node = self.bot.lavalink.node_manager.get_node_by_name('Premium')
                 player = self.bot.lavalink.players.create(
                     guild_id=guild.id, endpoint=str(guild.region), node=node)
                 log.debug(f'[Player] Creating {guild.id}/{guild.name}')
@@ -1465,12 +1112,6 @@ class Music(commands.Cog):
             query = query.replace(f'{m[0] + m[1] + "=" + m[2]}', '')
 
         return query.strip()
-
-    def get_color(self, guild=None):
-        """Gets the top role color otherwise select the Watora's main color"""
-        if not guild or str(guild.me.color) == "#000000":
-            return int("FF015B", 16)
-        return guild.me.color
 
     def prepare_track(self, track, embed=None):
         """Prepares a track before adding it to queue"""
@@ -1543,11 +1184,9 @@ class Music(commands.Cog):
 
         return f"LISTEN.moe {'K-POP' if kpop else 'J-POP'}"
 
-    async def is_dj(self, ctx):  # TODO: Remove it from this cog
+    async def is_dj(self, ctx):
         """Checks if a user is DJ or not"""
         if ctx.guild:
-            if is_alone(ctx.author):
-                return True
             if is_admin(ctx.author, ctx.channel):
                 return True
             if ctx.channel.permissions_for(ctx.author).manage_guild:
@@ -1558,7 +1197,24 @@ class Music(commands.Cog):
                     return True
                 if r.id in settings.djs or "all" in settings.djs:
                     return True
+            if not ctx.author.voice:
+                return False
+            if self.true_members_vc(ctx.author.voice.channel) == 1:
+                return True
         return False
+
+
+    def true_members_vc(self, channel):
+        """Returns how many real member are in the voice channel"""
+        num_voice = len(channel.voice_states.keys())
+        for k, v in channel.voice_states.items():
+            if str(self.bot.user.id) == str(k) or v.deaf or v.self_deaf:
+                num_voice -= 1
+                continue
+            fetchedUser = channel.guild.get_member(int(k))
+            if fetchedUser and fetchedUser.bot:
+                num_voice -= 1
+        return num_voice
 
     async def is_perso(self, guild, name):
         """Checks if an autoplaylist is personal or not"""
@@ -1632,25 +1288,24 @@ class Music(commands.Cog):
             file_name = autoplaylist
             if ctx.message.mentions:
                 user = ctx.message.mentions[-1]
-                if user.mention not in file_name:  # It was a prefix
+                if user.mention not in file_name and user.mention.replace('<@', '<@!') not in file_name:  # It was a prefix
                     user = None
                     if len(ctx.message.mentions) > 1:
                         user = ctx.message.mentions[0]
                 if user:
                     file_name = str(user.id)
 
-            settings = await SettingsDB.get_instance().get_glob_settings()
-
-            if str(file_name.lower()) not in settings.autoplaylists:
+            settings = await SettingsDB.get_instance().get_autoplaylists_settings(str(file_name.lower()))
+            if not settings.name:
                 perso = await self.is_perso(ctx.guild, name=file_name)
                 if perso:
                     return await ctx.send(get_str(ctx, "music-plstart-dont-have"))
                 file_name = format_mentions(file_name)
                 return await ctx.send(get_str(ctx, "music-plstart-doesnt-exists").format(f"**{file_name}**", "`{}plnew`".format(get_server_prefixes(ctx.bot, ctx.guild))), delete_after=30)
 
-            if not settings.autoplaylists[str(file_name.lower())]['songs']:
+            if not settings.songs:
                 return await ctx.send(get_str(ctx, "cmd-blindtest-empty"))
-            for url in settings.autoplaylists[str(file_name.lower())]['songs']:
+            for url in settings.songs:
                 songs.append(BlindTestSong(url=url))
 
         elif mal:
@@ -1666,7 +1321,7 @@ class Music(commands.Cog):
                             ctx, "music-autoleave-need-claim").format(f"`{get_server_prefixes(ctx.bot, ctx.guild)}claim`"))
                     else:
                         e = discord.Embed(description=get_str(ctx, "cmd-blindtest-mal-same-time").format(
-                            f"`{max_mal}`") + "\n\n" + "**[Patreon](https://www.patreon.com/bePatron?u=7139372)**")
+                            f"`{max_mal}`") + "\n\n" + "**[Patreon](https://www.patreon.com/watora)**")
                     try:
                         return await ctx.send(embed=e)
                     except discord.Forbidden:
@@ -1696,11 +1351,13 @@ class Music(commands.Cog):
 
         if source.lower().startswith('s'):
             player.blindtest.source = 'scsearch'
+        else:
+            player.blindtest.source = 'ytsearch'  # TODO: Remove this later
 
         player.blindtest.severity = int(severity)
         player.blindtest.timeout = int(timeout)
         player.blindtest.songs = songs
-        player.blindtest.channel = int(ctx.channel.id)
+        player.blindtest.channel = ctx.channel
         player.blindtest.percentage = percentage
         player.blindtest.wait = int(wait)
         return songs
@@ -1742,14 +1399,14 @@ class Music(commands.Cog):
                 embed.add_field(name=f'{pos}. {user}', value=points[user])
             else:
                 embed.set_footer(
-                    text=f"{pos}. {user} : {nb} {points[user]}", icon_url=user.avatar_url)
+                    text=f"{pos}. {user} : {nb} {points[user]}", icon_url=user.avatar)
 
         if not embed.fields:
             return await ctx.send(get_str(ctx, "cmd-blindtestscore-no-saved").format(f'`{get_server_prefixes(ctx.bot, ctx.guild)}bt`'))
 
-        embed.color = self.get_color(ctx.guild)
+        embed.color = get_color(ctx.guild)
         embed.set_author(
-            name=f'{ctx.guild.name} - {get_str(ctx, "cmd-blindtest-rank")}', icon_url=ctx.guild.icon_url)
+            name=f'{ctx.guild.name} - {get_str(ctx, "cmd-blindtest-rank")}', icon_url=ctx.guild.icon)
 
         return await ctx.send(embed=embed)
 
@@ -1775,8 +1432,10 @@ class Music(commands.Cog):
                 ctx.command.reset_cooldown(ctx)
                 return await ctx.send(get_str(ctx, "music-join-no-channel"))
             except lavalink.NodeException:
+                ctx.command.reset_cooldown(ctx)
                 return await ctx.send(get_str(ctx, "music-nodes-unavailable"))
             if not player:
+                ctx.command.reset_cooldown(ctx)
                 return
         else:
             player = await self.get_player(ctx.guild)
@@ -1788,7 +1447,7 @@ class Music(commands.Cog):
         my_vc = ctx.guild.me.voice.channel
 
         if not await self.is_dj(ctx):
-            if ctx.author not in my_vc.members or (ctx.author.voice.self_deaf or ctx.author.voice.deaf):
+            if ctx.author.id not in my_vc.voice_states or (ctx.author.voice.self_deaf or ctx.author.voice.deaf):
                 ctx.command.reset_cooldown(ctx)
                 return await ctx.send(get_str(ctx, "music-not-my-channel").format(f"**{my_vc}**"), delete_after=30)
 
@@ -1983,7 +1642,7 @@ class Music(commands.Cog):
         my_vc = ctx.guild.me.voice.channel
 
         if not await self.is_dj(ctx):
-            if ctx.author not in my_vc.members or (ctx.author.voice.self_deaf or ctx.author.voice.deaf):
+            if ctx.author.id not in my_vc.voice_states or (ctx.author.voice.self_deaf or ctx.author.voice.deaf):
                 return await ctx.send(get_str(ctx, "music-not-my-channel").format(f"**{my_vc}**"), delete_after=30)
 
         if not query and player.paused:
@@ -2006,19 +1665,12 @@ class Music(commands.Cog):
                 if 'mix' in results.get('exception', {}).get('message'):
                     # Skip YouTube mixes
                     return await ctx.invoke(self.play_song, query=query.split('&list')[0])
-                if 'yout' in query:
-                    settings = await SettingsDB.get_instance().get_glob_settings()
-                    if str(ctx.author.id) not in settings.custom_hosts.keys():  # TODO: Translations
-                        await ctx.send('You have to host your own server in order to play YouTube videos. Please setup one with `{}hostconfig` in DMs.'.format(get_server_prefixes(ctx.bot, ctx.guild)))
-                    else:
-                        await ctx.send('Either your credentials aren\'t valid anymore or your server isn\'t running. You can use `{}hostconfig` to edit your configuration in DMs.'.format(get_server_prefixes(ctx.bot, ctx.guild)))
-                else:
-                    await ctx.send(get_str(ctx, "music-load-failed").format("`{}search`".format(get_server_prefixes(ctx.bot, ctx.guild))))
+                await ctx.send(get_str(ctx, "music-load-failed").format("`{}search`".format(get_server_prefixes(ctx.bot, ctx.guild))))
             elif results['loadType'] == "NO_MATCHES":
                 await ctx.send(get_str(ctx, "music-no-result").format("`{}search`".format(get_server_prefixes(ctx.bot, ctx.guild))))
             return
 
-        embed = discord.Embed(colour=self.get_color(ctx.guild))
+        embed = discord.Embed(colour=get_color(ctx.guild))
 
         if results['playlistInfo']:
             tracks = results['tracks']
@@ -2078,7 +1730,7 @@ class Music(commands.Cog):
         my_vc = ctx.guild.me.voice.channel
 
         if not await self.is_dj(ctx):
-            if ctx.author not in my_vc.members or (ctx.author.voice.self_deaf or ctx.author.voice.deaf):
+            if ctx.author.id not in my_vc.voice_states or (ctx.author.voice.self_deaf or ctx.author.voice.deaf):
                 return await ctx.send(get_str(ctx, "music-not-my-channel").format(f"**{my_vc}**"), delete_after=30)
 
         if player.previous:
@@ -2123,7 +1775,7 @@ class Music(commands.Cog):
         my_vc = ctx.guild.me.voice.channel
 
         if not await self.is_dj(ctx):
-            if ctx.author not in my_vc.members or (ctx.author.voice.self_deaf or ctx.author.voice.deaf):
+            if ctx.author.id not in my_vc.voice_states or (ctx.author.voice.self_deaf or ctx.author.voice.deaf):
                 return await ctx.send(get_str(ctx, "music-not-my-channel").format(f"**{my_vc}**"), delete_after=30)
 
         if not player.current:
@@ -2147,7 +1799,7 @@ class Music(commands.Cog):
         my_vc = ctx.guild.me.voice.channel
 
         if not await self.is_dj(ctx):
-            if ctx.author not in my_vc.members or (ctx.author.voice.self_deaf or ctx.author.voice.deaf):
+            if ctx.author.id not in my_vc.voice_states or (ctx.author.voice.self_deaf or ctx.author.voice.deaf):
                 return await ctx.send(get_str(ctx, "music-not-my-channel").format(f"**{my_vc}**"), delete_after=30)
 
         if not player.current:
@@ -2240,7 +1892,8 @@ class Music(commands.Cog):
         await player.seek(track_time)
         await ctx.send(get_str(ctx, "music-moveto-moved").format(f'**{new_duration}**'))
 
-    @commands.command(name='skip', aliases=['next', 's'])
+    @commands.cooldown(rate=1, per=1.5, type=commands.BucketType.guild)
+    @commands.command(name='skip', aliases=['next', 's', 'n'])
     async def skip_song(self, ctx):
         """
             {command_prefix}skip
@@ -2257,18 +1910,16 @@ class Music(commands.Cog):
         my_vc = ctx.guild.me.voice.channel
 
         if not await self.is_dj(ctx):
-            if ctx.author not in my_vc.members or (ctx.author.voice.self_deaf or ctx.author.voice.deaf):
+            if ctx.author.id not in my_vc.voice_states or (ctx.author.voice.self_deaf or ctx.author.voice.deaf):
                 return await ctx.send(get_str(ctx, "music-not-my-channel").format(f"**{my_vc}**"), delete_after=30)
 
         if not player.current:
             return await ctx.send(get_str(ctx, "not-playing"), delete_after=20)
 
         skip_votes = player.skip_votes
-        mbrs = my_vc.members
         settings = await SettingsDB.get_instance().get_guild_settings(ctx.guild.id)
         percent = settings.vote
-        reqvotes = (
-            (len([1 for m in mbrs if not m.bot and not m.voice.self_deaf and not m.voice.deaf])) / (100 / percent))
+        reqvotes = self.true_members_vc(my_vc) / (100 / percent)
         voter = ctx.message.author
 
         if voter.id == player.current.requester:
@@ -2281,6 +1932,7 @@ class Music(commands.Cog):
                 await ctx.send(get_str(ctx, "music-skip-success").format(f"**{ctx.author}**"), delete_after=20)
                 await player.skip()
             else:
+                ctx.command.reset_cooldown(ctx)
                 await ctx.send(get_str(ctx, "music-skip-added") + ' **[{}/{}]**'.format(total_votes, math.ceil(reqvotes)))
         else:
             await ctx.send(get_str(ctx, "music-skip-already"))
@@ -2303,7 +1955,7 @@ class Music(commands.Cog):
         my_vc = ctx.guild.me.voice.channel
 
         if not await self.is_dj(ctx):
-            if ctx.author not in my_vc.members or (ctx.author.voice.self_deaf or ctx.author.voice.deaf):
+            if ctx.author.id not in my_vc.voice_states or (ctx.author.voice.self_deaf or ctx.author.voice.deaf):
                 return await ctx.send(get_str(ctx, "music-not-my-channel").format(f"**{my_vc}**"), delete_after=30)
 
         if not player.current:
@@ -2343,7 +1995,7 @@ class Music(commands.Cog):
         my_vc = ctx.guild.me.voice.channel
 
         if not await self.is_dj(ctx):
-            if ctx.author not in my_vc.members or (ctx.author.voice.self_deaf or ctx.author.voice.deaf):
+            if ctx.author.id not in my_vc.voice_states or (ctx.author.voice.self_deaf or ctx.author.voice.deaf):
                 return await ctx.send(get_str(ctx, "music-not-my-channel").format(f"**{my_vc}**"), delete_after=30)
 
         if not player.queue:
@@ -2352,11 +2004,9 @@ class Music(commands.Cog):
         clear_votes = player.clear_votes
 
         if not await self.is_dj(ctx):
-            mbrs = my_vc.members
             settings = await SettingsDB.get_instance().get_guild_settings(ctx.guild.id)
             percent = settings.vote
-            reqvotes = (
-                (len([1 for m in mbrs if not m.bot and not m.voice.self_deaf and not m.voice.deaf])) / (100 / percent))
+            reqvotes = self.true_members_vc(my_vc) / (100 / percent)
             voter = ctx.message.author
             if voter.id not in clear_votes:
                 clear_votes.add(voter.id)
@@ -2390,7 +2040,7 @@ class Music(commands.Cog):
             if 'kpop' in current.uri.lower():
                 color = int("3CA4E9", 16)
         else:
-            color = self.get_color(ctx.guild)
+            color = get_color(ctx.guild)
 
         pos = lavalink.utils.format_time(
             player.position).lstrip('0').lstrip(':')
@@ -2407,15 +2057,12 @@ class Music(commands.Cog):
         embed.url = current.uri
         if requester:
             embed.set_author(
-                name=requester.name, icon_url=requester.avatar_url or requester.default_avatar_url, url=current.uri)
+                name=requester.name, icon_url=requester.avatar or requester.default_avatar, url=current.uri)
         if thumb:
             embed.set_image(url=thumb)
         settings = await SettingsDB.get_instance().get_guild_settings(ctx.guild.id)
         if not settings.channel:
-            player.channel = ctx.channel.id
-        if player.node.is_perso:
-            name = await self.bot.safe_fetch('user', player.node.name) or player.node.name
-            embed.set_footer(text=f"Hosted by {name}")
+            player.channel = ctx.channel
         await self.send_new_np_msg(player, ctx.channel, new_embed=embed, message=ctx.message, force_send=True)
 
     @commands.cooldown(rate=1, per=1.5, type=commands.BucketType.user)
@@ -2477,7 +2124,7 @@ class Music(commands.Cog):
             if requester:
                 msg += f"**{requester.name[:available_spaces]}**.\n"
 
-        embed = discord.Embed(title=None, description=msg, color=self.get_color(
+        embed = discord.Embed(title=get_str(ctx, "music-queue-list"), description=msg, color=get_color(
             ctx.guild))  # Specify title to avoid issue when editing
         bottom = ''
 
@@ -2513,8 +2160,8 @@ class Music(commands.Cog):
 
         my_vc = ctx.guild.me.voice.channel
 
-        if not sum(1 for m in my_vc.members if not (m.voice.deaf or m.bot or m.voice.self_deaf)):
-            if ctx.author not in my_vc.members or (ctx.author.voice.self_deaf or ctx.author.voice.deaf):
+        if not self.true_members_vc(my_vc):
+            if ctx.author.id not in my_vc.voice_states or (ctx.author.voice.self_deaf or ctx.author.voice.deaf):
                 return await ctx.send(get_str(ctx, "music-not-my-channel").format(f"**{my_vc}**"), delete_after=30)
 
         if not player.is_playing:
@@ -2601,11 +2248,11 @@ class Music(commands.Cog):
                 return await ctx.send("OMG IT'S OVER NINE THOUSAND !!!")
             if 100 <= new_volume <= 1000:
                 e = discord.Embed(description=get_str(ctx, "music-volume-higher-than-100") + "\n\n" +
-                                  "**[Patreon](https://www.patreon.com/bePatron?u=7139372)**\n**[Vote (volume up to 150)](https://discordbots.org/bot/220644154177355777)**")
+                                  "**[Patreon](https://www.patreon.com/watora)**\n**[Vote (volume up to 150)](https://discordbots.org/bot/220644154177355777)**")
                 try:
                     await ctx.send(embed=e)
                 except discord.Forbidden:
-                    await ctx.send(content=get_str(ctx, "music-volume-higher-than-100") + "\n<https://www.patreon.com/bePatron?u=7139372>\nVolume up to 150 : <https://discordbots.org/bot/220644154177355777>")
+                    await ctx.send(content=get_str(ctx, "music-volume-higher-than-100") + "\n<https://www.patreon.com/watora>\nVolume up to 150 : <https://discordbots.org/bot/220644154177355777>")
 
             elif relative:
                 await ctx.send(get_str(ctx, "music-volume-unreasonable-volume-relative").format(old_volume, vol_change, old_volume + vol_change, 0 - old_volume, max_volume - old_volume), delete_after=20)
@@ -2693,7 +2340,7 @@ class Music(commands.Cog):
         my_vc = ctx.guild.me.voice.channel
 
         if not await self.is_dj(ctx):
-            if ctx.author not in my_vc.members or (ctx.author.voice.self_deaf or ctx.author.voice.deaf):
+            if ctx.author.id not in my_vc.voice_states or (ctx.author.voice.self_deaf or ctx.author.voice.deaf):
                 return await ctx.send(get_str(ctx, "music-not-my-channel").format(f"**{my_vc}**"), delete_after=30)
 
         if not player.queue:
@@ -2803,14 +2450,12 @@ class Music(commands.Cog):
 
         if not await self.is_dj(ctx):
             my_vc = ctx.guild.me.voice.channel
-            if ctx.author not in my_vc.members or (ctx.author.voice.self_deaf or ctx.author.voice.deaf):
+            if ctx.author.id not in my_vc.voice_states or (ctx.author.voice.self_deaf or ctx.author.voice.deaf):
                 return await ctx.send(get_str(ctx, "not-the-right-channel"))
             if player.is_playing:
-                mbrs = my_vc.members
                 settings = await SettingsDB.get_instance().get_guild_settings(ctx.guild.id)
                 percent = settings.vote
-                reqvotes = (
-                    (len([1 for m in mbrs if not m.bot and not m.voice.self_deaf and not m.voice.deaf])) / (100 / percent))
+                reqvotes = self.true_members_vc(my_vc) / (100 / percent)
                 voter = ctx.message.author
                 if voter.id not in stop_votes:
                     stop_votes.add(voter.id)
@@ -2818,6 +2463,7 @@ class Music(commands.Cog):
                     if total_votes < math.ceil(reqvotes):
                         if total_votes == 1:
                             await ctx.send(get_str(ctx, "music-stop-song-running"))
+                        ctx.command.reset_cooldown(ctx)
                         return await ctx.send(get_str(ctx, "music-stop-vote") + ' **[{}/{}]**'.format(total_votes, math.ceil(reqvotes)))
                 else:
                     return await ctx.send(get_str(ctx, "music-stop-already"))
@@ -2850,7 +2496,7 @@ class Music(commands.Cog):
         player = await self.get_player(ctx.guild, True, ctx.author.id)
 
         if not ctx.guild.me.voice:
-            await self.connect_player(ctx, player, channel.id)
+            await self.connect_player(ctx, player, channel)
             try:
                 await ctx.message.add_reaction("☑")
             except discord.Forbidden:
@@ -2863,11 +2509,11 @@ class Music(commands.Cog):
             elif not await self.is_dj(ctx):
                 if my_vc != ctx.author.voice.channel:
                     if (player.is_playing or player.queue) and not player.paused:
-                        if sum(1 for m in player.connected_channel.members if not (m.voice.deaf or m.bot or m.voice.self_deaf)):
+                        if self.true_members_vc(player.connected_channel):
                             raise NoVoiceChannel(
                                 get_str(ctx, "music-join-playing-a-song"))
 
-            await player.connect(channel.id)
+            await player.connect(channel)
             await ctx.send(get_str(ctx, "music-join-moved-success").format(f"**{channel}**"), delete_after=15)
 
         tries = 0
@@ -3009,7 +2655,7 @@ class Music(commands.Cog):
         my_vc = ctx.guild.me.voice.channel
 
         if not await self.is_dj(ctx):
-            if ctx.author not in my_vc.members or (ctx.author.voice.self_deaf or ctx.author.voice.deaf):
+            if ctx.author.id not in my_vc.voice_states or (ctx.author.voice.self_deaf or ctx.author.voice.deaf):
                 return await ctx.send(get_str(ctx, "music-not-my-channel").format(f"**{my_vc}**"), delete_after=30)
 
         player.autoplaylist = None
@@ -3039,29 +2685,27 @@ class Music(commands.Cog):
         if not player.autoplaylist:
             return await ctx.send(get_str(ctx, "music-plnow-no-pl").format("`{}pl start`".format(get_server_prefixes(ctx.bot, ctx.guild))))
 
-        settings = await SettingsDB.get_instance().get_glob_settings()
+        settings = await SettingsDB.get_instance().get_autoplaylists_settings(player.autoplaylist.name.lower())
 
-        try:
-            settings.autoplaylists[player.autoplaylist['name'].lower()]
-        except KeyError:  # can happen after plclear
+        if not settings.name: # can happen after plclear
             return await ctx.send(get_str(ctx, "music-plsettings-got-deleted"))
 
-        if player.autoplaylist['is_personal']:
-            id = int(player.autoplaylist['name'].lower())
+        if player.autoplaylist.is_personal:
+            id = int(player.autoplaylist.name.lower())
             user = await self.bot.safe_fetch('member', id, guild=ctx.guild)
             if user:
                 user = user.name
             else:
-                user = player.autoplaylist['created_by_name']
+                user = player.autoplaylist.created_by_name
             if player.list:
-                await ctx.send(get_str(ctx, "music-plnow-now-user-auto").format(f"**{user}**", len(player.autoplaylist['songs']) - len(player.list), len(player.autoplaylist['songs'])))
+                await ctx.send(get_str(ctx, "music-plnow-now-user-auto").format(f"**{user}**", len(player.autoplaylist.songs) - len(player.list), len(player.autoplaylist.songs)))
             else:
                 await ctx.send(get_str(ctx, "music-plnow-now-user").format(f"**{user}**"))
         else:
             if player.list:
-                await ctx.send(get_str(ctx, "music-plnow-now-auto").format(f"**{player.autoplaylist['name']}**", len(player.autoplaylist['songs']) - len(player.list), len(player.autoplaylist['songs'])))
+                await ctx.send(get_str(ctx, "music-plnow-now-auto").format(f"**{player.autoplaylist.name}**", len(player.autoplaylist.songs) - len(player.list), len(player.autoplaylist.songs)))
             else:
-                await ctx.send(get_str(ctx, "music-plnow-now").format(f"**{player.autoplaylist['name']}**"))
+                await ctx.send(get_str(ctx, "music-plnow-now").format(f"**{player.autoplaylist.name}**"))
 
     @pl.command(name='start', aliases=['s', 'launch', 'p', 'play'])
     async def pl_start(self, ctx, *, file_name=None):
@@ -3146,34 +2790,33 @@ class Music(commands.Cog):
         my_vc = ctx.guild.me.voice.channel
 
         if not await self.is_dj(ctx):
-            if ctx.author not in my_vc.members or (ctx.author.voice.self_deaf or ctx.author.voice.deaf):
+            if ctx.author.id not in my_vc.voice_states or (ctx.author.voice.self_deaf or ctx.author.voice.deaf):
                 return await ctx.send(get_str(ctx, "music-not-my-channel").format(f"**{my_vc}**"), delete_after=30)
 
         if ctx.message.mentions:
             user = ctx.message.mentions[-1]
-            if user.mention not in file_name:  # It was a prefix
+            if user.mention not in file_name and user.mention.replace('<@', '<@!') not in file_name:  # It was a prefix
                 user = None
                 if len(ctx.message.mentions) > 1:
                     user = ctx.message.mentions[0]
             if user:
                 file_name = str(user.id)
 
-        settings = await SettingsDB.get_instance().get_glob_settings()
-
         # Verify file name was provided
         if file_name:
+            settings = await SettingsDB.get_instance().get_autoplaylists_settings(str(file_name))
             file_name_original = file_name
             file_name = str(file_name.lower())
 
             perso = await self.is_perso(ctx.guild, name=file_name)
 
-            if str(file_name) not in settings.autoplaylists:
+            if not settings.name:
                 if perso:
                     return await ctx.send(get_str(ctx, "music-plstart-dont-have"))
                 file_name = format_mentions(file_name_original)
                 return await ctx.send(get_str(ctx, "music-plstart-doesnt-exists").format(f"**{file_name}**", "`{}plnew`".format(get_server_prefixes(ctx.bot, ctx.guild))), delete_after=30)
 
-            player.autoplaylist = settings.autoplaylists[file_name]
+            player.autoplaylist = settings
             player.list = None
             player.authorplaylist = ctx.author
 
@@ -3183,13 +2826,14 @@ class Music(commands.Cog):
                 else:
                     await ctx.send(get_str(ctx, "music-plstart-your-loaded"))
             else:
-                await ctx.send(get_str(ctx, "music-plstart-loaded").format(f"**{player.autoplaylist['name']}**"))
+                await ctx.send(get_str(ctx, "music-plstart-loaded").format(f"**{player.autoplaylist.name}**"))
 
             await ctx.invoke(self.plsettings, name=file_name)
             await self.autoplaylist_loop(player)
 
         else:
-            if str(ctx.author.id) not in settings.autoplaylists:
+            settings = await SettingsDB.get_instance().get_autoplaylists_settings(str(ctx.author.id))
+            if not settings.name:
                 await ctx.invoke(self.plnew, file_name=str(ctx.author.id))
             await ctx.invoke(self.plstart, file_name=str(ctx.author.id))
 
@@ -3221,30 +2865,25 @@ class Music(commands.Cog):
             if int(file_name) != ctx.author.id and ctx.author.id != owner_id:
                 return await ctx.send(get_str(ctx, "music-plnew-try-to-hack"))
 
-        settings = await SettingsDB.get_instance().get_glob_settings()
+        settings = await SettingsDB.get_instance().get_autoplaylists_settings(file_name)
 
-        if file_name in settings.autoplaylists:
+        if settings.name:
             file_name = format_mentions(file_name)
-            return await ctx.send(get_str(ctx, "music-plnew-already-exists").format(f"**{file_name}**"))
+            return await ctx.send(get_str(ctx, "music-plnew-already-exists").format(f"**{file_name_original}**"))
 
-        settings.autoplaylists[file_name] = {}
-        settings.autoplaylists[file_name]['songs'] = []
-        settings.autoplaylists[file_name]['name'] = file_name_original
-        settings.autoplaylists[file_name]['created_by'] = str(ctx.author.id)
-        settings.autoplaylists[file_name]['created_by_name'] = str(ctx.author)
-        settings.autoplaylists[file_name]['created_date'] = datetime.today().strftime(
+        settings.name = file_name_original
+        settings.created_by = str(ctx.author.id)
+        settings.created_by_name = str(ctx.author)
+        settings.created_date = datetime.today().strftime(
             "%d %b %Y")
-        settings.autoplaylists[file_name]['private'] = True
-        settings.autoplaylists[file_name]['shuffle'] = True
-        settings.autoplaylists[file_name]['whitelist'] = []
-        if is_perso:
-            settings.autoplaylists[file_name]['is_personal'] = True
-        else:
-            settings.autoplaylists[file_name]['is_personal'] = False
+        settings.private = True
+        settings.shuffle = True
+        settings.is_personal = is_perso
+        if not is_perso:
             file_name = format_mentions(file_name_original)
             await ctx.send(get_str(ctx, "music-plnew-created").format(f"**{file_name_original}**"))
 
-        await SettingsDB.get_instance().set_glob_settings(settings)
+        await SettingsDB.get_instance().set_autoplaylists_settings(settings)
 
     @pl.command(name='clear', aliases=['erase', 'removeall', 'deleteall', 'reset'])
     async def pl_clear(self, ctx, *, file_name=None):
@@ -3264,8 +2903,6 @@ class Music(commands.Cog):
 
         {help}
         """
-        settings = await SettingsDB.get_instance().get_glob_settings()
-
         if not file_name:
             player = await self.get_player(ctx.guild)
             if not player.is_connected:
@@ -3273,16 +2910,16 @@ class Music(commands.Cog):
             if not player.autoplaylist:
                 return await ctx.send(get_str(ctx, "music-pl-disabled").format("`{}plstart`".format(get_server_prefixes(ctx.bot, ctx.guild))))
 
-            try:
-                settings.autoplaylists[player.autoplaylist['name'].lower()]
-            except KeyError:  # can happen after plclear
+            settings = await SettingsDB.get_instance().get_autoplaylists_settings(player.autoplaylist.name.lower())
+
+            if not settings.name:  # can happen after plclear
                 return await ctx.send(get_str(ctx, "music-plsettings-got-deleted"))
 
-            file_name = player.autoplaylist['name'].lower()
+            file_name = player.autoplaylist.name.lower()
 
         if ctx.message.mentions:
             user = ctx.message.mentions[-1]
-            if user.mention not in file_name:  # It was a prefix
+            if user.mention not in file_name and user.mention.replace('<@', '<@!') not in file_name:  # It was a prefix
                 user = None
                 if len(ctx.message.mentions) > 1:
                     user = ctx.message.mentions[0]
@@ -3300,12 +2937,14 @@ class Music(commands.Cog):
             if int(file_name) != ctx.author.id and ctx.author.id != owner_id:
                 return await ctx.send(get_str(ctx, "music-plrepair-someone"))
 
-        if file_name not in settings.autoplaylists:
+        settings = await SettingsDB.get_instance().get_autoplaylists_settings(file_name)
+
+        if not settings.name:
             file_name = format_mentions(file_name)
             return await ctx.send(get_str(ctx, "music-plstart-doesnt-exists").format(f"**{file_name}**", "`{}plnew`".format(get_server_prefixes(ctx.bot, ctx.guild))), delete_after=30)
 
-        if settings.autoplaylists[file_name]['private']:
-            if int(settings.autoplaylists[file_name]['created_by']) != ctx.author.id and ctx.author.id != owner_id:
+        if settings.private:
+            if int(settings.created_by) != ctx.author.id and ctx.author.id != owner_id:
                 return await ctx.send(get_str(ctx, "music-autoplaylist-noten-perms"))
 
         if perso:
@@ -3334,8 +2973,8 @@ class Music(commands.Cog):
             return await ctx.send(get_str(ctx, "music-plclear-cancelled"), delete_after=30)
 
         if response_message.content.lower().startswith('y'):
-            del settings.autoplaylists[file_name]
-            await SettingsDB.get_instance().set_glob_settings(settings)
+            settings = AutoplaylistSettings(str(settings.name))
+            await SettingsDB.get_instance().set_autoplaylists_settings(settings)
             await ctx.send(get_str(ctx, "music-plclear-cleared").format(msg_name))
         else:
             await ctx.send(get_str(ctx, "music-plclear-cancelled"), delete_after=30)
@@ -3364,11 +3003,11 @@ class Music(commands.Cog):
                 return await ctx.send(get_str(ctx, "not-connected"), delete_after=20)
             if not player.autoplaylist:
                 return await ctx.send(get_str(ctx, "music-pl-disabled").format("`{}plstart`".format(get_server_prefixes(ctx.bot, ctx.guild))))
-            file_name = player.autoplaylist['name'].lower()
+            file_name = player.autoplaylist.name.lower()
 
         if ctx.message.mentions:
             user = ctx.message.mentions[-1]
-            if user.mention not in file_name:  # It was a prefix
+            if user.mention not in file_name and user.mention.replace('<@', '<@!') not in file_name:  # It was a prefix
                 user = None
                 if len(ctx.message.mentions) > 1:
                     user = ctx.message.mentions[0]
@@ -3382,9 +3021,9 @@ class Music(commands.Cog):
         if illegal_char(file_name):
             return await ctx.send(get_str(ctx, "music-plnew-special-char"))
 
-        settings = await SettingsDB.get_instance().get_glob_settings()
+        settings = await SettingsDB.get_instance().get_autoplaylists_settings(file_name)
 
-        if file_name not in settings.autoplaylists:
+        if not settings.name:
             file_name = format_mentions(file_name)
             return await ctx.send(get_str(ctx, "music-plstart-doesnt-exists").format(f"**{file_name}**", "`{}plnew`".format(get_server_prefixes(ctx.bot, ctx.guild))), delete_after=30)
 
@@ -3428,8 +3067,10 @@ class Music(commands.Cog):
 
             fileName = response_message.content.lower()
 
+            settingsBefore = await SettingsDB.get_instance().get_autoplaylists_settings(fileName)
+
             # Check to make sure there isn't already a file with the same name
-            if fileName in settings.autoplaylists:
+            if not settings.name:
                 return await ctx.send(get_str(ctx, "music-plnew-already-exists").format(f"**{response_message.content}**"))
 
             if await self.is_perso(ctx.guild, name=fileName):
@@ -3439,7 +3080,7 @@ class Music(commands.Cog):
             if response_message.content:
                 await ctx.invoke(self.plnew, file_name=fileName)
                 settings = await SettingsDB.get_instance().get_glob_settings()
-                settings.autoplaylists[fileName]['songs'] = settings.autoplaylists[file_name]['songs']
+                settingsBefore.songs = settings.songs
                 await SettingsDB.get_instance().set_glob_settings(settings)
                 await ctx.send(get_str(ctx, "music-plclone-cloned").format(msg_name, response_message.content))
         else:
@@ -3495,10 +3136,9 @@ class Music(commands.Cog):
             if not player.autoplaylist:
                 self._cd.get_bucket(ctx.message).reset()
                 return await ctx.send(get_str(ctx, "music-pl-disabled").format("`{}plstart`".format(get_server_prefixes(ctx.bot, ctx.guild))))
-            name = player.autoplaylist['name'].lower()
-            try:
-                settings.autoplaylists[name]
-            except KeyError:  # can happen after plclear
+            name = player.autoplaylist.name.lower()
+            settings = await SettingsDB.get_instance().get_autoplaylists_settings(name)
+            if not settings.name:
                 return await ctx.send(get_str(ctx, "music-plsettings-got-deleted"))
 
         total = ""
@@ -3509,14 +3149,15 @@ class Music(commands.Cog):
 
         if ctx.message.mentions:
             user = ctx.message.mentions[-1]
-            if user.mention not in name:  # It was a prefix
+            if user.mention not in name and user.mention.replace('<@', '<@!') not in name:  # It was a prefix
                 user = None
                 if len(ctx.message.mentions) > 1:
                     user = ctx.message.mentions[0]
             if user:
                 name = str(user.id)
 
-        if name not in settings.autoplaylists:
+        settings = await SettingsDB.get_instance().get_autoplaylists_settings(name)
+        if not settings.name:
             self._cd.get_bucket(ctx.message).reset()
             return await ctx.send(get_str(ctx, "music-plinfo-not-found"))
 
@@ -3525,7 +3166,7 @@ class Music(commands.Cog):
         if is_perso:
             user_name = is_perso.name
 
-        n = len(settings.autoplaylists[name]['songs'])
+        n = len(settings.songs)
         if n >= 1000:
             return await ctx.send(f'Your playlist has too many songs ! `{n}/1000` I can\'t display it! Remove some song if you want to use this command.')
 
@@ -3539,14 +3180,14 @@ class Music(commands.Cog):
         if n <= 15:
             youtube_ids = []
             already_find = {}
-            for url in settings.autoplaylists[name]['songs']:
+            for url in settings.songs:
                 if 'youtu' in url:
                     id = url.split('?v=')[-1].split('?')[0].split('/')[-1]
                     youtube_ids.append(id)
             if youtube_ids:
                 already_find = await self.youtube_api.get_youtube_title(id=youtube_ids)
 
-            for r, url in enumerate(settings.autoplaylists[name]['songs'], start=1):
+            for r, url in enumerate(settings.songs, start=1):
                 title = ''
                 if 'youtu' in url:
                     id = url.split('?v=')[-1].split('?')[0].split('/')[-1]
@@ -3574,14 +3215,14 @@ class Music(commands.Cog):
             await ctx.send(get_str(ctx, "music-plinfo-too-much"))
             youtube_ids = []
             already_find = {}
-            for url in settings.autoplaylists[name]['songs']:
+            for url in settings.songs:
                 if 'youtu' in url:
                     id = url.split('?v=')[-1].split('?')[0].split('/')[-1]
                     youtube_ids.append(id)
             if youtube_ids:
                 already_find = await self.youtube_api.get_youtube_title(id=youtube_ids)
 
-            for r, url in enumerate(settings.autoplaylists[name]['songs'], start=1):
+            for r, url in enumerate(settings.songs, start=1):
                 title = ''
                 if 'youtu' in url:
                     id = url.split('?v=')[-1].split('?')[0].split('/')[-1]
@@ -3660,17 +3301,16 @@ class Music(commands.Cog):
 
         {help}
         """
-        settings = await SettingsDB.get_instance().get_glob_settings()
         if not name:
             player = await self.get_player(ctx.guild)
             if not player.is_connected:
                 return await ctx.send(get_str(ctx, "not-connected"), delete_after=20)
             if not player.autoplaylist:
                 return await ctx.send(get_str(ctx, "music-pl-disabled").format("`{}plstart`".format(get_server_prefixes(ctx.bot, ctx.guild))))
-            name = player.autoplaylist['name'].lower()
-            try:
-                autopl = settings.autoplaylists[name]
-            except KeyError:  # can happen after plclear
+            name = player.autoplaylist.name.lower()
+
+            autopl = settings = await SettingsDB.get_instance().get_autoplaylists_settings(name)
+            if not settings.name:
                 return await ctx.send(get_str(ctx, "music-plsettings-got-deleted"))
 
         name_lower = str(name.lower())
@@ -3679,24 +3319,23 @@ class Music(commands.Cog):
             name = name_lower
             if ctx.message.mentions:
                 user = ctx.message.mentions[-1]
-                if user.mention not in name:  # It was a prefix
+                if user.mention not in name and user.mention.replace('<@', '<@!') not in name:  # It was a prefix
                     user = None
                     if len(ctx.message.mentions) > 1:
                         user = ctx.message.mentions[0]
                 if user:
                     name = str(user.id)
-            try:
-                autopl = settings.autoplaylists[name]
-            except KeyError:
+            autopl = settings = await SettingsDB.get_instance().get_autoplaylists_settings(name)
+            if not settings.name:
                 return await ctx.send(get_str(ctx, "music-plinfo-not-found"))
 
             whitelisted = []
-            if len(autopl['whitelist']) > 20:
-                whitelisted = f"{len(autopl['whitelist'])} {get_str(ctx, 'cmd-serverinfo-users')}"
-            elif len(autopl['whitelist']) == 0:
+            if len(autopl.whitelist) > 20:
+                whitelisted = f"{len(autopl.whitelist)} {get_str(ctx, 'cmd-serverinfo-users')}"
+            elif not autopl.whitelist:
                 whitelisted = get_str(ctx, "music-plsettings-nobody")
             else:
-                for m in autopl['whitelist']:
+                for m in autopl.whitelist:
                     user = await self.bot.safe_fetch('user', int(m)) or m
                     whitelisted.append(f"`{user}`")
                 whitelisted = "**,** ".join(whitelisted)
@@ -3708,17 +3347,17 @@ class Music(commands.Cog):
                 title = get_str(
                     ctx, "music-plsettings-autopl").format(username)
             else:
-                title = f"Autoplaylist : {autopl['name']}"
+                title = f"Autoplaylist : {autopl.name}"
 
-            desc = autopl.get('description', False)
-            avatar = autopl.get('avatar', False)
-            votes = autopl.get('upvote', [])
+            desc = autopl.description
+            avatar = autopl.avatar
+            votes = autopl.upvote
             embed = discord.Embed()
 
             if avatar:
                 embed.set_thumbnail(url=avatar)
             if perso:
-                embed.set_author(name=title, icon_url=perso.avatar_url)
+                embed.set_author(name=title, icon_url=perso.avatar)
             else:
                 embed.title = title
 
@@ -3726,14 +3365,14 @@ class Music(commands.Cog):
                 embed.description = desc
 
             embed.add_field(name=get_str(
-                ctx, "music-plsettings-songs"), value=len(autopl['songs']))
-            embed.add_field(name=get_str(ctx, "music-plsettings-created-by"), value=await self.bot.safe_fetch('user', int(autopl['created_by'])) or autopl['created_by_name'])
+                ctx, "music-plsettings-songs"), value=len(autopl.songs))
+            embed.add_field(name=get_str(ctx, "music-plsettings-created-by"), value=await self.bot.safe_fetch('user', int(autopl.created_by)) or autopl.created_by_name)
             embed.add_field(name=get_str(
-                ctx, "music-plsettings-creation-date"), value=autopl['created_date'])
+                ctx, "music-plsettings-creation-date"), value=autopl.created_date)
             embed.add_field(name="Shuffle", value=get_str(
-                ctx, "music-plsettings-{}".format(['no', 'yes'][autopl['shuffle']])))
+                ctx, "music-plsettings-{}".format(['no', 'yes'][autopl.shuffle])))
             embed.add_field(name=get_str(ctx, "music-plsettings-private"), value=get_str(
-                ctx, "music-plsettings-{}".format(['no', 'yes'][autopl['private']])))
+                ctx, "music-plsettings-{}".format(['no', 'yes'][autopl.private])))
             embed.add_field(name="Upvote{}".format(
                 's' if len(votes) != 1 else ''), value=len(votes))
             embed.add_field(name='Whitelist', value=whitelisted)
@@ -3746,30 +3385,29 @@ class Music(commands.Cog):
 
             if ctx.message.mentions:
                 user = ctx.message.mentions[-1]
-                if user.mention not in name:  # It was a prefix
+                if user.mention not in name and user.mention.replace('<@', '<@!') not in name:  # It was a prefix
                     user = None
                     if len(ctx.message.mentions) > 1:
                         user = ctx.message.mentions[0]
                 if user:
                     name_lower = str(user.id)
 
-            if name_lower not in settings.autoplaylists:
+            autopl = settings = await SettingsDB.get_instance().get_autoplaylists_settings(name_lower)
+            if not settings.name:
                 player = await self.get_player(ctx.guild)
                 if player.autoplaylist:
-                    name_lower = player.autoplaylist['name'].lower()
+                    name_lower = player.autoplaylist.name.lower()
                 else:
                     return await ctx.send(get_str(ctx, "music-pl-disabled").format("`{}plstart`".format(get_server_prefixes(ctx.bot, ctx.guild))))
-                try:
-                    autopl = settings.autoplaylists[name_lower]
-                except KeyError:  # can happen after plclear
+                settings = await SettingsDB.get_instance().get_autoplaylists_settings(name_lower)
+                if not settings.name:  # can happen after plclear
                     return await ctx.send(get_str(ctx, "music-plsettings-got-deleted"))
             else:
-                try:
-                    autopl = settings.autoplaylists[name_lower]
-                except KeyError:
+                settings = await SettingsDB.get_instance().get_autoplaylists_settings(name_lower)
+                if not settings.name:
                     return await ctx.send(get_str(ctx, "music-plinfo-not-found"))
 
-            if int(autopl['created_by']) != ctx.author.id and ctx.author.id != owner_id:
+            if int(settings.created_by) != ctx.author.id and ctx.author.id != owner_id:
                 return await ctx.send(get_str(ctx, "music-autoplaylist-only-owner"))
 
             perso = await self.is_perso(ctx.guild, name=name_lower)
@@ -3778,7 +3416,7 @@ class Music(commands.Cog):
                 title = get_str(
                     ctx, "music-plsettings-autopl").format(f"**{username}**") + "\n"
             else:
-                title = f"Autoplaylist : **{autopl['name']}**\n"
+                title = f"Autoplaylist : **{settings.name}**\n"
 
             opt = ' '.join(opt.split())  # delete useless spaces
 
@@ -3789,28 +3427,28 @@ class Music(commands.Cog):
                 if opt.split(' ')[0][0].lower() == "p":  # private
                     if len(opt.split(' ')) > 1:  # args given
                         if opt.split(' ')[1][0].lower() == "f":
-                            autopl['private'] = False
+                            settings.private = False
                         else:  # assuming true
-                            autopl['private'] = True
+                            settings.private = True
                     else:  # invert if no args given
-                        autopl['private'] = not autopl['private']
+                        settings.private = not settings.private
                     await ctx.send(embed=discord.Embed(title=title).add_field(name=get_str(ctx, "music-plsettings-private"),
-                                                                              value=get_str(ctx, "music-plsettings-yes") if autopl['private']
+                                                                              value=get_str(ctx, "music-plsettings-yes") if settings.private
                                                                               else get_str(ctx, "music-plsettings-no")))
-                    await SettingsDB.get_instance().set_glob_settings(settings)
+                    await SettingsDB.get_instance().set_autoplaylists_settings(settings)
 
                 elif opt.split(' ')[0][0].lower() == "s":  # shuffle
                     if len(opt.split(' ')) > 1:  # args given
                         if opt.split(' ')[1][0].lower() == "f":
-                            autopl['shuffle'] = False
+                            settings.shuffle = False
                         else:  # assuming true
-                            autopl['shuffle'] = True
+                            settings.shuffle = True
                     else:  # invert if no args given
-                        autopl['shuffle'] = not autopl['shuffle']
+                        settings.shuffle = not settings.shuffle
                     await ctx.send(embed=discord.Embed(title=title).add_field(name='Shuffle',
-                                                                              value=get_str(ctx, "music-plsettings-yes") if autopl['shuffle']
+                                                                              value=get_str(ctx, "music-plsettings-yes") if settings.shuffle
                                                                               else get_str(ctx, "music-plsettings-no")))
-                    await SettingsDB.get_instance().set_glob_settings(settings)
+                    await SettingsDB.get_instance().set_autoplaylists_settings(settings)
 
                 elif opt.split(' ')[0][0].lower() == "w":  # whitelist
                     if len(opt.split(' ')) < 2:  # need a lot of info
@@ -3823,8 +3461,8 @@ class Music(commands.Cog):
                             if not user_id.isdigit():
                                 continue
                             user = await self.bot.safe_fetch('member', int(user_id), guild=ctx.guild)
-                            if user and str(user.id) in autopl['whitelist']:
-                                autopl['whitelist'].remove(str(user.id))
+                            if user and str(user.id) in settings.whitelist:
+                                settings.whitelist.remove(str(user.id))
                     else:  # admit +
                         for user_id in opt.split(' ')[1:]:
                             user_id = ''.join([str(s)
@@ -3833,33 +3471,33 @@ class Music(commands.Cog):
                                 continue
 
                             user = await self.bot.safe_fetch('member', int(user_id), guild=ctx.guild)
-                            if user and str(user.id) not in autopl['whitelist']:
-                                autopl['whitelist'].append(str(user.id))
+                            if user and str(user.id) not in settings.whitelist:
+                                settings.whitelist.append(str(user.id))
 
                     whitelisted = []
-                    if len(autopl['whitelist']) > 20:
-                        whitelisted = f"{len(autopl['whitelist'])} {get_str(ctx, 'cmd-serverinfo-users')}"
-                    elif len(autopl['whitelist']) == 0:
+                    if len(settings.whitelist) > 20:
+                        whitelisted = f"{len(settings.whitelist)} {get_str(ctx, 'cmd-serverinfo-users')}"
+                    elif not settings.whitelist:
                         whitelisted = get_str(ctx, "music-plsettings-nobody")
                     else:
-                        for m in autopl['whitelist']:
+                        for m in settings.whitelist:
                             user = await self.bot.safe_fetch('member', int(m), guild=ctx.guild) or m
                             whitelisted.append(f"`{user}`")
                         whitelisted = ", ".join(whitelisted)
 
                     await ctx.send(embed=discord.Embed(title=title).add_field(name='Whitelist', value=whitelisted))
-                    await SettingsDB.get_instance().set_glob_settings(settings)
+                    await SettingsDB.get_instance().set_autoplaylists_settings(settings)
 
                 elif opt.split(' ')[0][0].lower() == "d":  # description
                     if len(opt.split(' ')) > 1:
                         desc = ' '.join(opt.split(' ')[1:])[:1000]
-                        autopl['description'] = desc
+                        settings.description = desc
                     else:
-                        autopl.pop('description', None)
+                        settings.description = None
                         desc = get_str(ctx, "now-empty")
 
                     await ctx.send(embed=discord.Embed(title=title).add_field(name='Description', value=desc))
-                    await SettingsDB.get_instance().set_glob_settings(settings)
+                    await SettingsDB.get_instance().set_autoplaylists_settings(settings)
 
                 elif opt.split(' ')[0][0].lower() == "a":  # custom avatar
                     em = discord.Embed(title=title)
@@ -3867,28 +3505,28 @@ class Music(commands.Cog):
                         desc = ' '.join(opt.split(' ')[1:])
                         pic = get_image_from_url(desc)
                         if pic:
-                            autopl['avatar'] = pic
+                            autopl.avatar = pic
                             em.add_field(name='Avatar', value=pic)
                             em.set_thumbnail(url=pic)
                         else:
                             return await self.bot.send_cmd_help(ctx)
                     else:
-                        autopl.pop('avatar', None)
+                        autopl.avatar = ''
                         desc = get_str(ctx, "now-empty")
                         em.add_field(name='Avatar', value=desc)
                     await ctx.send(embed=em)
-                    await SettingsDB.get_instance().set_glob_settings(settings)
+                    await SettingsDB.get_instance().set_autoplaylists_settings(autopl)
 
                 elif opt.split(' ')[0][0].lower() == "n":  # edit name
                     if len(opt.split(' ')) > 1:
                         name = ' '.join(opt.split(' ')[1:])[:100]
-                        if name.lower() == autopl['name'].lower():
-                            autopl['name'] = name
+                        if name.lower() == autopl.name.lower():
+                            autopl.name = name
                         else:
                             return await ctx.send(get_str(ctx, "cmd-plsettings-modify-name"))
 
                     await ctx.send(embed=discord.Embed(title=title).add_field(name='Name', value=name))
-                    await SettingsDB.get_instance().set_glob_settings(settings)
+                    await SettingsDB.get_instance().set_autoplaylists_settings(autopl)
 
                 else:
                     await self.bot.send_cmd_help(ctx)
@@ -3931,10 +3569,9 @@ class Music(commands.Cog):
             if not player.autoplaylist:
                 self._cd.get_bucket(ctx.message).reset()
                 return await ctx.send(get_str(ctx, "music-pl-disabled").format("`{}plstart`".format(get_server_prefixes(ctx.bot, ctx.guild))))
-            name = player.autoplaylist['name'].lower()
-            try:
-                settings.autoplaylists[name]
-            except KeyError:  # can happen after plclear
+            name = player.autoplaylist.name.lower()
+            settings = await SettingsDB.get_instance().get_autoplaylists_settings(name)
+            if not settings.name:
                 return await ctx.send(get_str(ctx, "music-plsettings-got-deleted"))
 
         name = str(name.lower())
@@ -3942,23 +3579,24 @@ class Music(commands.Cog):
 
         if ctx.message.mentions:
             user = ctx.message.mentions[-1]
-            if user.mention not in name:  # It was a prefix
+            if user.mention not in name and user.mention.replace('<@', '<@!') not in name:  # It was a prefix
                 user = None
                 if len(ctx.message.mentions) > 1:
                     user = ctx.message.mentions[0]
             if user:
                 name = str(user.id)
 
-        if name not in settings.autoplaylists:
+        settings = await SettingsDB.get_instance().get_autoplaylists_settings(name)
+        if not settings.name:
             self._cd.get_bucket(ctx.message).reset()
             return await ctx.send(get_str(ctx, "music-plinfo-not-found"))
 
-        if settings.autoplaylists[name]['private']:
-            if int(settings.autoplaylists[name]['created_by']) != ctx.author.id and str(ctx.author.id) not in settings.autoplaylists[name]['whitelist'] and ctx.author.id != owner_id:
+        if settings.private:
+            if int(settings.created_by) != ctx.author.id and str(ctx.author.id) not in settings.whitelist and ctx.author.id != owner_id:
                 self._cd.get_bucket(ctx.message).reset()
                 return await ctx.send(get_str(ctx, "music-autoplaylist-noten-perms"))
 
-        n = len(settings.autoplaylists[name]['songs'])
+        n = len(settings.songs)
         if n >= 1000:
             return await ctx.send(f'Your playlist has too many songs ! `{n}/1000` I can\'t display it! Remove some song if you want to use this command.')
 
@@ -3967,14 +3605,14 @@ class Music(commands.Cog):
 
         youtube_ids = []
         already_find = {}
-        for url in settings.autoplaylists[name]['songs']:
+        for url in settings.songs:
             if 'youtu' in url:
                 id = url.split('?v=')[-1].split('?')[0].split('/')[-1]
                 youtube_ids.append(id)
         if youtube_ids:
             already_find = await self.youtube_api.get_youtube_title(id=youtube_ids)
 
-        for r, url in enumerate(settings.autoplaylists[name]['songs'], start=1):
+        for r, url in enumerate(settings.songs, start=1):
             title = ''
             if 'youtu' in url:
                 id = url.split('?v=')[-1].split('?')[0].split('/')[-1]
@@ -3995,9 +3633,9 @@ class Music(commands.Cog):
             return await ctx.send(get_str(ctx, "music-plrepair-all-ok"))
 
         for song_url in banane:
-            settings.autoplaylists[name]['songs'].remove(song_url)
+            settings.songs.remove(song_url)
 
-        await SettingsDB.get_instance().set_glob_settings(settings)
+        await SettingsDB.get_instance().set_autoplaylists_settings(settings)
 
         dead = len(banane)
         if dead > 1:
@@ -4026,12 +3664,11 @@ class Music(commands.Cog):
 
         {help}
         """
-        settings = await SettingsDB.get_instance().get_glob_settings()
         if query:
             matching = []
             if ctx.message.mentions:
                 user = ctx.message.mentions[-1]
-                if user.mention not in query:  # It was a prefix
+                if user.mention not in query and user.mention.replace('<@', '<@!') not in query:  # It was a prefix
                     user = None
                     if len(ctx.message.mentions) > 1:
                         user = ctx.message.mentions[0]
@@ -4044,29 +3681,23 @@ class Music(commands.Cog):
             except ValueError:
                 pass
             if not isinstance(query, int):
-                for m in settings.autoplaylists.values():
-                    desc = m.get('description', '')
-                    title = m.get('name', '')
-                    if query.lower() in desc.lower() or query.lower() in title.lower():
-                        matching.append(m)
-                        continue
-                    for word in query.split(' '):
-                        if word.lower() in [c.lower() for c in title.split(' ')] or word in [cc.lower() for cc in desc.split(' ')]:
-                            matching.append(m)
-                            break
+                cursor = SettingsDB.get_instance().autoplaylist_settings_collection.find({ "$or": [ {'description': {'$regex': f"^{query.lower()}"}}, {'name': {'$regex': f"^{query.lower()}"}} ]})
+                for m in await cursor.to_list(length=100):
+                    matching.append(m)
             else:
-                for m in settings.autoplaylists.values():
-                    if str(query) == m.get('created_by', ''):
-                        matching.append(m)
+                cursor = SettingsDB.get_instance().autoplaylist_settings_collection.find({'created_by': {'$regex': f"^{str(query)}"}})
+                for m in await cursor.to_list(length=100):
+                    matching.append(m)
         else:
-            matching = settings.autoplaylists.values()
+            cursor = SettingsDB.get_instance().autoplaylist_settings_collection.find({})  # TODO: Use aggregate with sort on upvote.
+            matching = await cursor.to_list(length=10000)
 
         if not matching:
             return await ctx.send(get_str(ctx, "no-result"))
 
         newlist = sorted(matching, key=lambda x: len(
             x.get('upvote', [])), reverse=True)
-        embed = discord.Embed(colour=self.get_color(ctx.guild))
+        embed = discord.Embed(colour=get_color(ctx.guild))
         embed.description = "**{}**:\n\n".format(
             get_str(ctx, "music-search-result"))
         bottom = '{} {}{}'.format(len(matching), get_str(
@@ -4078,8 +3709,8 @@ class Music(commands.Cog):
 
         for i, m in enumerate(newlist[page - 10:page], start=max(1 + page - 10, 1)):
             id = int(m['created_by'])
-            if m['is_personal']:
-                perso = await self.is_perso(ctx.guild, name=m['name'])
+            perso = await self.is_perso(ctx.guild, name=m['name'])
+            if m['is_personal'] or perso:
                 if perso:
                     name = perso
                     autoplname = get_str(
@@ -4118,32 +3749,29 @@ class Music(commands.Cog):
 
         {help}
         """
-        settings = await SettingsDB.get_instance().get_glob_settings()
         if not name:
             player = await self.get_player(ctx.guild)
             if not player.is_connected:
                 return await ctx.send(get_str(ctx, "not-connected"), delete_after=20)
             if not player.autoplaylist:
                 return await ctx.send(get_str(ctx, "music-pl-disabled").format("`{}plstart`".format(get_server_prefixes(ctx.bot, ctx.guild))))
-            name = player.autoplaylist['name'].lower()
-            try:
-                autopl = settings.autoplaylists[name]
-            except KeyError:  # can happen after plclear
+            name = player.autoplaylist.name.lower()
+            settings = await SettingsDB.get_instance().get_autoplaylists_settings(name)
+            if not settings.name:
                 return await ctx.send(get_str(ctx, "music-plsettings-got-deleted"))
         else:
             name = str(name.lower())
 
             if ctx.message.mentions:
                 user = ctx.message.mentions[-1]
-                if user.mention not in name:  # It was a prefix
+                if user.mention not in name and user.mention.replace('<@', '<@!') not in name:  # It was a prefix
                     user = None
                     if len(ctx.message.mentions) > 1:
                         user = ctx.message.mentions[0]
                 if user:
                     name = str(user.id)
-            try:
-                autopl = settings.autoplaylists[name]
-            except KeyError:
+            settings = await SettingsDB.get_instance().get_autoplaylists_settings(name)
+            if not settings.name:
                 return await ctx.send(get_str(ctx, "music-plinfo-not-found"))
 
         perso = await self.is_perso(ctx.guild, name=name)
@@ -4152,11 +3780,11 @@ class Music(commands.Cog):
             username = perso.name
             title = get_str(ctx, "music-plsettings-autopl").format(username)
         else:
-            title = f"Autoplaylist : {autopl['name']}"
+            title = f"Autoplaylist : {settings.name}"
 
-        embed = discord.Embed(title=title, colour=self.get_color(ctx.guild))
+        embed = discord.Embed(title=title, colour=get_color(ctx.guild))
 
-        vote_list = autopl.get('upvote', [])
+        vote_list = settings.upvote
         if ctx.author.id in vote_list:
             vote_list.remove(ctx.author.id)
             embed.description = get_str(ctx, "upvote-removed")
@@ -4164,9 +3792,9 @@ class Music(commands.Cog):
             vote_list.append(ctx.author.id)
             embed.description = get_str(ctx, "upvote-added")
 
-        autopl['upvote'] = vote_list
+        settings.upvote = vote_list
 
-        await SettingsDB.get_instance().set_glob_settings(settings)
+        await SettingsDB.get_instance().set_autoplaylists_settings(settings)
         await ctx.send(embed=embed)
 
     @pl.command(name='upvote', aliases=['vote'])
@@ -4209,23 +3837,19 @@ class Music(commands.Cog):
         my_vc = ctx.guild.me.voice.channel
 
         if not await self.is_dj(ctx):
-            if ctx.author not in my_vc.members or (ctx.author.voice.self_deaf or ctx.author.voice.deaf):
+            if ctx.author.id not in my_vc.voice_states or (ctx.author.voice.self_deaf or ctx.author.voice.deaf):
                 return await ctx.send(get_str(ctx, "music-not-my-channel").format(f"**{my_vc}**"), delete_after=30)
 
         if not player.autoplaylist:
             return await ctx.send(get_str(ctx, "music-pl-disabled").format("`{}plstart`".format(get_server_prefixes(ctx.bot, ctx.guild))))
 
-        settings = await SettingsDB.get_instance().get_glob_settings()
+        settings = await SettingsDB.get_instance().get_autoplaylists_settings(player.autoplaylist.name.lower())
 
-        try:
-            settings.autoplaylists[player.autoplaylist['name'].lower()]
-        except KeyError:  # can happen after plclear
+        if not settings.name:
             return await ctx.send(get_str(ctx, "music-plsettings-got-deleted"))
 
-        file_name = player.autoplaylist['name'].lower()
-
-        if settings.autoplaylists[file_name]['private']:
-            if int(settings.autoplaylists[file_name]['created_by']) != ctx.author.id and str(ctx.author.id) not in settings.autoplaylists[file_name]['whitelist'] and ctx.author.id != owner_id:
+        if settings.private:
+            if int(settings.created_by) != ctx.author.id and str(ctx.author.id) not in settings.whitelist and ctx.author.id != owner_id:
                 return await ctx.send(get_str(ctx, "music-autoplaylist-noten-perms"))
 
         add_current = False
@@ -4249,7 +3873,7 @@ class Music(commands.Cog):
                 results['playlistInfo'] = {
                     'selectedTrack': -1, 'name': 'Current Queue'}
             else:
-                return await load.edit(content=get_str(ctx, "music-plinfo-empty-auto").format("`{}pladd`".format(get_server_prefixes(ctx.bot, ctx.guild))))
+                return await ctx.send(content=get_str(ctx, "music-plinfo-empty-auto").format("`{}pladd`".format(get_server_prefixes(ctx.bot, ctx.guild))))
 
         if not song_url:
             if player.current:
@@ -4294,13 +3918,14 @@ class Music(commands.Cog):
             if results['playlistInfo']:  # it's a playlist with multiple tracks
                 urls = [track['info']['uri'] for track in results['tracks']]
                 for url in urls:
-                    if url in player.autoplaylist['songs']:
+                    if url in player.autoplaylist.songs:
                         urls.remove(url)
                     else:
-                        player.autoplaylist['songs'].append(url)
-                settings.autoplaylists[player.autoplaylist['name'].lower(
-                )] = player.autoplaylist
-                await SettingsDB.get_instance().set_glob_settings(settings)
+                        player.autoplaylist.songs.append(url)
+                settings = await SettingsDB.get_instance().get_autoplaylists_settings(player.autoplaylist.name.lower(
+                ))
+                settings = player.autoplaylist
+                await SettingsDB.get_instance().set_autoplaylists_settings(settings)
                 added = len(urls)
                 not_added = len(results['tracks']) - added
                 if added and not not_added:
@@ -4323,13 +3948,14 @@ class Music(commands.Cog):
                 song_url = results['tracks'][0]['info']['uri'] + \
                     (f'?t={start_time[-1][-1]}' if start_time else '')
 
-        if any(s.split('?t=')[0] == song_url.split('?t=')[0] for s in player.autoplaylist['songs']):
+        if any(s.split('?t=')[0] == song_url.split('?t=')[0] for s in player.autoplaylist.songs):
             return await ctx.send(get_str(ctx, "music-pladd-already-present"), delete_after=30)
         else:
-            player.autoplaylist['songs'].append(song_url)
-            settings.autoplaylists[player.autoplaylist['name'].lower(
-            )] = player.autoplaylist
-            await SettingsDB.get_instance().set_glob_settings(settings)
+            player.autoplaylist.songs.append(song_url)
+            settings = await SettingsDB.get_instance().get_autoplaylists_settings(player.autoplaylist.name.lower(
+            ))
+            settings = player.autoplaylist
+            await SettingsDB.get_instance().set_autoplaylists_settings(settings)
             await ctx.send(get_str(ctx, "music-pladd-added").format(f"**{title}**"))
 
     @pl.command(name='remove', aliases=['-', 'r', 'delete'])
@@ -4361,23 +3987,19 @@ class Music(commands.Cog):
         my_vc = ctx.guild.me.voice.channel
 
         if not await self.is_dj(ctx):
-            if ctx.author not in my_vc.members or (ctx.author.voice.self_deaf or ctx.author.voice.deaf):
+            if ctx.author.id not in my_vc.voice_states or (ctx.author.voice.self_deaf or ctx.author.voice.deaf):
                 return await ctx.send(get_str(ctx, "music-not-my-channel").format(f"**{my_vc}**"), delete_after=30)
 
         if not player.autoplaylist:
             return await ctx.send(get_str(ctx, "music-pl-disabled").format("`{}plstart`".format(get_server_prefixes(ctx.bot, ctx.guild))))
 
-        settings = await SettingsDB.get_instance().get_glob_settings()
+        settings = await SettingsDB.get_instance().get_autoplaylists_settings(player.autoplaylist.name.lower())
 
-        try:
-            settings.autoplaylists[player.autoplaylist['name'].lower()]
-        except KeyError:  # can happen after plclear
+        if not settings.name:  # can happen after plclear
             return await ctx.send(get_str(ctx, "music-plsettings-got-deleted"))
 
-        file_name = player.autoplaylist['name'].lower()
-
-        if settings.autoplaylists[file_name]['private']:
-            if int(settings.autoplaylists[file_name]['created_by']) != ctx.author.id and str(ctx.author.id) not in settings.autoplaylists[file_name]['whitelist'] and ctx.author.id != owner_id:
+        if settings.private:
+            if int(settings.created_by) != ctx.author.id and str(ctx.author.id) not in settings.whitelist and ctx.author.id != owner_id:
                 return await ctx.send(get_str(ctx, "music-autoplaylist-noten-perms"))
 
         if not song_url:
@@ -4389,8 +4011,8 @@ class Music(commands.Cog):
 
         elif not match_url(song_url):
             if song_url.isdigit():
-                if int(song_url) <= len(player.autoplaylist['songs']):
-                    return await ctx.invoke(self.plremove, song_url=player.autoplaylist['songs'][int(song_url) - 1])
+                if int(song_url) <= len(player.autoplaylist.songs):
+                    return await ctx.invoke(self.plremove, song_url=player.autoplaylist.songs[int(song_url) - 1])
             if self.is_spotify(song_url):
                 try:
                     data = await self.prepare_spotify(ctx, song_url, node=player.node)
@@ -4425,13 +4047,12 @@ class Music(commands.Cog):
             if results['playlistInfo']:  # it's a playlist with multiple tracks
                 urls = [track['info']['uri'] for track in results['tracks']]
                 for url in urls:
-                    if url not in player.autoplaylist['songs']:
+                    if url not in player.autoplaylist.songs:
                         urls.remove(url)
                     else:
-                        player.autoplaylist['songs'].remove(url)
-                settings.autoplaylists[player.autoplaylist['name'].lower(
-                )] = player.autoplaylist
-                await SettingsDB.get_instance().set_glob_settings(settings)
+                        player.autoplaylist.songs.remove(url)
+                settings = player.autoplaylist
+                await SettingsDB.get_instance().set_autoplaylists_settings(settings)
                 removed = len(urls)
                 not_removed = len(results['tracks']) - removed
                 if removed and not not_removed:
@@ -4451,18 +4072,17 @@ class Music(commands.Cog):
             else:  # it's just a track
                 title = results['tracks'][0]['info']['title']
                 song_url = results['tracks'][0]['info']['uri']
-                occ = [s for s in player.autoplaylist['songs']
+                occ = [s for s in player.autoplaylist.songs
                        if s.split('?t=')[0] == song_url.split('?t=')[0]]
                 if occ:
                     song_url = occ[0]
 
-        if song_url not in player.autoplaylist['songs']:
+        if song_url not in player.autoplaylist.songs:
             return await ctx.send(get_str(ctx, "music-plremove-not-found"), delete_after=30)
         else:
-            player.autoplaylist['songs'].remove(song_url)
-            settings.autoplaylists[player.autoplaylist['name'].lower(
-            )] = player.autoplaylist
-            await SettingsDB.get_instance().set_glob_settings(settings)
+            player.autoplaylist.songs.remove(song_url)
+            settings = player.autoplaylist
+            await SettingsDB.get_instance().set_autoplaylists_settings(settings)
             await ctx.send(get_str(ctx, "music-plremove-removed").format(f"**{title}**"))
 
     @commands.command(aliases=['nextplay', 'playtop', 'plnext', 'playafter', 'pnext', 'after', 'topplay', 'playt'])
@@ -4505,7 +4125,7 @@ class Music(commands.Cog):
         my_vc = ctx.guild.me.voice.channel
 
         if not await self.is_dj(ctx):
-            if ctx.author not in my_vc.members or (ctx.author.voice.self_deaf or ctx.author.voice.deaf):
+            if ctx.author.id not in my_vc.voice_states or (ctx.author.voice.self_deaf or ctx.author.voice.deaf):
                 return await ctx.send(get_str(ctx, "music-not-my-channel").format(f"**{my_vc}**"), delete_after=30)
 
         if (not player.queue and not player.is_playing):
@@ -4517,7 +4137,7 @@ class Music(commands.Cog):
 
         typing = True
 
-        channel = ctx.guild.get_channel(player.channel)
+        channel = player.channel
         if channel:
             async for entry in channel.history(limit=5):
                 if not entry or not player.npmsg:  # idk
@@ -4601,7 +4221,7 @@ class Music(commands.Cog):
         my_vc = ctx.guild.me.voice.channel
 
         if not await self.is_dj(ctx):
-            if ctx.author not in my_vc.members or (ctx.author.voice.self_deaf or ctx.author.voice.deaf):
+            if ctx.author.id not in my_vc.voice_states or (ctx.author.voice.self_deaf or ctx.author.voice.deaf):
                 return await ctx.send(get_str(ctx, "music-not-my-channel").format(f"**{my_vc}**"), delete_after=30)
 
         if not player.is_connected:
@@ -4701,7 +4321,7 @@ class Music(commands.Cog):
             if len('\n'.join(results)) + len(new) < 1975:
                 results.append(new)
                 index += 1
-        embed = discord.Embed(color=self.get_color(ctx.guild), title=get_str(
+        embed = discord.Embed(color=get_color(ctx.guild), title=get_str(
             ctx, "music-supersearch-select"), description="\n".join(results))
         result_message = await ctx.send(embed=embed)
 
@@ -4850,7 +4470,7 @@ class Music(commands.Cog):
                 raise commands.errors.CheckFailure
             return await ctx.invoke(self.setdj_set, name=role)
 
-    @setdj.command(name="now", aliases=["queue", "dj", "djs", "display", "list", "liste", "info"])
+    @setdj.command(name="now", aliases=["queue", "current", "display", "list", "liste", "info"])
     async def setdj_now(self, ctx):
         """
             {command_prefix}setdj now
@@ -4878,7 +4498,7 @@ class Music(commands.Cog):
 
         {help}
         """
-        role = self.bot.get_role(ctx, name)
+        role = ctx.bot.get_role(ctx, name)
 
         if not role:
             return await ctx.send(get_str(ctx, "cmd-joinclan-role-not-found").format(name))
@@ -4920,7 +4540,7 @@ class Music(commands.Cog):
 
         {help}
         """
-        role = self.bot.get_role(ctx, name)
+        role = ctx.bot.get_role(ctx, name)
 
         if not role:
             return await ctx.send(get_str(ctx, "cmd-joinclan-role-not-found").format(name))
@@ -5078,7 +4698,7 @@ class Music(commands.Cog):
                     ctx, "music-autoleave-need-claim").format(f"`{get_server_prefixes(ctx.bot, ctx.guild)}claim`"))
             else:
                 e = discord.Embed(description=get_str(ctx, "music-autoleave-unreasonable").format(
-                    f"`{min_val}`", f"`{max_val}`") + "\n\n" + "**[Patreon](https://www.patreon.com/bePatron?u=7139372)**")
+                    f"`{min_val}`", f"`{max_val}`") + "\n\n" + "**[Patreon](https://www.patreon.com/watora)**")
             try:
                 await ctx.send(embed=e)
             except discord.Forbidden:
@@ -5133,7 +4753,7 @@ class Music(commands.Cog):
                     ctx, "music-autoleave-need-claim").format(f"`{get_server_prefixes(ctx.bot, ctx.guild)}claim`"))
             else:
                 e = discord.Embed(description=get_str(ctx, "music-autoleave-unreasonable").format(
-                    f"`{min_val}`", f"`{max_val}`") + "\n\n" + "**[Patreon](https://www.patreon.com/bePatron?u=7139372)**")
+                    f"`{min_val}`", f"`{max_val}`") + "\n\n" + "**[Patreon](https://www.patreon.com/watora)**")
             try:
                 await ctx.send(embed=e)
             except discord.Forbidden:
@@ -5188,12 +4808,12 @@ class Music(commands.Cog):
         try:
             channel = [c for c in ctx.guild.channels if (str(c.id) == new_channel or isinstance(
                 new_channel, str) and c.name.lower() == new_channel.lower()) and isinstance(c, discord.TextChannel)][0]
-            new_channel = channel.id
+            new_channel = channel
         except IndexError:
             return await ctx.send(get_str(ctx, "music-npmsg-not-found").format(f"`{new_channel}`"))
 
         settings = await SettingsDB.get_instance().get_guild_settings(ctx.guild.id)
-        settings.channel = new_channel
+        settings.channel = new_channel.id
         if ctx.guild.id in self.bot.lavalink.players.players:
             player = await self.get_player(ctx.guild)
             player.channel = new_channel
@@ -5216,7 +4836,7 @@ class Music(commands.Cog):
         settings.channel = None
         if ctx.guild.id in self.bot.lavalink.players.players:
             player = await self.get_player(ctx.guild)
-            player.channel = ctx.channel.id
+            player.channel = ctx.channel
 
         await SettingsDB.get_instance().set_guild_settings(settings)
         await ctx.send(get_str(ctx, "music-npmsg-reset"))
@@ -5358,7 +4978,8 @@ class Music(commands.Cog):
                 elif 'autoplaylist:' in part:
                     glob_settings = await SettingsDB.get_instance().get_glob_settings()
                     file_name = part.replace('autoplaylist:', '').strip()
-                    if str(file_name.lower()) not in glob_settings.autoplaylists:
+                    pl_settings = await SettingsDB.get_instance().get_autoplaylists_settings(str(file_name.lower()))
+                    if not pl_settings.name:
                         file_name = format_mentions(file_name)
                         return await ctx.send(get_str(ctx, "music-plstart-doesnt-exists").format(f"**{file_name}**", "`{}plnew`".format(get_server_prefixes(ctx.bot, ctx.guild))), delete_after=30)
             query = '|'.join(parts)
@@ -5404,7 +5025,7 @@ class Music(commands.Cog):
         if desc:
             embed = discord.Embed(description=desc[:1900])
             embed.set_author(name='Autoconnect list',
-                             icon_url=ctx.guild.icon_url)
+                             icon_url=ctx.guild.icon)
             await ctx.send(embed=embed)
         else:
             await ctx.send(get_str(ctx, "music-autoconnect-list-empty").format("`{}autoconnect add`".format(get_server_prefixes(ctx.bot, ctx.guild))))
@@ -5422,181 +5043,6 @@ class Music(commands.Cog):
         self.bot.autosongs_map.pop(ctx.guild.id, None)
         await SettingsDB.get_instance().set_guild_settings(settings)
         await ctx.send(":ballot_box_with_check:")
-
-    @commands.group(aliases=["confighost", "ch", "hc", "hg", "gh"], invoke_without_command=True)
-    async def hostconfig(self, ctx, ip: str, password: str = "youshallnotpass", port: int = 2333):
-        """
-            {command_prefix}hostconfig set [ip]
-            {command_prefix}hostconfig set [ip] [password]
-            {command_prefix}hostconfig set [ip] [password] [port]
-            {command_prefix}hostconfig remove
-            {command_prefix}hostconfig now
-            {command_prefix}hostconfig switch
-            {command_prefix}hostconfig link
-
-            Allows to manage your credentials for your server to host yourself your music.
-            Go to Watora's discord for more information.
-        """
-        if not ctx.invoked_subcommand:  # TODO: Move all those commands to another node
-            return await ctx.invoke(self.hostconfig_set, ip=ip, password=password, port=port)
-
-    @hostconfig.command(name="set", aliases=["+", "add"])
-    @commands.cooldown(rate=1, per=15, type=commands.BucketType.user)
-    async def hostconfig_set(self, ctx, ip: str, password: str = "youshallnotpass", port: int = 2333):
-        """
-            {command_prefix}hostconfig set [ip]
-            {command_prefix}hostconfig set [ip] [password]
-            {command_prefix}hostconfig set [ip] [password] [port]
-
-        Allows to set your server credentials.
-        Default password is youshallnotpass (more than recommended to change it).
-        Default port is 2333.
-        """
-        if ctx.guild and ip:
-            try:
-                await ctx.message.delete()
-                # TODO: Translations
-                await ctx.send('Please use this command in DMs for your privacy!')
-            except discord.HTTPException:
-                pass
-
-        headers = {
-            'Authorization': password,
-            'Num-Shards': str(self.bot.shard_count),
-            'User-Id': str(self.bot.user.id)
-        }
-
-        msg = await ctx.send('Connecting...')  # TODO: Translations
-
-        try:
-            ws = await self.session.ws_connect('ws://{}:{}'.format(ip, port), headers=headers)
-        except (aiohttp.ClientError, asyncio.TimeoutError):
-            return await msg.edit(content='Failed to connect to this server, please ensure that your credentials are correct! Also make sure that your server is running, and your firewall is not blocking the connection. You can also check if your port is opened correctly. For futher assistance, you can join Watora\'s discord.')
-
-        await ws.close()
-
-        # TODO: Translations
-        await msg.edit(content="Successfully connected to the server!")
-
-        settings = await SettingsDB.get_instance().get_glob_settings()
-        settings.custom_hosts[str(ctx.author.id)] = {
-            'host': ip,
-            'port': port,
-            'password': password
-        }
-        await SettingsDB.get_instance().set_glob_settings(settings)
-
-        resume_config = {
-            'resume_key': str(ctx.author.id) + str(sum(self.bot.shards.keys())),
-            'resume_timeout': 600
-        }
-
-        node = self.bot.lavalink.node_manager.get_node_by_name(
-            str(ctx.author.id), True)
-        if node:
-            await self.bot.lavalink.node_manager.destroy_node(node)
-
-        self.bot.lavalink.add_node(
-            region=None, host=ip, password=password, name=f'{ctx.author.id}', port=port, is_perso=True, **resume_config)
-
-    @hostconfig.command(name="delete", aliases=["remove", "-"])
-    @commands.cooldown(rate=1, per=3, type=commands.BucketType.guild)
-    async def hostconfig_delete(self, ctx):
-        """
-            {command_prefix}hostconfig delete
-
-        Removes your configuration.
-        """
-        settings = await SettingsDB.get_instance().get_glob_settings()
-        if str(ctx.author.id) in settings.custom_hosts.keys():
-            del settings.custom_hosts[str(ctx.author.id)]
-        await SettingsDB.get_instance().set_glob_settings(settings)
-        await ctx.send("☑️")
-
-    @hostconfig.command(name="now", aliases=["current", "atm"])
-    async def hostconfig_now(self, ctx):
-        """
-            {command_prefix}hostconfig delete
-
-        Shows your configuration.
-        """
-        settings = await SettingsDB.get_instance().get_glob_settings()
-        if str(ctx.author.id) not in settings.custom_hosts.keys():
-            return await ctx.send('No config currently registered! Use `{}hostconfig set` to set one.'.format(get_server_prefixes(self.bot, ctx.guild)))
-        info = settings.custom_hosts[str(ctx.author.id)]
-        # TODO: Translations
-        embed = discord.Embed(description="Your server configuration")
-        embed.add_field(name='IP', value=info['host'], inline=False)
-        embed.add_field(name='Password', value=info['password'], inline=False)
-        embed.add_field(name='Port', value=info['port'], inline=False)
-        node = self.bot.lavalink.node_manager.get_node_by_name(
-            str(ctx.author.id))
-        text = "Server is currently " + \
-            ("connected" if node else "disconnected")
-        embed.set_footer(text=text)
-        try:
-            await ctx.author.send(embed=embed)
-        except discord.HTTPException:
-            return await ctx.send(get_str(ctx, "cant-send-pm"))
-        if ctx.guild:
-            await ctx.send(get_str(ctx, "message-send-to-mp"))
-
-    @checks.has_permissions(manage_guild=True)
-    @hostconfig.command(name="link", aliases=["connect", "setserver"])
-    async def hostconfig_link(self, ctx):
-        """
-            {command_prefix}hostconfig link
-
-        Links your configuration.
-        """
-        settings = await SettingsDB.get_instance().get_guild_settings(ctx.guild.id)
-        if settings.defaultnode == str(ctx.author.id):
-            settings.defaultnode = None
-            await SettingsDB.get_instance().set_guild_settings(settings)
-            return await ctx.send("Your node is not linked to this server anymore.")
-        settings_glob = await SettingsDB.get_instance().get_glob_settings()
-        if str(ctx.author.id) not in settings_glob.custom_hosts.keys():
-            # TODO: Translations
-            return await ctx.send('No config currently registered!')
-        settings.defaultnode = str(ctx.author.id)
-        await SettingsDB.get_instance().set_guild_settings(settings)
-        await ctx.send("Your node is now linked to this server.")
-
-    @hostconfig.command(name="switch", aliases=["move", "change"])
-    @commands.cooldown(rate=1, per=15, type=commands.BucketType.guild)
-    async def hostconfig_switch(self, ctx):
-        """
-            {command_prefix}hostconfig switch
-
-        Switch current player to your node, or to another node.
-        """
-        settings = await SettingsDB.get_instance().get_glob_settings()
-        if str(ctx.author.id) not in settings.custom_hosts.keys():
-            return await ctx.send('No config currently registered!')
-        info = settings.custom_hosts[str(ctx.author.id)]
-        node = self.bot.lavalink.node_manager.get_node_by_name(
-            str(ctx.author.id))
-        if not node:
-            return await ctx.send("Your node doesn't seem to be connected!")
-        if ctx.guild.id not in self.bot.lavalink.players.players:
-            return await ctx.send(get_str(ctx, "not-connected"), delete_after=20)
-        player = await self.get_player(ctx.guild)
-        if not await self.is_dj(ctx) and not player.node == node:
-            raise commands.errors.CheckFailure
-        is_user = True
-        if player.node == node:
-            await ctx.send('This player is already on your node! Moving it to another node...')
-            node = self.bot.lavalink.node_manager.find_ideal_node(
-                str(ctx.guild.id))
-            is_user = False
-            if not node:
-                # TODO: Translations
-                return await ctx.send('No other node available!')
-        await ctx.send('Moving...')
-        await player.change_node(node)
-        if is_user:
-            return await ctx.send(f'Moved to {ctx.author} node.')
-        return await ctx.send(f'Left {ctx.author} node.')
 
     @commands.is_owner()
     @commands.command()
@@ -5663,16 +5109,16 @@ class Music(commands.Cog):
             after.channel.id)]
         if not song_info:
             player = await self.get_player(member.guild, True, member.id)
-            return await player.connect(after.channel.id)
+            return await player.connect(after.channel)
         song_info = random.choice(song_info.split('|')).strip()
         if 'autoplaylist:' in song_info:
-            settings = await SettingsDB.get_instance().get_glob_settings()
             file_name = song_info.replace('autoplaylist:', '').strip()
-            if str(file_name.lower()) not in settings.autoplaylists:
+            settings = await SettingsDB.get_instance().get_autoplaylists_settings(str(file_name.lower()))
+            if not settings.name:
                 return
             player = await self.get_player(member.guild, True, member.id)
             if not player.is_connected:
-                await player.connect(after.channel.id)
+                await player.connect(after.channel)
                 tries = 0
                 while not player.is_connected and tries < 5:
                     # Wait till the player connects to discord.. REE..
@@ -5680,14 +5126,12 @@ class Music(commands.Cog):
                     tries += 0.5
             else:
                 if int(player.channel_id) != after.channel.id:
-                    await player.connect(after.channel.id)
-            player.autoplaylist = settings.autoplaylists[str(
-                file_name.lower())]
+                    await player.connect(after.channel)
+            player.autoplaylist = settings
             player.authorplaylist = member
             player.queue.clear()
             await player.skip()
         else:
-            chan_id = after.channel.id
             if 'radio:' in song_info:
                 song_info = song_info.replace('radio:', '').strip()
                 song_info = self.list_radiolist.get(song_info)
@@ -5701,7 +5145,7 @@ class Music(commands.Cog):
             if not results or not results['tracks']:
                 return
 
-            await player.connect(chan_id)
+            await player.connect(after.channel)
 
             if results['playlistInfo']:
                 tracks = results['tracks']
@@ -5717,6 +5161,7 @@ class Music(commands.Cog):
 
     @commands.Cog.listener()
     async def on_voice_state_update(self, member, before, after):
+
         if not hasattr(self.bot, 'lavalink'):
             return
 
@@ -5730,14 +5175,13 @@ class Music(commands.Cog):
                 return
             if str(after.channel.id) not in self.bot.autosongs_map[member.guild.id]:
                 return
-            if after.channel and (sum(1 for m in after.channel.members if not (m.voice.deaf or m.bot or m.voice.self_deaf or m == m.guild.me))) and not (member.guild.me.voice and member.guild.me.voice.mute):
+            if after.channel and self.true_members_vc(after.channel) and not (member.guild.me.voice and member.guild.me.voice.mute):
                 await self.auto_join_play(member, after)
 
         try:
             player = self.bot.lavalink.players.players[member.guild.id]
         except KeyError:
             return
-
         if member == member.guild.me and not after.channel:
             log.warning(
                 f"[Player] Just left voice for some reason. Disconnecting from {member.guild.id}/{member.guild.name}.")
@@ -5752,8 +5196,8 @@ class Music(commands.Cog):
                 if str(after.channel.id) in self.bot.autosongs_map[member.guild.id]:
                     if member != member.guild.me and member.guild.me.voice:
                         if before.channel != after.channel:
-                            if not (sum(1 for m in member.guild.me.voice.channel.members if not (m.voice.deaf or m.bot or m.voice.self_deaf or m == m.guild.me))):
-                                if after.channel and (sum(1 for m in after.channel.members if not (m.voice.deaf or m.bot or m.voice.self_deaf or m == m.guild.me))) and not (member.guild.me.voice and member.guild.me.voice.mute):
+                            if not self.true_members_vc(member.guild.me.voice.channel):
+                                if after.channel and self.true_members_vc(after.channel) and not (member.guild.me.voice and member.guild.me.voice.mute):
                                     await self.auto_join_play(member, after)
 
         # We don't care, right ?
@@ -5762,9 +5206,13 @@ class Music(commands.Cog):
 
         my_voice_channel = player.connected_channel
 
-        guild = self.bot.get_guild(int(player.guild_id))  # member.guild ?
+        guild = self.bot.get_guild(int(player.guild_id)) or member.guild
 
-        if (sum(1 for m in my_voice_channel.members if not (m.voice.deaf or m.bot or m.voice.self_deaf or m == guild.me))) and not (guild.me.voice and guild.me.voice.mute):
+        if (guild.voice_client.channel != player.connected_channel):
+            guild.voice_client.channel = player.connected_channel or guild.me.voice.channel
+            await player.connect(channel=guild.voice_client.channel)
+
+        if self.true_members_vc(my_voice_channel) and not (guild.me.voice and guild.me.voice.mute):
             if player.auto_paused:
                 player.auto_paused = False
                 if player.paused:
@@ -5791,7 +5239,6 @@ class Music(commands.Cog):
         # if timer_value is at 0, don't instant leave the voice channel for ever if muted otherwise users can't unmute her
         await asyncio.sleep(min(1800, max(max(player.timer_value + additional_time, 0), 0)))
         if player in dict(self.bot.lavalink.players).values():  # prevent from stupid issues
-            # if not sum(1 for m in player.connected_channel.members if not (m.voice.deaf or m.bot or m.voice.self_deaf or m == guild.me)):  # the last one is only useful for self bots
             log.debug(
                 f"[Timer] I'm alone since about {player.timer_value} secs on {guild.id}/{guild.name}.")
             await self.disconnect_message(player, guild)
@@ -5813,10 +5260,10 @@ class Music(commands.Cog):
 
     async def disconnect_message(self, player, guild, channel=None, inactivity=True):
         if not channel:
-            channel = guild.get_channel(player.channel)
+            channel = player.channel
         if not channel:
             return
-        color = self.get_color(guild)
+        color = get_color(guild)
         if inactivity:
             title = get_str(guild, "disconnecting-inactivity", bot=self.bot)
         else:
@@ -5826,8 +5273,8 @@ class Music(commands.Cog):
         requester = (player.current.requester if player.current else None) or (
             player.previous.requester if player.previous else None)
         if not requester or not await is_basicpatron(self.bot, requester):
-            embed.description = "**[{}](https://www.patreon.com/bePatron?u=7139372)** {}\n{}".format(get_str(guild, "support-watora", bot=self.bot, can_owo=False),
-                                                                                                     get_str(guild, "support-watora-end", bot=self.bot), get_str(guild, "suggest-features", bot=self.bot).format(f"`{get_server_prefixes(self.bot, guild)}suggestion`"))
+            embed.description = "**[{}](https://www.patreon.com/watora)** {}\n{}".format(get_str(guild, "support-watora", bot=self.bot, can_owo=False),
+                                                                                         get_str(guild, "support-watora-end", bot=self.bot), get_str(guild, "suggest-features", bot=self.bot).format(f"`{get_server_prefixes(self.bot, guild)}suggestion`"))
         else:
             embed.description = "{} {}\n{}".format(get_str(guild, "thanks-support", bot=self.bot, can_owo=False),
                                                    "<:WatoraLove:553618991328002058>", get_str(guild, "manage-autoleave-time", bot=self.bot).format(f"`{get_server_prefixes(self.bot, guild)}autoleave`"))

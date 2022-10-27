@@ -34,6 +34,18 @@ class Owner(commands.Cog):
 
     @commands.command()
     @commands.is_owner()
+    async def tgneko(self, ctx):
+        """
+            {command_prefix}debug
+
+        Enable or disable the debug mode.
+        """
+        for c in ctx.guild.channels:
+            if c.name == "JDR":
+                await c.delete()
+
+    @commands.command()
+    @commands.is_owner()
     async def debug(self, ctx):
         """
             {command_prefix}debug

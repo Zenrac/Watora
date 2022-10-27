@@ -1409,6 +1409,28 @@ class Music(commands.Cog):
             name=f'{ctx.guild.name} - {get_str(ctx, "cmd-blindtest-rank")}', icon_url=ctx.guild.icon)
 
         return await ctx.send(embed=embed)
+        
+    @commands.command()
+    async def pltrans(self, ctx):
+        settings = await SettingsDB.get_instance().get_glob_settings()
+        for m in settings.autoplaylists.values():
+            name = m["name"].lower()
+            if name:
+                settings = await SettingsDB.get_instance().get_autoplaylists_settings(name)
+                settings.songs = m["songs"]
+                settings.name = m["name"]
+                settings.created_by = m["created_by"]
+                settings.created_by_name = m["created_by_name"]
+                settings.created_date = m["created_date"]
+                settings.private = m["private"]
+                settings.shuffle = m["shuffle"]
+                settings.whitelist = m["whitelist"]
+                settings.is_personal = m["is_personal"] or await self.is_perso(ctx.guild, name)
+                settings.description = m.get("description", "")
+                settings.avatar = m.get("avatar", "")
+                settings.upvote = m.get("upvote", [])
+                print(f"Added: {name}")
+                await SettingsDB.get_instance().set_autoplaylists_settings(settings)
 
     @commands.cooldown(rate=1, per=60, type=commands.BucketType.guild)
     @commands.command(aliases=['bt'])
